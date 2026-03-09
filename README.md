@@ -2,6 +2,17 @@
 
 Rust tool for Brother P-Touch USB label printers. CLI and GUI.
 
+![ptouch-gui screenshot](https://github.com/user-attachments/assets/c3060994-be09-4138-9ffc-37290c458ea5)
+
+## Features
+
+- Print text labels with custom font, size, alignment and rotation
+- Print PNG images
+- Compose multi-element labels (text + image + cut mark + padding)
+- Chain print and multi-copy support
+- GUI with live preview, zoom, and drag-and-drop element reordering
+- Export to PNG without a printer connected
+
 ## Supported Printers
 
 PT-9200DX, PT-2300, PT-2420PC, PT-2450PC, PT-18R, PT-1950, PT-2700,
@@ -31,6 +42,18 @@ cargo build --release --workspace
 ```
 
 Binaries: `target/release/ptouch` (CLI), `target/release/ptouch-gui` (GUI).
+
+## GUI
+
+```sh
+ptouch-gui
+```
+
+- Live label preview with zoom
+- Add/edit/reorder text, images, cut marks, padding
+- Free-angle text rotation with auto font sizing
+- Tape width selection
+- Print to connected printer or export to PNG
 
 ## CLI Usage
 
@@ -77,22 +100,6 @@ ptouch list
 | | `--chain` | Skip final feed/cut (chained labels) |
 | | `--copies` | Number of copies |
 | | `--debug` | Enable debug output |
-
-## GUI
-
-```sh
-ptouch-gui
-```
-
-![ptouch-gui screenshot](https://github.com/user-attachments/assets/c3060994-be09-4138-9ffc-37290c458ea5)
-
-Features:
-- Live label preview with zoom
-- Add/edit/reorder text, images, cut marks, padding
-- Free-angle text rotation with auto font sizing
-- Tape width selection
-- Print to connected printer
-- Export to PNG
 
 ## USB Permissions (Linux)
 
