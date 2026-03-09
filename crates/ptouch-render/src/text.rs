@@ -136,15 +136,24 @@ impl TextRenderer {
         );
         buffer.shape_until_scroll(&mut self.font_system, true);
 
-        // Measure actual width from layout runs
+        // Measure tight horizontal extent (min_x..max_x) from layout runs.
+        // With Center/Right alignment, cosmic-text offsets glyphs within the
+        // large layout_width. We subtract min_x so the bitmap is tight.
+        let mut min_x: f32 = f32::MAX;
         let mut max_x: f32 = 0.0;
         for run in buffer.layout_runs() {
-            let run_end = run.glyphs.iter().fold(0.0f32, |acc, g| acc.max(g.x + g.w));
-            max_x = max_x.max(run_end);
+            for g in run.glyphs.iter() {
+                min_x = min_x.min(g.x);
+                max_x = max_x.max(g.x + g.w);
+            }
+        }
+        if min_x == f32::MAX {
+            min_x = 0.0;
         }
 
-        let bitmap_width = (max_x.ceil() as u32).max(1);
+        let bitmap_width = ((max_x - min_x).ceil() as u32).max(1);
         let bitmap_height = print_width;
+        let x_offset = min_x.floor() as i32;
 
         let mut bitmap = LabelBitmap::new(bitmap_width, bitmap_height);
 
@@ -163,12 +172,11 @@ impl TextRenderer {
             &mut self.swash_cache,
             text_color,
             |x, y, w, h, color| {
-                // color.a() gives the coverage/alpha
                 let alpha = color.a();
                 if alpha < 128 {
                     return;
                 }
-                let px = x;
+                let px = x - x_offset;
                 let py = y + y_offset;
                 for dy in 0..h as i32 {
                     for dx in 0..w as i32 {

@@ -134,6 +134,22 @@ impl PtouchApp {
 
         if let Some(ref bitmap) = result {
             let rgba = bitmap.to_rgba_image();
+            let max_side = ctx.input(|i| i.max_texture_side);
+
+            let rgba = if rgba.width() as usize > max_side || rgba.height() as usize > max_side {
+                let scale = max_side as f32 / rgba.width().max(rgba.height()) as f32;
+                let new_w = (rgba.width() as f32 * scale).floor() as u32;
+                let new_h = (rgba.height() as f32 * scale).floor() as u32;
+                image::imageops::resize(
+                    &rgba,
+                    new_w.max(1),
+                    new_h.max(1),
+                    image::imageops::FilterType::Nearest,
+                )
+            } else {
+                rgba
+            };
+
             let size = [rgba.width() as usize, rgba.height() as usize];
             let pixels = rgba.into_raw();
             let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &pixels);
