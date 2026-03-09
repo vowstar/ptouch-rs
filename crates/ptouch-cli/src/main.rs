@@ -3,7 +3,7 @@
 
 //! Command-line tool for Brother P-Touch label printers.
 //!
-//! Supports printing text labels, PNG images, or combinations of both.
+//! Supports printing text labels, images, or combinations of both.
 //! Can also export labels to PNG files for preview.
 
 use std::path::Path;
@@ -51,9 +51,13 @@ struct PrintArgs {
     #[arg(value_name = "TEXT")]
     text: Vec<String>,
 
-    /// Print a PNG image
+    /// Print an image file
     #[arg(short = 'i', long)]
     image: Option<String>,
+
+    /// Binarization mode for images
+    #[arg(long, value_enum, default_value = "auto")]
+    binarize: BinarizeArg,
 
     /// Export to PNG file instead of printing
     #[arg(short = 'o', long)]
@@ -132,6 +136,23 @@ impl AlignArg {
             AlignArg::Left => TextAlign::Left,
             AlignArg::Center => TextAlign::Center,
             AlignArg::Right => TextAlign::Right,
+        }
+    }
+}
+
+#[derive(ValueEnum, Clone, Copy, Debug)]
+enum BinarizeArg {
+    Auto,
+    Threshold,
+    Dither,
+}
+
+impl BinarizeArg {
+    fn to_binarize_mode(self) -> image_loader::BinarizeMode {
+        match self {
+            BinarizeArg::Auto => image_loader::BinarizeMode::Auto,
+            BinarizeArg::Threshold => image_loader::BinarizeMode::Threshold,
+            BinarizeArg::Dither => image_loader::BinarizeMode::Dither,
         }
     }
 }
@@ -400,7 +421,12 @@ fn build_label(
     // Load and append image if provided
     if let Some(ref img_path) = args.image {
         debug!("Loading image: {}", img_path);
-        let img_bitmap = image_loader::load_png(Path::new(img_path))?;
+        let options = image_loader::ImageLoadOptions {
+            binarize: args.binarize.to_binarize_mode(),
+            target_height: Some(print_width),
+            ..image_loader::ImageLoadOptions::default()
+        };
+        let img_bitmap = image_loader::load_image(Path::new(img_path), &options)?;
         result = Some(append_bitmap(result, img_bitmap));
     }
 

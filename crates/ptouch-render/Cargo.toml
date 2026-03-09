@@ -12,7 +12,8 @@ repository.workspace = true
 
 [dependencies]
 ptouch-core = { path = "../ptouch-core" }
-image = { version = "0.25", default-features = false, features = ["png"] }
+image = { version = "0.25", default-features = false, features = ["default-formats"] }
+resvg = "0.47"
 cosmic-text = "0.18"
 log = "0.4"
 thiserror = "2.0"

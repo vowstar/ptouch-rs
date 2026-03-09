@@ -255,7 +255,7 @@ fn show_image_properties(
     ui.add_space(4.0);
 
     if ui.button("Reload").clicked() {
-        match image_loader::load_png(path) {
+        match image_loader::load_image(path, &image_loader::ImageLoadOptions::default()) {
             Ok(bmp) => {
                 info!("Reloaded image: {}", path.display());
                 *bitmap = Some(bmp);
@@ -269,10 +269,16 @@ fn show_image_properties(
 
     if ui.button("Change File...").clicked() {
         if let Some(new_path) = rfd::FileDialog::new()
-            .add_filter("PNG Images", &["png"])
+            .add_filter(
+                "Images",
+                &[
+                    "png", "jpg", "jpeg", "gif", "bmp", "tiff", "tif", "webp", "ico", "pnm", "tga",
+                    "qoi", "svg", "svgz",
+                ],
+            )
             .pick_file()
         {
-            match image_loader::load_png(&new_path) {
+            match image_loader::load_image(&new_path, &image_loader::ImageLoadOptions::default()) {
                 Ok(bmp) => {
                     info!("Changed image to: {}", new_path.display());
                     *path = new_path;

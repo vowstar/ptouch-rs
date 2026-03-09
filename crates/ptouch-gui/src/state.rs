@@ -19,7 +19,7 @@ pub enum LabelElement {
         /// Rotation angle in degrees (clockwise). 0.0 = horizontal.
         rotation: f32,
     },
-    /// An image loaded from a PNG file.
+    /// An image loaded from a file.
     Image {
         path: PathBuf,
         bitmap: Option<LabelBitmap>,

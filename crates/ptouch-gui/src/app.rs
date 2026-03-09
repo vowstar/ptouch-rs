@@ -112,7 +112,10 @@ impl PtouchApp {
                     if let Some(bmp) = bitmap {
                         bmp.clone()
                     } else {
-                        match image_loader::load_png(path) {
+                        match image_loader::load_image(
+                            path,
+                            &image_loader::ImageLoadOptions::default(),
+                        ) {
                             Ok(bmp) => bmp,
                             Err(e) => {
                                 error!("Image load failed: {}", e);

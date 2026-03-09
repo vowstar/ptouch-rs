@@ -29,12 +29,21 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &mut AppState) {
         }
 
         if ui.button("Add Image").clicked() {
-            // Open a file dialog for PNG files
+            // Open a file dialog for image files
             if let Some(path) = rfd::FileDialog::new()
-                .add_filter("PNG Images", &["png"])
+                .add_filter(
+                    "Images",
+                    &[
+                        "png", "jpg", "jpeg", "gif", "bmp", "tiff", "tif", "webp", "ico", "pnm",
+                        "tga", "qoi", "svg", "svgz",
+                    ],
+                )
                 .pick_file()
             {
-                let bitmap = match image_loader::load_png(&path) {
+                let bitmap = match image_loader::load_image(
+                    &path,
+                    &image_loader::ImageLoadOptions::default(),
+                ) {
                     Ok(bmp) => {
                         info!("Loaded image: {}", path.display());
                         Some(bmp)

@@ -2,12 +2,12 @@
 
 Rust tool for Brother P-Touch USB label printers. CLI and GUI.
 
-![ptouch-gui screenshot](https://github.com/user-attachments/assets/c3060994-be09-4138-9ffc-37290c458ea5)
+![ptouch-gui screenshot](https://github.com/user-attachments/assets/b18ba04d-0526-43f8-ad40-8ca29b5cb280)
 
 ## Features
 
 - Print text labels with custom font, size, alignment and rotation
-- Print PNG images
+- Print images (PNG, JPEG, GIF, BMP, TIFF, WebP, SVG, and more)
 - Compose multi-element labels (text + image + cut mark + padding)
 - Chain print and multi-copy support
 - GUI with live preview, zoom, and drag-and-drop element reordering
@@ -67,7 +67,7 @@ ptouch print "Line 1" "Line 2"
 # Print with options
 ptouch print "Label" -f "DejaVu Sans" -s 32 -a center
 
-# Print image
+# Print image (PNG, JPEG, BMP, SVG, etc.)
 ptouch print -i logo.png
 
 # Text + image + cut mark
@@ -88,7 +88,7 @@ ptouch list
 | Flag | Long | Description |
 |------|------|-------------|
 | | `TEXT...` | Text lines (max 4) |
-| `-i` | `--image` | PNG image path |
+| `-i` | `--image` | Image file path |
 | `-o` | `--output` | Export to PNG instead of printing |
 | `-f` | `--font` | Font name (default: DejaVuSans) |
 | `-s` | `--size` | Font size in points (auto if omitted) |
@@ -98,6 +98,7 @@ ptouch list
 | `-c` | `--cut` | Add cut mark |
 | `-p` | `--pad` | Add padding in pixels |
 | | `--chain` | Skip final feed/cut (chained labels) |
+| | `--binarize` | Binarization: auto, threshold, dither |
 | | `--copies` | Number of copies |
 | | `--debug` | Enable debug output |
 
