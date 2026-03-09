@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Huang Rui <vowstar@gmail.com>
+
+[package]
+name = "ptouch-cli"
+description = "Command-line tool for Brother P-Touch label printers"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "ptouch"
+path = "src/main.rs"
+
+[dependencies]
+ptouch-core = { path = "../ptouch-core" }
+ptouch-render = { path = "../ptouch-render" }
+clap = { version = "4.5", features = ["derive"] }
+log = "0.4"
+env_logger = "0.11"

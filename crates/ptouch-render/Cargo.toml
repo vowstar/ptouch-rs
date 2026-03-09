@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Huang Rui <vowstar@gmail.com>
+
+[package]
+name = "ptouch-render"
+description = "Label rendering engine for Brother P-Touch printers"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+ptouch-core = { path = "../ptouch-core" }
+image = { version = "0.25", default-features = false, features = ["png"] }
+cosmic-text = "0.18"
+log = "0.4"
+thiserror = "2.0"

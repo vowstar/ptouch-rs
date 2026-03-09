@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Huang Rui <vowstar@gmail.com>
+#
+# udev rules for Brother P-Touch printers
+# Install to /etc/udev/rules.d/ and run: udevadm control --reload-rules
+#
+# Brother USB Vendor ID: 0x04f9
+
+# PT-9200DX
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2001", MODE="0660", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2002", MODE="0660", TAG+="uaccess"
+# PT-2300
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2004", MODE="0660", TAG+="uaccess"
+# PT-2420PC
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2007", MODE="0660", TAG+="uaccess"
+# PT-2450PC
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2011", MODE="0660", TAG+="uaccess"
+# PT-18R
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="201a", MODE="0660", TAG+="uaccess"
+# PT-1950
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2019", MODE="0660", TAG+="uaccess"
+# PT-2700
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="201f", MODE="0660", TAG+="uaccess"
+# PT-1230PC
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="202c", MODE="0660", TAG+="uaccess"
+# PT-2430PC
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="202d", MODE="0660", TAG+="uaccess"
+# PT-2730
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2041", MODE="0660", TAG+="uaccess"
+# PT-H500
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="205e", MODE="0660", TAG+="uaccess"
+# PT-E500
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="205f", MODE="0660", TAG+="uaccess"
+# PT-E550W
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2060", MODE="0660", TAG+="uaccess"
+# PT-P700
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2061", MODE="0660", TAG+="uaccess"
+# PT-P750W
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2062", MODE="0660", TAG+="uaccess"
+# PT-D410
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="20df", MODE="0660", TAG+="uaccess"
+# PT-D450
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2073", MODE="0660", TAG+="uaccess"
+# PT-D460BT
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="20e0", MODE="0660", TAG+="uaccess"
+# PT-D600
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2074", MODE="0660", TAG+="uaccess"
+# PT-D610BT
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="20e1", MODE="0660", TAG+="uaccess"
+# PT-P710BT
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="20af", MODE="0660", TAG+="uaccess"
+# PT-E310BT
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2201", MODE="0660", TAG+="uaccess"
+# PT-E560BT
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2203", MODE="0660", TAG+="uaccess"

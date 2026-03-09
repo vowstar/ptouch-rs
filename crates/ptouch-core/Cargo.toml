@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Huang Rui <vowstar@gmail.com>
+
+[package]
+name = "ptouch-core"
+description = "Brother P-Touch printer USB protocol library"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+rusb = "0.9"
+thiserror = "2.0"
+log = "0.4"
+bitflags = { version = "2.6", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }

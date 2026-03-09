@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Huang Rui <vowstar@gmail.com>
+
+[workspace]
+resolver = "2"
+members = [
+    "crates/ptouch-core",
+    "crates/ptouch-render",
+    "crates/ptouch-cli",
+    "crates/ptouch-gui",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Huang Rui <vowstar@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/vowstar/ptouch-rs"
+
+[profile.release]
+opt-level = 2
+
+[profile.dev.package."*"]
+opt-level = 2
