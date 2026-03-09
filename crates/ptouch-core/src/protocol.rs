@@ -111,10 +111,12 @@ pub fn cmd_precut(enabled: bool) -> Vec<u8> {
 
 /// Construct the D460BT magic initialization command.
 ///
-/// Sends ESC i d 0x01 0x00 0x4D 0x00 0x00.
-/// The trailing 0x00 is a required NUL terminator.
+/// Sends ESC i d followed by 4 parameter bytes:
+///   n1/n2: margin value as LE u16 (0x0001 = minimal margin)
+///   n3: must be 0x4D or the print gets corrupted
+///   n4: reserved (0x00)
 pub fn cmd_d460bt_magic() -> Vec<u8> {
-    vec![0x1B, 0x69, 0x64, 0x01, 0x00, 0x4D, 0x00, 0x00]
+    vec![0x1B, 0x69, 0x64, 0x01, 0x00, 0x4D, 0x00]
 }
 
 /// Construct the D460BT chain print command.
@@ -289,7 +291,7 @@ mod tests {
     fn test_cmd_d460bt_magic() {
         assert_eq!(
             cmd_d460bt_magic(),
-            vec![0x1B, 0x69, 0x64, 0x01, 0x00, 0x4D, 0x00, 0x00]
+            vec![0x1B, 0x69, 0x64, 0x01, 0x00, 0x4D, 0x00]
         );
     }
 
