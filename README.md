@@ -84,6 +84,8 @@ ptouch list
 ptouch-gui
 ```
 
+![ptouch-gui screenshot](https://github.com/user-attachments/assets/c3060994-be09-4138-9ffc-37290c458ea5)
+
 Features:
 - Live label preview with zoom
 - Add/edit/reorder text, images, cut marks, padding
