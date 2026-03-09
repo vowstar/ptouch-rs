@@ -23,6 +23,8 @@ pub enum LabelElement {
     Image {
         path: PathBuf,
         bitmap: Option<LabelBitmap>,
+        /// Rotation angle in degrees (clockwise). 0.0 = horizontal.
+        rotation: f32,
     },
     /// A cut mark separator.
     CutMark,

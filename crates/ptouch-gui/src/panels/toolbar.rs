@@ -54,7 +54,11 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &mut AppState) {
                         None
                     }
                 };
-                state.elements.push(LabelElement::Image { path, bitmap });
+                state.elements.push(LabelElement::Image {
+                    path,
+                    bitmap,
+                    rotation: 0.0,
+                });
                 state.selected_element = Some(state.elements.len() - 1);
                 state.mark_dirty();
             }

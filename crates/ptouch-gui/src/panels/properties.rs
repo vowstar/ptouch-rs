@@ -37,8 +37,12 @@ pub fn show_properties(ui: &mut egui::Ui, state: &mut AppState) {
         } => {
             changed |= show_text_properties(ui, content, font_size, align, rotation, state);
         }
-        LabelElement::Image { path, bitmap } => {
-            changed |= show_image_properties(ui, path, bitmap);
+        LabelElement::Image {
+            path,
+            bitmap,
+            rotation,
+        } => {
+            changed |= show_image_properties(ui, path, bitmap, rotation, state);
         }
         LabelElement::CutMark => {
             ui.label("Cut Mark");
@@ -240,6 +244,8 @@ fn show_image_properties(
     ui: &mut egui::Ui,
     path: &mut PathBuf,
     bitmap: &mut Option<ptouch_render::bitmap::LabelBitmap>,
+    rotation: &mut f32,
+    state: &mut AppState,
 ) -> bool {
     let mut changed = false;
 
@@ -291,6 +297,55 @@ fn show_image_properties(
             }
         }
     }
+
+    ui.add_space(8.0);
+
+    // Rotation
+    ui.label("Rotation:");
+    ui.horizontal(|ui| {
+        if ui
+            .add(
+                egui::DragValue::new(rotation)
+                    .speed(1.0)
+                    .range(-360.0..=360.0)
+                    .suffix(" deg"),
+            )
+            .changed()
+        {
+            state.rotation_input = format!("{}", *rotation as i32);
+            changed = true;
+        }
+    });
+    ui.horizontal(|ui| {
+        for &deg in &[0.0_f32, 45.0, 90.0, 135.0, 180.0, 270.0] {
+            if ui
+                .selectable_label((*rotation - deg).abs() < 0.5, format!("{}", deg as i32))
+                .clicked()
+            {
+                *rotation = deg;
+                state.rotation_input = format!("{}", deg as i32);
+                changed = true;
+            }
+        }
+    });
+
+    // Manual angle input field
+    ui.horizontal(|ui| {
+        ui.label("Angle:");
+        let resp = ui.add(
+            egui::TextEdit::singleline(&mut state.rotation_input)
+                .desired_width(60.0)
+                .hint_text("deg"),
+        );
+        if resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+            if let Ok(val) = state.rotation_input.parse::<f32>() {
+                let clamped = val.clamp(-360.0, 360.0);
+                *rotation = clamped;
+                state.rotation_input = format!("{}", clamped);
+                changed = true;
+            }
+        }
+    });
 
     changed
 }

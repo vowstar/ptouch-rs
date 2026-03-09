@@ -108,8 +108,12 @@ impl PtouchApp {
                         bmp
                     }
                 }
-                LabelElement::Image { path, bitmap } => {
-                    if let Some(bmp) = bitmap {
+                LabelElement::Image {
+                    path,
+                    bitmap,
+                    rotation,
+                } => {
+                    let bmp = if let Some(bmp) = bitmap {
                         bmp.clone()
                     } else {
                         match image_loader::load_image(
@@ -123,6 +127,14 @@ impl PtouchApp {
                                 continue;
                             }
                         }
+                    };
+
+                    let norm = ((*rotation % 360.0) + 360.0) % 360.0;
+                    let is_rotated = !(norm.abs() < 0.5 || (norm - 360.0).abs() < 0.5);
+                    if is_rotated {
+                        bmp.rotate(*rotation).fit_height(print_width)
+                    } else {
+                        bmp
                     }
                 }
                 LabelElement::CutMark => compose::cutmark(print_width),
