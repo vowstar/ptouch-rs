@@ -20,7 +20,9 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libusb-1.0-0-dev libudev-dev
+          sudo apt-get install -y libusb-1.0-0-dev libudev-dev \
+          libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+          libxkbcommon-dev libssl-dev
 
       - run: cargo check --workspace
 
@@ -46,6 +48,8 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libusb-1.0-0-dev libudev-dev
+          sudo apt-get install -y libusb-1.0-0-dev libudev-dev \
+          libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+          libxkbcommon-dev libssl-dev
 
       - run: cargo clippy --workspace -- -D warnings
