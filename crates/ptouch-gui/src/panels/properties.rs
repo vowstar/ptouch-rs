@@ -83,37 +83,32 @@ fn show_text_properties(
 
     ui.add_space(8.0);
 
-    // Font name (dropdown ComboBox with search)
+    // Font name (searchable dropdown)
     ui.label("Font:");
+    ui.add(
+        egui::TextEdit::singleline(&mut state.font_search)
+            .desired_width(f32::INFINITY)
+            .hint_text("Search fonts..."),
+    );
+    let query = state.font_search.to_lowercase();
     egui::ComboBox::from_id_salt("font_selector")
         .selected_text(&state.font_name)
         .width(150.0)
         .height(300.0)
         .show_ui(ui, |ui| {
-            ui.add(
-                egui::TextEdit::singleline(&mut state.font_search)
-                    .desired_width(f32::INFINITY)
-                    .hint_text("Search..."),
-            );
-            ui.add_space(2.0);
-            let query = state.font_search.to_lowercase();
-            egui::ScrollArea::vertical()
-                .max_height(250.0)
-                .show(ui, |ui| {
-                    for font in &state.available_fonts {
-                        if !query.is_empty() && !font.to_lowercase().contains(&query) {
-                            continue;
-                        }
-                        if ui
-                            .selectable_label(state.font_name == *font, font)
-                            .clicked()
-                        {
-                            state.font_name = font.clone();
-                            state.font_search.clear();
-                            changed = true;
-                        }
-                    }
-                });
+            for font in &state.available_fonts {
+                if !query.is_empty() && !font.to_lowercase().contains(&query) {
+                    continue;
+                }
+                if ui
+                    .selectable_label(state.font_name == *font, font)
+                    .clicked()
+                {
+                    state.font_name = font.clone();
+                    state.font_search.clear();
+                    changed = true;
+                }
+            }
         });
 
     ui.add_space(4.0);
