@@ -246,8 +246,11 @@ fn execute_info(_args: &InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
     let mut dev = PtouchDevice::open_first()?;
     dev.init()?;
 
-    // Clone the status so we release the mutable borrow on dev.
-    let status = dev.get_status()?.clone();
+    // init() already called get_status() internally; use that result.
+    let status = dev
+        .status()
+        .ok_or_else(|| PtouchError::StatusError("No status available after init".to_string()))?
+        .clone();
 
     println!("Printer Information");
     println!("  Model:          {}", dev.device_info().name);
@@ -322,7 +325,7 @@ fn execute_print(args: &PrintArgs) -> Result<(), Box<dyn std::error::Error>> {
             debug!("Connecting to printer...");
             let mut dev = PtouchDevice::open_first()?;
             dev.init()?;
-            let _status = dev.get_status()?;
+            // init() already called get_status() internally
             let width = dev.tape_width_px().ok_or_else(|| {
                 PtouchError::StatusError("Could not determine tape width".to_string())
             })?;
@@ -462,7 +465,10 @@ fn print_to_device(
     let total_copies = args.copies.max(1);
     for copy_idx in 0..total_copies {
         let is_last = copy_idx == total_copies - 1;
-        let chain_print = args.chain && is_last;
+        // Chain intermediate copies (no cut between copies).
+        // Last copy: chain only if user requested --chain.
+        // Chain intermediate copies; last copy follows user's --chain flag
+        let chain_print = args.chain || !is_last;
 
         debug!(
             "Printing copy {}/{} ({} raster lines, chain={})",
@@ -472,7 +478,7 @@ fn print_to_device(
             chain_print
         );
 
-        dev.print_raster(&raster_lines, chain_print)?;
+        dev.print_raster(&raster_lines, chain_print, args.precut)?;
     }
 
     let tape_mm = bitmap.width() as f64 / 180.0 * 25.4;

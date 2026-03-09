@@ -50,29 +50,32 @@ fn connect_printer(state: &mut AppState) {
                 state.status_message = format!("Init error: {}", e);
                 return;
             }
-            match dev.get_status() {
-                Ok(status) => {
-                    let width_mm = status.media_width;
-                    state.printer_status = Some("Connected".to_string());
-                    state.printer_model =
-                        Some(format!("{} mm {}", width_mm, status.media_type_name()));
 
-                    // Update tape width from printer
-                    if width_mm > 0 {
-                        state.tape_width_mm = width_mm;
-                        state.update_tape_pixels();
-                        state.mark_dirty();
-                    }
+            // init() already called get_status() internally; use that result
+            if let Some(status) = dev.status() {
+                let width_mm = status.media_width;
+                state.printer_status = Some("Connected".to_string());
+                state.printer_model = Some(format!(
+                    "{}: {} mm {}",
+                    dev.device_info().name,
+                    width_mm,
+                    status.media_type_name()
+                ));
 
-                    state.status_message = "Printer connected".to_string();
-                    info!("Printer connected: {} mm tape", width_mm);
+                // Update tape width from printer
+                if width_mm > 0 {
+                    state.tape_width_mm = width_mm;
+                    state.update_tape_pixels();
+                    state.mark_dirty();
                 }
-                Err(e) => {
-                    state.printer_status = Some(format!("Error: {}", e));
-                    state.status_message = format!("Status error: {}", e);
-                    error!("Status error: {}", e);
-                }
+
+                state.status_message = "Printer connected".to_string();
+                info!("Printer connected: {} mm tape", width_mm);
+            } else {
+                state.printer_status = Some("Connected (no status)".to_string());
+                state.status_message = "Printer connected".to_string();
             }
+
             let _ = dev.close();
         }
         Err(e) => {

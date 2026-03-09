@@ -97,28 +97,23 @@ fn do_print(state: &mut AppState) {
         Ok(mut dev) => {
             if let Err(e) = dev.init() {
                 state.status_message = format!("Init error: {}", e);
+                let _ = dev.close();
                 return;
             }
-            match dev.get_status() {
-                Ok(_status) => {
-                    let max_px = dev.max_px();
-                    let raster_lines = raster::bitmap_to_raster_lines(bitmap, max_px);
-                    match dev.print_raster(&raster_lines, false) {
-                        Ok(()) => {
-                            state.status_message = "Print complete".to_string();
-                            info!("Print successful");
-                        }
-                        Err(e) => {
-                            state.status_message = format!("Print error: {}", e);
-                            error!("Print error: {}", e);
-                        }
-                    }
-                    let _ = dev.close();
+            // init() already called get_status() internally
+            let max_px = dev.max_px();
+            let raster_lines = raster::bitmap_to_raster_lines(bitmap, max_px);
+            match dev.print_raster(&raster_lines, false, false) {
+                Ok(()) => {
+                    state.status_message = "Print complete".to_string();
+                    info!("Print successful");
                 }
                 Err(e) => {
-                    state.status_message = format!("Status error: {}", e);
+                    state.status_message = format!("Print error: {}", e);
+                    error!("Print error: {}", e);
                 }
             }
+            let _ = dev.close();
         }
         Err(e) => {
             state.status_message = format!("Connect error: {}", e);

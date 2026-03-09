@@ -75,28 +75,30 @@ pub fn cmd_finalize(chain_print: bool, flags: DeviceFlags) -> Vec<u8> {
 
 /// Construct the info command (ESC i z).
 ///
-/// Sets media type, width, and raster line count. Used by devices with
+/// Sets media width and raster line count. Used by devices with
 /// FLAG_USE_INFO_CMD.
 ///
-/// Format: ESC i z <flags> <media_type> <width_mm> 0x00
-///         <raster_lines as 4 LE bytes> 0x00 0x00
+/// Format: ESC i z 0x00 0x00 <width_mm> 0x00
+///         <raster_lines as 4 LE bytes> <n9> 0x00
 ///
-/// The flags byte typically contains:
-///   bit 6 (0x40): various quality
-///   bit 7 (0x80): recover enabled
-pub fn cmd_info(media_type: u8, width_mm: u8, raster_lines: u32, quality_flags: u8) -> Vec<u8> {
+/// For D460BT devices, n9 is set to 0x02 to feed the last label properly.
+pub fn cmd_info(media_width: u8, raster_lines: u32, flags: DeviceFlags) -> Vec<u8> {
     let mut buf = vec![0x1B, 0x69, 0x7A]; // ESC i z
-    buf.push(quality_flags);
-    buf.push(media_type);
-    buf.push(width_mm);
-    buf.push(0x00);
-    // Raster lines as 4 bytes, little-endian
-    buf.push((raster_lines & 0xFF) as u8);
+    buf.push(0x00); // n1: quality flags
+    buf.push(0x00); // n2: media type
+    buf.push(media_width); // n3: media width
+    buf.push(0x00); // n4
+    buf.push((raster_lines & 0xFF) as u8); // n5: raster lines (LE)
     buf.push(((raster_lines >> 8) & 0xFF) as u8);
     buf.push(((raster_lines >> 16) & 0xFF) as u8);
     buf.push(((raster_lines >> 24) & 0xFF) as u8);
-    buf.push(0x00);
-    buf.push(0x00);
+    // n9: D460BT feed control (0x02 to feed last label properly)
+    buf.push(if flags.contains(DeviceFlags::D460BT_MAGIC) {
+        0x02
+    } else {
+        0x00
+    });
+    buf.push(0x00); // n10
     buf
 }
 
@@ -109,16 +111,18 @@ pub fn cmd_precut(enabled: bool) -> Vec<u8> {
 
 /// Construct the D460BT magic initialization command.
 ///
-/// Sends ESC i d 0x01 0x00 0x4D 0x00.
+/// Sends ESC i d 0x01 0x00 0x4D 0x00 0x00.
+/// The trailing 0x00 is a required NUL terminator.
 pub fn cmd_d460bt_magic() -> Vec<u8> {
-    vec![0x1B, 0x69, 0x64, 0x01, 0x00, 0x4D, 0x00]
+    vec![0x1B, 0x69, 0x64, 0x01, 0x00, 0x4D, 0x00, 0x00]
 }
 
 /// Construct the D460BT chain print command.
 ///
-/// Sends ESC i K 0x00.
+/// Sends ESC i K 0x00 0x00.
+/// The trailing 0x00 is a required NUL terminator.
 pub fn cmd_d460bt_chain() -> Vec<u8> {
-    vec![0x1B, 0x69, 0x4B, 0x00]
+    vec![0x1B, 0x69, 0x4B, 0x00, 0x00]
 }
 
 /// Construct a raster data command without PackBits compression.
@@ -169,22 +173,6 @@ pub fn cmd_page_flags(margin: u16) -> Vec<u8> {
         (margin & 0xFF) as u8,
         ((margin >> 8) & 0xFF) as u8,
     ]
-}
-
-/// Set a single pixel in a raster line buffer.
-///
-/// The raster line is `max_px` bits wide, stored MSB-first in bytes.
-/// Pixel 0 is the leftmost pixel (MSB of byte 0).
-///
-/// # Arguments
-/// * `line` - Mutable byte buffer of length `ceil(max_px / 8)`.
-/// * `pixel` - The pixel index to set (0 = leftmost).
-pub fn rasterline_setpixel(line: &mut [u8], pixel: usize) {
-    let byte_idx = pixel / 8;
-    let bit_idx = 7 - (pixel % 8);
-    if byte_idx < line.len() {
-        line[byte_idx] |= 1 << bit_idx;
-    }
 }
 
 /// Create a blank raster line of the given width in pixels.
@@ -273,48 +261,41 @@ mod tests {
     }
 
     #[test]
-    fn test_rasterline_setpixel() {
-        let mut line = rasterline_blank(128);
-        assert_eq!(line.len(), 16);
-        assert!(rasterline_is_blank(&line));
-
-        rasterline_setpixel(&mut line, 0);
-        assert_eq!(line[0], 0x80); // MSB set
-
-        rasterline_setpixel(&mut line, 7);
-        assert_eq!(line[0], 0x81); // MSB and LSB set
-
-        rasterline_setpixel(&mut line, 8);
-        assert_eq!(line[1], 0x80);
-    }
-
-    #[test]
     fn test_cmd_info() {
-        let cmd = cmd_info(0x01, 24, 100, 0xC0);
+        let cmd = cmd_info(24, 100, DeviceFlags::NONE);
+        assert_eq!(cmd.len(), 13);
         assert_eq!(cmd[0], 0x1B);
         assert_eq!(cmd[1], 0x69);
         assert_eq!(cmd[2], 0x7A);
-        assert_eq!(cmd[3], 0xC0); // quality flags
-        assert_eq!(cmd[4], 0x01); // media type
-        assert_eq!(cmd[5], 24); // width
-        assert_eq!(cmd[6], 0x00);
-        assert_eq!(cmd[7], 100); // raster lines low byte
+        assert_eq!(cmd[3], 0x00); // n1: quality flags = 0
+        assert_eq!(cmd[4], 0x00); // n2: media type = 0
+        assert_eq!(cmd[5], 24); // n3: width
+        assert_eq!(cmd[6], 0x00); // n4
+        assert_eq!(cmd[7], 100); // n5: raster lines low byte
         assert_eq!(cmd[8], 0x00);
         assert_eq!(cmd[9], 0x00);
         assert_eq!(cmd[10], 0x00);
+        assert_eq!(cmd[11], 0x00); // n9: not D460BT
+        assert_eq!(cmd[12], 0x00); // n10
+    }
+
+    #[test]
+    fn test_cmd_info_d460bt() {
+        let cmd = cmd_info(24, 100, DeviceFlags::D460BT_MAGIC);
+        assert_eq!(cmd[11], 0x02); // n9: D460BT feed control
     }
 
     #[test]
     fn test_cmd_d460bt_magic() {
         assert_eq!(
             cmd_d460bt_magic(),
-            vec![0x1B, 0x69, 0x64, 0x01, 0x00, 0x4D, 0x00]
+            vec![0x1B, 0x69, 0x64, 0x01, 0x00, 0x4D, 0x00, 0x00]
         );
     }
 
     #[test]
     fn test_cmd_d460bt_chain() {
-        assert_eq!(cmd_d460bt_chain(), vec![0x1B, 0x69, 0x4B, 0x00]);
+        assert_eq!(cmd_d460bt_chain(), vec![0x1B, 0x69, 0x4B, 0x00, 0x00]);
     }
 
     #[test]

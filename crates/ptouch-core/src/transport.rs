@@ -20,6 +20,15 @@ use crate::tape;
 /// Default USB timeout for bulk transfers.
 const USB_TIMEOUT: Duration = Duration::from_secs(5);
 
+/// Short timeout for flushing stale USB data.
+const USB_FLUSH_TIMEOUT: Duration = Duration::from_millis(100);
+
+/// Delay between status read retries.
+const STATUS_RETRY_DELAY: Duration = Duration::from_millis(100);
+
+/// Maximum number of status read retries.
+const STATUS_MAX_RETRIES: usize = 10;
+
 /// USB interface number for P-Touch printers.
 const USB_INTERFACE: u8 = 0;
 
@@ -78,10 +87,12 @@ impl PtouchDevice {
             .open_device_with_vid_pid(vid, pid)
             .ok_or(PtouchError::DeviceNotFound)?;
 
-        // Detach kernel driver if active
+        // Detach kernel driver if active (non-fatal)
         if handle.kernel_driver_active(USB_INTERFACE).unwrap_or(false) {
             debug!("Detaching kernel driver from interface {}", USB_INTERFACE);
-            handle.detach_kernel_driver(USB_INTERFACE)?;
+            if let Err(e) = handle.detach_kernel_driver(USB_INTERFACE) {
+                warn!("Failed to detach kernel driver: {} (continuing)", e);
+            }
         }
 
         handle.claim_interface(USB_INTERFACE)?;
@@ -205,27 +216,39 @@ impl PtouchDevice {
         Ok(read)
     }
 
+    /// Flush stale data from the USB IN endpoint.
+    ///
+    /// Performs short-timeout reads and discards any data until the pipe
+    /// is empty. This prevents stale responses from confusing subsequent
+    /// command/response exchanges.
+    fn flush_input(&self) {
+        let mut buf = [0u8; 64];
+        loop {
+            match self
+                .handle
+                .read_bulk(self.ep_in, &mut buf, USB_FLUSH_TIMEOUT)
+            {
+                Ok(n) if n > 0 => {
+                    debug!("Flushed {} stale bytes from USB IN", n);
+                }
+                _ => break,
+            }
+        }
+    }
+
     /// Initialize the printer.
     ///
-    /// Sends the init sequence, queries the status, and resolves the tape width.
-    /// For devices with FLAG_P700_INIT, sends the P700-style raster start.
-    /// For devices with FLAG_D460BT_MAGIC, sends the magic init sequence.
+    /// Sends the init sequence (100 zeros + ESC @) and queries the status.
+    /// Raster start is sent per-job in `print_raster()`.
     pub fn init(&mut self) -> Result<()> {
+        // Flush any stale data from previous sessions
+        self.flush_input();
+
         // Send the init command (100 zeros + ESC @)
         self.send(&protocol::cmd_init())?;
 
-        // For P700-style devices, send raster mode switch
-        if self.dev_info.flags.contains(DeviceFlags::P700_INIT) {
-            self.send(&protocol::cmd_raster_start(self.dev_info.flags))?;
-        }
-
         // Request and read status
         self.get_status()?;
-
-        // D460BT magic init if needed
-        if self.dev_info.flags.contains(DeviceFlags::D460BT_MAGIC) {
-            self.send(&protocol::cmd_d460bt_magic())?;
-        }
 
         self.initialized = true;
         info!(
@@ -241,14 +264,41 @@ impl PtouchDevice {
     /// Request and read the printer status.
     ///
     /// Sends the status request command and reads the 32-byte response.
+    /// Retries up to STATUS_MAX_RETRIES times with STATUS_RETRY_DELAY
+    /// between attempts.
     /// Updates internal status and tape width fields.
     pub fn get_status(&mut self) -> Result<&PrinterStatus> {
         self.send(&protocol::cmd_status_request())?;
 
         let mut buf = [0u8; STATUS_PACKET_SIZE];
-        let read = self.receive(&mut buf)?;
+        let mut read = 0usize;
+
+        // Retry loop: sleep then read
+        for attempt in 0..STATUS_MAX_RETRIES {
+            std::thread::sleep(STATUS_RETRY_DELAY);
+
+            match self.handle.read_bulk(self.ep_in, &mut buf, USB_TIMEOUT) {
+                Ok(n) => read = n,
+                Err(rusb::Error::Timeout) => {
+                    debug!("Status read timeout (attempt {})", attempt + 1);
+                    continue;
+                }
+                Err(e) => return Err(PtouchError::UsbError(e)),
+            }
+
+            if read >= STATUS_PACKET_SIZE {
+                break;
+            }
+            debug!(
+                "Short status read ({} bytes, attempt {})",
+                read,
+                attempt + 1
+            );
+        }
 
         if read < STATUS_PACKET_SIZE {
+            // Flush junk data before returning error
+            self.flush_input();
             return Err(PtouchError::StatusError(format!(
                 "Status packet too short: {} bytes (expected {})",
                 read, STATUS_PACKET_SIZE
@@ -257,6 +307,15 @@ impl PtouchDevice {
 
         let status = PrinterStatus::from_bytes(&buf)
             .ok_or_else(|| PtouchError::StatusError("Failed to parse status packet".to_string()))?;
+
+        // Validate header bytes (print_head_mark=0x80, size=0x20)
+        if status.print_head_mark != 0x80 || status.size != 0x20 {
+            self.flush_input();
+            return Err(PtouchError::StatusError(format!(
+                "Invalid status header: mark={:#04x} size={:#04x}",
+                status.print_head_mark, status.size
+            )));
+        }
 
         debug!(
             "Status: type={}, media_width={}mm, media_type={}, tape_color={}, text_color={}",
@@ -291,12 +350,17 @@ impl PtouchDevice {
     /// # Arguments
     /// * `lines` - Raster image data, one byte-slice per line.
     /// * `chain_print` - If true, don't cut the tape (chain mode).
+    /// * `precut` - If true AND device supports precut, send precut command.
     ///
     /// # Errors
     ///
     /// Returns [`PtouchError::NotInitialized`] if [`init`](Self::init) was not called.
-    /// Returns [`PtouchError::ImageTooLarge`] if any line exceeds the tape width.
-    pub fn print_raster(&mut self, lines: &[Vec<u8>], chain_print: bool) -> Result<()> {
+    pub fn print_raster(
+        &mut self,
+        lines: &[Vec<u8>],
+        chain_print: bool,
+        precut: bool,
+    ) -> Result<()> {
         if !self.initialized {
             return Err(PtouchError::NotInitialized);
         }
@@ -307,39 +371,41 @@ impl PtouchDevice {
         let has_precut = flags.contains(DeviceFlags::HAS_PRECUT);
         let is_d460bt = flags.contains(DeviceFlags::D460BT_MAGIC);
 
-        // For P700 and non-P700, start raster mode
-        if !flags.contains(DeviceFlags::P700_INIT) {
-            self.send(&protocol::cmd_raster_start(flags))?;
-        }
+        // Brother P-Touch print command sequence:
+        // packbits -> rasterstart -> info -> d460bt_magic -> precut ->
+        // d460bt_chain -> raster lines -> finalize
 
-        // Send info command if supported
-        if use_info {
-            let media_type = self.status.as_ref().map_or(0x00, |s| s.media_type);
-            let media_width = self.status.as_ref().map_or(0, |s| s.media_width);
-            let raster_lines = lines.len() as u32;
-            // flags: 0x80 (recover) | 0x40 (various quality)
-            self.send(&protocol::cmd_info(
-                media_type,
-                media_width,
-                raster_lines,
-                0xC0,
-            ))?;
-        }
-
-        // Enable PackBits if supported
+        // 1. Enable PackBits compression (before rasterstart)
         if use_packbits {
             self.send(&protocol::cmd_enable_packbits())?;
         }
 
-        // Set pre-cut if supported
-        if has_precut {
-            self.send(&protocol::cmd_precut(!chain_print))?;
+        // 2. Start raster mode (sent per-job)
+        self.send(&protocol::cmd_raster_start(flags))?;
+
+        // 3. Send info command with label metadata
+        if use_info {
+            let media_width = self.status.as_ref().map_or(0, |s| s.media_width);
+            let raster_lines = lines.len() as u32;
+            self.send(&protocol::cmd_info(media_width, raster_lines, flags))?;
         }
 
-        // Set margin
-        self.send(&protocol::cmd_page_flags(0))?;
+        // 4. D460BT magic sequence (sent per print job)
+        if is_d460bt {
+            self.send(&protocol::cmd_d460bt_magic())?;
+        }
 
-        // Send raster lines
+        // 5. Pre-cut setting (only when user explicitly requests it)
+        if has_precut && precut {
+            self.send(&protocol::cmd_precut(true))?;
+        }
+
+        // 6. D460BT chain command (before raster data)
+        if is_d460bt && chain_print {
+            self.send(&protocol::cmd_d460bt_chain())?;
+        }
+
+        // 7. Send raster lines
         for line in lines {
             if protocol::rasterline_is_blank(line) {
                 self.send(&protocol::cmd_line_feed())?;
@@ -350,12 +416,7 @@ impl PtouchDevice {
             }
         }
 
-        // D460BT chain command
-        if is_d460bt && chain_print {
-            self.send(&protocol::cmd_d460bt_chain())?;
-        }
-
-        // Finalize
+        // 8. Finalize
         self.send(&protocol::cmd_finalize(chain_print, flags))?;
 
         // Wait for printing completed status
