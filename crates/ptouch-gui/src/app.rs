@@ -23,7 +23,8 @@ pub struct PtouchApp {
 
 impl PtouchApp {
     /// Create a new application instance.
-    pub fn new(_cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        setup_fallback_fonts(&cc.egui_ctx);
         Self {
             state: AppState {
                 available_fonts: ptouch_render::font::list_fonts(),
@@ -262,4 +263,34 @@ impl eframe::App for PtouchApp {
             self.update_preview(ctx);
         }
     }
+}
+
+/// Register fallback fonts for CJK text and emoji rendering.
+fn setup_fallback_fonts(ctx: &egui::Context) {
+    use egui::epaint::text::{FontInsert, FontPriority, InsertFontFamily};
+
+    let lowest_both = vec![
+        InsertFontFamily {
+            family: egui::FontFamily::Proportional,
+            priority: FontPriority::Lowest,
+        },
+        InsertFontFamily {
+            family: egui::FontFamily::Monospace,
+            priority: FontPriority::Lowest,
+        },
+    ];
+
+    // CJK fallback (DroidSansFallback, Apache-2.0)
+    ctx.add_font(FontInsert {
+        name: "cjk_fallback".into(),
+        data: egui::FontData::from_static(include_bytes!("../assets/fonts/DroidSansFallback.ttf")),
+        families: lowest_both.clone(),
+    });
+
+    // Emoji fallback (NotoEmoji, OFL-1.1)
+    ctx.add_font(FontInsert {
+        name: "emoji_fallback".into(),
+        data: egui::FontData::from_static(include_bytes!("../assets/fonts/NotoEmoji.ttf")),
+        families: lowest_both,
+    });
 }
