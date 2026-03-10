@@ -443,6 +443,49 @@ impl PtouchDevice {
         Ok(())
     }
 
+    /// Feed tape forward and cut.
+    ///
+    /// Prints a minimal blank strip (a few blank raster lines) then
+    /// ejects and cuts. The printer needs actual raster data to engage
+    /// the feed mechanism.
+    pub fn feed_and_cut(&mut self) -> Result<()> {
+        if !self.initialized {
+            return Err(PtouchError::NotInitialized);
+        }
+
+        let flags = self.dev_info.flags;
+        let use_packbits = flags.contains(DeviceFlags::RASTER_PACKBITS);
+        let use_info = flags.contains(DeviceFlags::USE_INFO_CMD);
+        let is_d460bt = flags.contains(DeviceFlags::D460BT_MAGIC);
+
+        // A small number of blank lines to make the printer engage
+        let blank_lines = 1;
+
+        if use_packbits {
+            self.send(&protocol::cmd_enable_packbits())?;
+        }
+        self.send(&protocol::cmd_raster_start(flags))?;
+
+        if use_info {
+            let media_width = self.status.as_ref().map_or(0, |s| s.media_width);
+            self.send(&protocol::cmd_info(media_width, blank_lines, flags))?;
+        }
+
+        if is_d460bt {
+            self.send(&protocol::cmd_d460bt_magic())?;
+        }
+
+        // Send blank raster lines (line feed = blank line)
+        for _ in 0..blank_lines {
+            self.send(&protocol::cmd_line_feed())?;
+        }
+
+        // Eject and cut
+        self.send(&protocol::cmd_finalize(false, flags))?;
+        info!("Feed and cut");
+        Ok(())
+    }
+
     /// Release the USB interface and close the device.
     pub fn close(self) -> Result<()> {
         self.handle.release_interface(USB_INTERFACE)?;

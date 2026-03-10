@@ -77,6 +77,10 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &mut AppState) {
             do_print(state);
         }
 
+        if ui.button("Feed & Cut").clicked() {
+            do_feed_and_cut(state);
+        }
+
         if ui.button("Export PNG").clicked() {
             do_export_png(state);
         }
@@ -117,6 +121,38 @@ fn do_print(state: &mut AppState) {
                 Err(e) => {
                     state.status_message = format!("Print error: {}", e);
                     error!("Print error: {}", e);
+                }
+            }
+            let _ = dev.close();
+        }
+        Err(e) => {
+            state.status_message = format!("Connect error: {}", e);
+            error!("Failed to open printer: {}", e);
+        }
+    }
+}
+
+/// Feed tape forward and cut without printing.
+fn do_feed_and_cut(state: &mut AppState) {
+    use ptouch_core::transport::PtouchDevice;
+
+    state.status_message = "Connecting to printer...".to_string();
+
+    match PtouchDevice::open_first() {
+        Ok(mut dev) => {
+            if let Err(e) = dev.init() {
+                state.status_message = format!("Init error: {}", e);
+                let _ = dev.close();
+                return;
+            }
+            match dev.feed_and_cut() {
+                Ok(()) => {
+                    state.status_message = "Feed & cut done".to_string();
+                    info!("Feed and cut successful");
+                }
+                Err(e) => {
+                    state.status_message = format!("Feed & cut error: {}", e);
+                    error!("Feed & cut error: {}", e);
                 }
             }
             let _ = dev.close();
