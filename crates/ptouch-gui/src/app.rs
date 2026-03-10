@@ -113,6 +113,7 @@ impl PtouchApp {
                     path,
                     bitmap,
                     rotation,
+                    target_height,
                 } => {
                     let bmp = if let Some(bmp) = bitmap {
                         bmp.clone()
@@ -130,12 +131,16 @@ impl PtouchApp {
                         }
                     };
 
+                    // Scale to target height (auto = tape height, manual = specified)
+                    let scale_h = target_height.unwrap_or(print_width);
+                    let bmp = bmp.scale_to_height(scale_h);
+
                     let norm = ((*rotation % 360.0) + 360.0) % 360.0;
                     let is_rotated = !(norm.abs() < 0.5 || (norm - 360.0).abs() < 0.5);
                     if is_rotated {
                         bmp.rotate(*rotation).fit_height(print_width)
                     } else {
-                        bmp
+                        bmp.fit_height(print_width)
                     }
                 }
                 LabelElement::CutMark => compose::cutmark(print_width),

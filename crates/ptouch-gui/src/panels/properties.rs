@@ -41,8 +41,9 @@ pub fn show_properties(ui: &mut egui::Ui, state: &mut AppState) {
             path,
             bitmap,
             rotation,
+            target_height,
         } => {
-            changed |= show_image_properties(ui, path, bitmap, rotation, state);
+            changed |= show_image_properties(ui, path, bitmap, rotation, target_height, state);
         }
         LabelElement::CutMark => {
             ui.label("Cut Mark");
@@ -240,6 +241,7 @@ fn show_image_properties(
     path: &mut PathBuf,
     bitmap: &mut Option<ptouch_render::bitmap::LabelBitmap>,
     rotation: &mut f32,
+    target_height: &mut Option<u32>,
     state: &mut AppState,
 ) -> bool {
     let mut changed = false;
@@ -250,7 +252,7 @@ fn show_image_properties(
     ui.label(format!("File: {}", path.display()));
 
     if let Some(ref bmp) = bitmap {
-        ui.label(format!("Size: {} x {} px", bmp.width(), bmp.height()));
+        ui.label(format!("Original: {} x {} px", bmp.width(), bmp.height()));
     }
 
     ui.add_space(4.0);
@@ -294,6 +296,32 @@ fn show_image_properties(
     }
 
     ui.add_space(8.0);
+
+    // Height sizing (auto = fit to tape, manual = user-specified)
+    let mut use_auto = target_height.is_none();
+    if ui.checkbox(&mut use_auto, "Auto height").changed() {
+        if use_auto {
+            *target_height = None;
+        } else {
+            *target_height = Some(state.tape_width_px);
+        }
+        changed = true;
+    }
+
+    if let Some(ref mut h) = target_height {
+        ui.horizontal(|ui| {
+            ui.label("Height:");
+            if ui
+                .add(egui::DragValue::new(h).speed(1.0).range(1..=1000))
+                .changed()
+            {
+                changed = true;
+            }
+            ui.label("px");
+        });
+    }
+
+    ui.add_space(4.0);
 
     // Rotation
     ui.label("Rotation:");

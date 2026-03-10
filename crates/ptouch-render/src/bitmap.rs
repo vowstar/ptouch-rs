@@ -378,6 +378,33 @@ impl LabelBitmap {
         result
     }
 
+    /// Scale bitmap to a target height, preserving aspect ratio.
+    ///
+    /// Uses nearest-neighbor interpolation. Returns a new bitmap whose
+    /// height equals `target_height` and whose width is proportionally
+    /// adjusted.
+    pub fn scale_to_height(&self, target_height: u32) -> LabelBitmap {
+        if self.height == 0 || self.width == 0 || target_height == 0 {
+            return LabelBitmap::new(0, target_height);
+        }
+        if self.height == target_height {
+            return self.clone();
+        }
+        let scale = target_height as f64 / self.height as f64;
+        let target_width = ((self.width as f64 * scale).round() as u32).max(1);
+        let mut result = LabelBitmap::new(target_width, target_height);
+        for y in 0..target_height {
+            let src_y = ((y as f64 / scale).floor() as u32).min(self.height - 1);
+            for x in 0..target_width {
+                let src_x = ((x as f64 / scale).floor() as u32).min(self.width - 1);
+                if self.get_pixel(src_x, src_y) {
+                    result.set_pixel(x, y, true);
+                }
+            }
+        }
+        result
+    }
+
     /// Access the raw packed bit data.
     pub fn data(&self) -> &[u8] {
         &self.data
@@ -636,5 +663,42 @@ mod tests {
         assert_eq!(trimmed.height(), 4);
         assert!(trimmed.get_pixel(0, 0));
         assert!(trimmed.get_pixel(0, 3));
+    }
+
+    #[test]
+    fn test_scale_to_height_downscale() {
+        let mut bmp = LabelBitmap::new(100, 200);
+        bmp.set_pixel(50, 100, true);
+        let scaled = bmp.scale_to_height(100);
+        assert_eq!(scaled.height(), 100);
+        assert_eq!(scaled.width(), 50); // 100 * 0.5
+        assert!(scaled.get_pixel(25, 50));
+    }
+
+    #[test]
+    fn test_scale_to_height_upscale() {
+        let mut bmp = LabelBitmap::new(10, 5);
+        bmp.set_pixel(0, 0, true);
+        let scaled = bmp.scale_to_height(10);
+        assert_eq!(scaled.height(), 10);
+        assert_eq!(scaled.width(), 20); // 10 * 2.0
+        assert!(scaled.get_pixel(0, 0));
+    }
+
+    #[test]
+    fn test_scale_to_height_same() {
+        let mut bmp = LabelBitmap::new(10, 10);
+        bmp.set_pixel(5, 5, true);
+        let scaled = bmp.scale_to_height(10);
+        assert_eq!(scaled.width(), 10);
+        assert_eq!(scaled.height(), 10);
+        assert!(scaled.get_pixel(5, 5));
+    }
+
+    #[test]
+    fn test_scale_to_height_zero() {
+        let bmp = LabelBitmap::new(10, 10);
+        let scaled = bmp.scale_to_height(0);
+        assert_eq!(scaled.height(), 0);
     }
 }

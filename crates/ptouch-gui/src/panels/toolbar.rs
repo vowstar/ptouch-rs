@@ -58,6 +58,7 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &mut AppState) {
                     path,
                     bitmap,
                     rotation: 0.0,
+                    target_height: None,
                 });
                 state.selected_element = Some(state.elements.len() - 1);
                 state.mark_dirty();

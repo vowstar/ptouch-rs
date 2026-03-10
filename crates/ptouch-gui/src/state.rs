@@ -25,6 +25,8 @@ pub enum LabelElement {
         bitmap: Option<LabelBitmap>,
         /// Rotation angle in degrees (clockwise). 0.0 = horizontal.
         rotation: f32,
+        /// Target height in pixels. None = auto (fit to tape height).
+        target_height: Option<u32>,
     },
     /// A cut mark separator.
     CutMark,

@@ -25,9 +25,9 @@ use crate::bitmap::LabelBitmap;
 #[inline]
 fn rasterline_setpixel(rasterline: &mut [u8], pixel: usize) {
     let size = rasterline.len();
-    let byte_idx = size - 1 - pixel / 8;
-    if byte_idx < size {
-        rasterline[byte_idx] |= 1u8 << (pixel % 8);
+    let byte_pos = pixel / 8;
+    if byte_pos < size {
+        rasterline[size - 1 - byte_pos] |= 1u8 << (pixel % 8);
     }
 }
 
@@ -128,5 +128,24 @@ mod tests {
         for line in &lines {
             assert_eq!(line.len(), 16); // 128/8
         }
+    }
+
+    #[test]
+    fn test_setpixel_out_of_bounds_is_ignored() {
+        let mut line = vec![0u8; 4]; // 32 pixels max
+        rasterline_setpixel(&mut line, 32); // exactly out of bounds
+        rasterline_setpixel(&mut line, 100); // far out of bounds
+        assert_eq!(line, [0, 0, 0, 0]); // nothing written
+    }
+
+    #[test]
+    fn test_bitmap_taller_than_max_px() {
+        // Bitmap height (192) exceeds max_px (128) -- must not panic
+        let mut bmp = LabelBitmap::new(2, 192);
+        bmp.set_pixel(0, 0, true);
+        bmp.set_pixel(1, 191, true);
+        let lines = bitmap_to_raster_lines(&bmp, 128);
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0].len(), 16); // 128/8
     }
 }
