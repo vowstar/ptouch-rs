@@ -95,6 +95,8 @@ pub struct AppState {
     pub rotation_input: String,
     /// Buffer for font search/filter in properties panel.
     pub font_search: String,
+    /// Auto-cut after printing. When false, chain print mode (no cut).
+    pub auto_cut: bool,
 }
 
 impl Default for AppState {
@@ -117,6 +119,7 @@ impl Default for AppState {
             status_message: "Ready".to_string(),
             rotation_input: String::new(),
             font_search: String::new(),
+            auto_cut: true,
         }
     }
 }

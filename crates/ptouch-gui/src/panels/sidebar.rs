@@ -16,6 +16,8 @@ pub fn show_sidebar(ui: &mut egui::Ui, state: &mut AppState) {
         ui.separator();
         show_tape_section(ui, state);
         ui.separator();
+        show_print_options(ui, state);
+        ui.separator();
         show_elements_section(ui, state);
     });
 }
@@ -109,6 +111,17 @@ fn show_tape_section(ui: &mut egui::Ui, state: &mut AppState) {
                 }
             }
         });
+}
+
+/// Print options: auto-cut toggle.
+fn show_print_options(ui: &mut egui::Ui, state: &mut AppState) {
+    ui.heading("Print Options");
+    ui.add_space(4.0);
+    ui.horizontal(|ui| {
+        let label = if state.auto_cut { "Auto cut" } else { "No cut" };
+        ui.label(label);
+        ui.add(crate::widgets::toggle(&mut state.auto_cut));
+    });
 }
 
 /// Element list section with reorder and delete controls.

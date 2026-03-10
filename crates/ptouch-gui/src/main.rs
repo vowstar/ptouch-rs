@@ -9,6 +9,7 @@
 mod app;
 mod panels;
 mod state;
+mod widgets;
 
 fn main() -> eframe::Result<()> {
     env_logger::init();

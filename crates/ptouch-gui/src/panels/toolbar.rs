@@ -117,7 +117,8 @@ fn do_print(state: &mut AppState) {
             // init() already called get_status() internally
             let max_px = dev.max_px();
             let raster_lines = raster::bitmap_to_raster_lines(bitmap, max_px);
-            match dev.print_raster(&raster_lines, false, false) {
+            let chain_print = !state.auto_cut;
+            match dev.print_raster(&raster_lines, chain_print, state.auto_cut) {
                 Ok(()) => {
                     state.status_message = "Print complete".to_string();
                     info!("Print successful");
