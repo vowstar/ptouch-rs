@@ -81,8 +81,8 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &mut AppState) {
             do_feed_and_cut(state);
         }
 
-        if ui.button("Export PNG").clicked() {
-            do_export_png(state);
+        if ui.button("Export Image").clicked() {
+            do_export_image(state);
         }
     });
 }
@@ -164,8 +164,8 @@ fn do_feed_and_cut(state: &mut AppState) {
     }
 }
 
-/// Export the current label preview as a PNG file.
-fn do_export_png(state: &mut AppState) {
+/// Export the current label preview as an image file.
+fn do_export_image(state: &mut AppState) {
     let bitmap = match state.preview_bitmap {
         Some(ref bmp) => bmp,
         None => {
@@ -175,7 +175,12 @@ fn do_export_png(state: &mut AppState) {
     };
 
     if let Some(path) = rfd::FileDialog::new()
-        .add_filter("PNG Images", &["png"])
+        .add_filter("PNG", &["png"])
+        .add_filter("JPEG", &["jpg", "jpeg"])
+        .add_filter("BMP", &["bmp"])
+        .add_filter("GIF", &["gif"])
+        .add_filter("TIFF", &["tiff", "tif"])
+        .add_filter("WebP", &["webp"])
         .set_file_name("label.png")
         .save_file()
     {
@@ -184,14 +189,14 @@ fn do_export_png(state: &mut AppState) {
         } else {
             path
         };
-        match bitmap.save_png(&save_path) {
+        match bitmap.save(&save_path) {
             Ok(()) => {
                 state.status_message = format!("Saved to {}", save_path.display());
-                info!("Exported PNG: {}", save_path.display());
+                info!("Exported image: {}", save_path.display());
             }
             Err(e) => {
                 state.status_message = format!("Save error: {}", e);
-                error!("PNG save error: {}", e);
+                error!("Image save error: {}", e);
             }
         }
     }

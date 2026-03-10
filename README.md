@@ -11,7 +11,8 @@ Rust tool for Brother P-Touch USB label printers. CLI and GUI.
 - Compose multi-element labels (text + image + cut mark + padding)
 - Chain print and multi-copy support
 - GUI with live preview, zoom, and drag-and-drop element reordering
-- Export to PNG without a printer connected
+- Export to image (PNG, JPEG, BMP, GIF, TIFF, WebP) without a printer connected
+- Feed and cut tape without printing
 
 ## Supported Printers
 
@@ -53,7 +54,8 @@ ptouch-gui
 - Add/edit/reorder text, images, cut marks, padding
 - Free-angle text rotation with auto font sizing
 - Tape width selection
-- Print to connected printer or export to PNG
+- Print to connected printer or export to image file
+- Feed and cut tape without printing
 
 ## CLI Usage
 
@@ -73,8 +75,9 @@ ptouch print -i logo.png
 # Text + image + cut mark
 ptouch print "Name" -i photo.png -c
 
-# Export to PNG (no printer needed)
+# Export to image file (no printer needed, format from extension)
 ptouch print "Preview" -o label.png -w 76
+ptouch print "Preview" -o label.bmp -w 76
 
 # Show printer info
 ptouch info
@@ -89,7 +92,7 @@ ptouch list
 |------|------|-------------|
 | | `TEXT...` | Text lines (max 4) |
 | `-i` | `--image` | Image file path |
-| `-o` | `--output` | Export to PNG instead of printing |
+| `-o` | `--output` | Export to image file instead of printing |
 | `-f` | `--font` | Font name (default: DejaVuSans) |
 | `-s` | `--size` | Font size in points (auto if omitted) |
 | `-m` | `--margin` | Top/bottom margin in pixels |

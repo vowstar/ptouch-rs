@@ -153,28 +153,19 @@ impl LabelBitmap {
         bmp
     }
 
-    /// Save the bitmap as a PNG file at 180 DPI.
+    /// Save the bitmap as a PNG file.
     pub fn save_png(&self, path: &Path) -> Result<()> {
-        use image::codecs::png::PngEncoder;
-        use image::ImageEncoder;
-        use std::fs::File;
-        use std::io::BufWriter;
+        self.save(path)
+    }
 
+    /// Save the bitmap to a file.
+    ///
+    /// The output format is determined by the file extension (png, jpg,
+    /// bmp, gif, tiff, webp, etc.). Falls back to PNG for unknown
+    /// extensions.
+    pub fn save(&self, path: &Path) -> Result<()> {
         let rgba = self.to_rgba_image();
-        let file = File::create(path)?;
-        let writer = BufWriter::new(file);
-        let encoder = PngEncoder::new(writer);
-
-        // 180 DPI = 180 / 25.4 mm = ~7087 pixels per meter
-        // The PNG encoder in the image crate does not directly support DPI
-        // metadata through the simple API, so we encode the raw pixels.
-        encoder.write_image(
-            rgba.as_raw(),
-            self.width,
-            self.height,
-            image::ExtendedColorType::Rgba8,
-        )?;
-
+        rgba.save(path)?;
         Ok(())
     }
 

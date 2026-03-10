@@ -4,7 +4,7 @@
 //! Command-line tool for Brother P-Touch label printers.
 //!
 //! Supports printing text labels, images, or combinations of both.
-//! Can also export labels to PNG files for preview.
+//! Can also export labels to image files (PNG, JPEG, BMP, etc.) for preview.
 
 use std::path::Path;
 use std::process;
@@ -79,7 +79,7 @@ struct PrintArgs {
     #[arg(short = 'a', long, value_enum, default_value = "left")]
     align: AlignArg,
 
-    /// Force tape width in pixels (use with -o for PNG export without printer)
+    /// Force tape width in pixels (use with -o for image export without printer)
     #[arg(short = 'w', long)]
     tape_width: Option<u32>,
 
@@ -360,7 +360,7 @@ fn execute_print(args: &PrintArgs) -> Result<(), Box<dyn std::error::Error>> {
 
     // Output: save to PNG or print to device
     if let Some(ref output_path) = args.output {
-        bitmap.save_png(Path::new(output_path))?;
+        bitmap.save(Path::new(output_path))?;
         let tape_mm = bitmap.width() as f64 / 180.0 * 25.4;
         println!(
             "Saved to '{}' ({}x{} px, {:.1} mm of tape)",
