@@ -8,6 +8,7 @@
 
 mod app;
 mod panels;
+mod printer_worker;
 mod state;
 mod widgets;
 

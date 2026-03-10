@@ -8,9 +8,10 @@ use std::path::PathBuf;
 use log::{error, info};
 
 use ptouch_render::image_loader;
+use ptouch_render::raster;
 use ptouch_render::text::TextAlign;
 
-use crate::state::{AppState, LabelElement};
+use crate::state::{AppState, LabelElement, PrinterCommand};
 
 /// Render the top toolbar.
 pub fn show_toolbar(ui: &mut egui::Ui, state: &mut AppState) {
@@ -73,95 +74,45 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &mut AppState) {
         ui.separator();
 
         // -- Action buttons --
-        if ui.button("Print").clicked() {
-            do_print(state);
+        let connected = state.printer_connected;
+        let busy = state.operation_in_progress;
+        let has_bitmap = state.preview_bitmap.is_some();
+
+        if ui
+            .add_enabled(connected && !busy && has_bitmap, egui::Button::new("Print"))
+            .clicked()
+        {
+            if let Some(ref bitmap) = state.preview_bitmap {
+                let raster_lines = raster::bitmap_to_raster_lines(bitmap, state.printer_max_px);
+                let chain_print = !state.auto_cut;
+                let auto_cut = state.auto_cut;
+                if let Some(ref tx) = state.printer_cmd_tx {
+                    let _ = tx.send(PrinterCommand::Print {
+                        raster_lines,
+                        chain_print,
+                        auto_cut,
+                    });
+                    state.operation_in_progress = true;
+                    state.status_message = "Printing...".to_string();
+                }
+            }
         }
 
-        if ui.button("Feed & Cut").clicked() {
-            do_feed_and_cut(state);
+        if ui
+            .add_enabled(connected && !busy, egui::Button::new("Feed & Cut"))
+            .clicked()
+        {
+            if let Some(ref tx) = state.printer_cmd_tx {
+                let _ = tx.send(PrinterCommand::FeedAndCut);
+                state.operation_in_progress = true;
+                state.status_message = "Feeding & cutting...".to_string();
+            }
         }
 
         if ui.button("Export Image").clicked() {
             do_export_image(state);
         }
     });
-}
-
-/// Attempt to print the current label to a connected printer.
-fn do_print(state: &mut AppState) {
-    use ptouch_core::transport::PtouchDevice;
-    use ptouch_render::raster;
-
-    let bitmap = match state.preview_bitmap {
-        Some(ref bmp) => bmp,
-        None => {
-            state.status_message = "Nothing to print".to_string();
-            return;
-        }
-    };
-
-    state.status_message = "Connecting to printer...".to_string();
-
-    match PtouchDevice::open_first() {
-        Ok(mut dev) => {
-            if let Err(e) = dev.init() {
-                state.status_message = format!("Init error: {}", e);
-                let _ = dev.close();
-                return;
-            }
-            // init() already called get_status() internally
-            let max_px = dev.max_px();
-            let raster_lines = raster::bitmap_to_raster_lines(bitmap, max_px);
-            let chain_print = !state.auto_cut;
-            match dev.print_raster(&raster_lines, chain_print, state.auto_cut) {
-                Ok(()) => {
-                    state.status_message = "Print complete".to_string();
-                    info!("Print successful");
-                }
-                Err(e) => {
-                    state.status_message = format!("Print error: {}", e);
-                    error!("Print error: {}", e);
-                }
-            }
-            let _ = dev.close();
-        }
-        Err(e) => {
-            state.status_message = format!("Connect error: {}", e);
-            error!("Failed to open printer: {}", e);
-        }
-    }
-}
-
-/// Feed tape forward and cut without printing.
-fn do_feed_and_cut(state: &mut AppState) {
-    use ptouch_core::transport::PtouchDevice;
-
-    state.status_message = "Connecting to printer...".to_string();
-
-    match PtouchDevice::open_first() {
-        Ok(mut dev) => {
-            if let Err(e) = dev.init() {
-                state.status_message = format!("Init error: {}", e);
-                let _ = dev.close();
-                return;
-            }
-            match dev.feed_and_cut() {
-                Ok(()) => {
-                    state.status_message = "Feed & cut done".to_string();
-                    info!("Feed and cut successful");
-                }
-                Err(e) => {
-                    state.status_message = format!("Feed & cut error: {}", e);
-                    error!("Feed & cut error: {}", e);
-                }
-            }
-            let _ = dev.close();
-        }
-        Err(e) => {
-            state.status_message = format!("Connect error: {}", e);
-            error!("Failed to open printer: {}", e);
-        }
-    }
 }
 
 /// Export the current label preview as an image file.

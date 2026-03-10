@@ -261,6 +261,16 @@ impl PtouchDevice {
         Ok(())
     }
 
+    /// Query printer status without sending the init command.
+    ///
+    /// Flushes stale USB data and reads the printer status. Unlike
+    /// [`init`](Self::init), this does not send the 100-zero + ESC @
+    /// reset sequence, so it will not disturb the printer.
+    pub fn query_status(&mut self) -> Result<&PrinterStatus> {
+        self.flush_input();
+        self.get_status()
+    }
+
     /// Request and read the printer status.
     ///
     /// Sends the status request command and reads the 32-byte response.

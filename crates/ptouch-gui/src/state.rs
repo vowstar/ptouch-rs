@@ -4,9 +4,43 @@
 //! Application state for the P-Touch GUI.
 
 use std::path::PathBuf;
+use std::sync::mpsc;
 
 use ptouch_render::bitmap::LabelBitmap;
 use ptouch_render::text::TextAlign;
+
+/// Commands sent from the UI thread to the printer worker.
+pub enum PrinterCommand {
+    /// Poll for a connected printer (query status only, no init).
+    Poll,
+    /// Print raster data.
+    Print {
+        raster_lines: Vec<Vec<u8>>,
+        chain_print: bool,
+        auto_cut: bool,
+    },
+    /// Feed tape forward and cut.
+    FeedAndCut,
+}
+
+/// Responses sent from the printer worker back to the UI thread.
+pub enum PrinterResponse {
+    /// A printer was found and its status queried.
+    Connected {
+        model_name: String,
+        media_width: u8,
+        media_type: String,
+        max_px: u16,
+    },
+    /// No printer found or previously connected printer lost.
+    Disconnected,
+    /// Print job completed successfully.
+    PrintDone,
+    /// Feed and cut completed successfully.
+    FeedAndCutDone,
+    /// An operation failed.
+    Error(String),
+}
 
 /// A single element in the label composition.
 #[derive(Debug, Clone)]
@@ -97,6 +131,14 @@ pub struct AppState {
     pub font_search: String,
     /// Auto-cut after printing. When false, chain print mode (no cut).
     pub auto_cut: bool,
+    /// Whether a printer is currently connected (detected by background poll).
+    pub printer_connected: bool,
+    /// Whether a printer operation (print, feed & cut) is in progress.
+    pub operation_in_progress: bool,
+    /// Maximum printable pixels for the connected printer.
+    pub printer_max_px: u16,
+    /// Channel sender for commands to the printer worker thread.
+    pub printer_cmd_tx: Option<mpsc::Sender<PrinterCommand>>,
 }
 
 impl Default for AppState {
@@ -120,6 +162,10 @@ impl Default for AppState {
             rotation_input: String::new(),
             font_search: String::new(),
             auto_cut: true,
+            printer_connected: false,
+            operation_in_progress: false,
+            printer_max_px: 0,
+            printer_cmd_tx: None,
         }
     }
 }

@@ -3,6 +3,8 @@
 
 //! Main application struct and eframe::App implementation.
 
+use std::sync::mpsc;
+
 use log::{error, info};
 
 use ptouch_render::bitmap::LabelBitmap;
@@ -11,7 +13,8 @@ use ptouch_render::image_loader;
 use ptouch_render::text::TextRenderer;
 
 use crate::panels;
-use crate::state::{AppState, LabelElement};
+use crate::printer_worker;
+use crate::state::{AppState, LabelElement, PrinterResponse};
 
 /// The main P-Touch GUI application.
 pub struct PtouchApp {
@@ -19,18 +22,34 @@ pub struct PtouchApp {
     pub state: AppState,
     /// Text renderer instance for generating label bitmaps.
     renderer: TextRenderer,
+    /// Receiver for responses from the printer worker thread.
+    resp_rx: mpsc::Receiver<PrinterResponse>,
 }
 
 impl PtouchApp {
     /// Create a new application instance.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         setup_fallback_fonts(&cc.egui_ctx);
+
+        let (cmd_tx, cmd_rx) = mpsc::channel();
+        let (resp_tx, resp_rx) = mpsc::channel();
+
+        let ctx = cc.egui_ctx.clone();
+        std::thread::Builder::new()
+            .name("printer-worker".to_string())
+            .spawn(move || {
+                printer_worker::printer_worker(cmd_rx, resp_tx, ctx);
+            })
+            .expect("failed to spawn printer worker thread");
+
         Self {
             state: AppState {
                 available_fonts: ptouch_render::font::list_fonts(),
+                printer_cmd_tx: Some(cmd_tx),
                 ..AppState::default()
             },
             renderer: TextRenderer::new(),
+            resp_rx,
         }
     }
 
@@ -232,6 +251,51 @@ fn rotation_aware_font_size(
 
 impl eframe::App for PtouchApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Drain all pending responses from the printer worker
+        while let Ok(resp) = self.resp_rx.try_recv() {
+            match resp {
+                PrinterResponse::Connected {
+                    model_name,
+                    media_width,
+                    media_type,
+                    max_px,
+                } => {
+                    self.state.printer_connected = true;
+                    self.state.operation_in_progress = false;
+                    self.state.printer_max_px = max_px;
+                    self.state.printer_model =
+                        Some(format!("{}: {} mm {}", model_name, media_width, media_type));
+                    self.state.printer_status = Some("Connected".to_string());
+                    if media_width > 0 && media_width != self.state.tape_width_mm {
+                        self.state.tape_width_mm = media_width;
+                        self.state.update_tape_pixels();
+                        self.state.mark_dirty();
+                    }
+                }
+                PrinterResponse::Disconnected => {
+                    if self.state.printer_connected {
+                        self.state.printer_status = Some("Disconnected".to_string());
+                        self.state.printer_model = None;
+                    }
+                    self.state.printer_connected = false;
+                    self.state.operation_in_progress = false;
+                    self.state.printer_max_px = 0;
+                }
+                PrinterResponse::PrintDone => {
+                    self.state.operation_in_progress = false;
+                    self.state.status_message = "Print complete".to_string();
+                }
+                PrinterResponse::FeedAndCutDone => {
+                    self.state.operation_in_progress = false;
+                    self.state.status_message = "Feed & cut done".to_string();
+                }
+                PrinterResponse::Error(msg) => {
+                    self.state.operation_in_progress = false;
+                    self.state.status_message = msg;
+                }
+            }
+        }
+
         // Top toolbar
         egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
             panels::toolbar::show_toolbar(ui, &mut self.state);
@@ -267,6 +331,9 @@ impl eframe::App for PtouchApp {
         if self.state.needs_rerender {
             self.update_preview(ctx);
         }
+
+        // Periodic repaint so we pick up worker responses even when idle
+        ctx.request_repaint_after(std::time::Duration::from_secs(1));
     }
 }
 

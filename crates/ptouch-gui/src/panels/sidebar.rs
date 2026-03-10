@@ -3,11 +3,11 @@
 
 //! Left sidebar panel: printer info, tape selection, and element list.
 
-use log::{error, info};
+use log::info;
 
 use ptouch_core::tape;
 
-use crate::state::AppState;
+use crate::state::{AppState, PrinterCommand};
 
 /// Render the left sidebar.
 pub fn show_sidebar(ui: &mut egui::Ui, state: &mut AppState) {
@@ -30,60 +30,17 @@ fn show_printer_section(ui: &mut egui::Ui, state: &mut AppState) {
     let model_text = state.printer_model.as_deref().unwrap_or("Not connected");
     ui.label(format!("Model: {}", model_text));
 
-    let status_text = state.printer_status.as_deref().unwrap_or("--");
+    let status_text = state.printer_status.as_deref().unwrap_or("Scanning...");
     ui.label(format!("Status: {}", status_text));
 
     ui.add_space(4.0);
-    if ui.button("Connect").clicked() {
-        connect_printer(state);
-    }
-}
-
-/// Try to open a printer and read its status.
-fn connect_printer(state: &mut AppState) {
-    use ptouch_core::transport::PtouchDevice;
-
-    state.status_message = "Connecting...".to_string();
-
-    match PtouchDevice::open_first() {
-        Ok(mut dev) => {
-            if let Err(e) = dev.init() {
-                state.printer_status = Some(format!("Init error: {}", e));
-                state.status_message = format!("Init error: {}", e);
-                return;
-            }
-
-            // init() already called get_status() internally; use that result
-            if let Some(status) = dev.status() {
-                let width_mm = status.media_width;
-                state.printer_status = Some("Connected".to_string());
-                state.printer_model = Some(format!(
-                    "{}: {} mm {}",
-                    dev.device_info().name,
-                    width_mm,
-                    status.media_type_name()
-                ));
-
-                // Update tape width from printer
-                if width_mm > 0 {
-                    state.tape_width_mm = width_mm;
-                    state.update_tape_pixels();
-                    state.mark_dirty();
-                }
-
-                state.status_message = "Printer connected".to_string();
-                info!("Printer connected: {} mm tape", width_mm);
-            } else {
-                state.printer_status = Some("Connected (no status)".to_string());
-                state.status_message = "Printer connected".to_string();
-            }
-
-            let _ = dev.close();
-        }
-        Err(e) => {
-            state.printer_status = Some("Not found".to_string());
-            state.status_message = format!("Connect error: {}", e);
-            error!("Connect error: {}", e);
+    if ui
+        .add_enabled(!state.operation_in_progress, egui::Button::new("Refresh"))
+        .clicked()
+    {
+        if let Some(ref tx) = state.printer_cmd_tx {
+            let _ = tx.send(PrinterCommand::Poll);
+            info!("Manual printer refresh requested");
         }
     }
 }
