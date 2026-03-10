@@ -271,16 +271,7 @@ fn show_image_properties(
     }
 
     if ui.button("Change File...").clicked() {
-        if let Some(new_path) = rfd::FileDialog::new()
-            .add_filter(
-                "Images",
-                &[
-                    "png", "jpg", "jpeg", "gif", "bmp", "tiff", "tif", "webp", "ico", "pnm", "tga",
-                    "qoi", "svg", "svgz",
-                ],
-            )
-            .pick_file()
-        {
+        if let Some(new_path) = crate::widgets::image_file_dialog().pick_file() {
             match image_loader::load_image(&new_path, &image_loader::ImageLoadOptions::default()) {
                 Ok(bmp) => {
                     info!("Changed image to: {}", new_path.display());

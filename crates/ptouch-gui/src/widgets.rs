@@ -1,7 +1,33 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Huang Rui <vowstar@gmail.com>
 
-//! Custom egui widgets.
+//! Custom egui widgets and shared helpers.
+
+/// Build an image file dialog with per-format filters.
+///
+/// The first filter is "All Images" (default), followed by individual
+/// format groups so the user can narrow down if needed.
+pub fn image_file_dialog() -> rfd::FileDialog {
+    rfd::FileDialog::new()
+        .add_filter(
+            "All Images",
+            &[
+                "png", "jpg", "jpeg", "gif", "bmp", "tiff", "tif", "webp", "ico", "pnm", "tga",
+                "qoi", "svg", "svgz",
+            ],
+        )
+        .add_filter("PNG", &["png"])
+        .add_filter("JPEG", &["jpg", "jpeg"])
+        .add_filter("SVG", &["svg", "svgz"])
+        .add_filter("GIF", &["gif"])
+        .add_filter("BMP", &["bmp"])
+        .add_filter("TIFF", &["tiff", "tif"])
+        .add_filter("WebP", &["webp"])
+        .add_filter("ICO", &["ico"])
+        .add_filter("QOI", &["qoi"])
+        .add_filter("PNM", &["pnm"])
+        .add_filter("TGA", &["tga"])
+}
 
 /// iOS-style toggle switch widget.
 ///
