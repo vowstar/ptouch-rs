@@ -37,11 +37,10 @@ fn show_printer_section(ui: &mut egui::Ui, state: &mut AppState) {
     if ui
         .add_enabled(!state.operation_in_progress, egui::Button::new("Refresh"))
         .clicked()
+        && let Some(ref tx) = state.printer_cmd_tx
     {
-        if let Some(ref tx) = state.printer_cmd_tx {
-            let _ = tx.send(PrinterCommand::Poll);
-            info!("Manual printer refresh requested");
-        }
+        let _ = tx.send(PrinterCommand::Poll);
+        info!("Manual printer refresh requested");
     }
 }
 
@@ -115,10 +114,9 @@ fn show_elements_section(ui: &mut egui::Ui, state: &mut AppState) {
                 egui::Button::new("Up"),
             )
             .clicked()
+            && let Some(idx) = state.selected_element
         {
-            if let Some(idx) = state.selected_element {
-                action = Some(ElementAction::MoveUp(idx));
-            }
+            action = Some(ElementAction::MoveUp(idx));
         }
 
         if ui
@@ -131,19 +129,17 @@ fn show_elements_section(ui: &mut egui::Ui, state: &mut AppState) {
                 egui::Button::new("Down"),
             )
             .clicked()
+            && let Some(idx) = state.selected_element
         {
-            if let Some(idx) = state.selected_element {
-                action = Some(ElementAction::MoveDown(idx));
-            }
+            action = Some(ElementAction::MoveDown(idx));
         }
 
         if ui
             .add_enabled(has_selection, egui::Button::new("Delete"))
             .clicked()
+            && let Some(idx) = state.selected_element
         {
-            if let Some(idx) = state.selected_element {
-                action = Some(ElementAction::Delete(idx));
-            }
+            action = Some(ElementAction::Delete(idx));
         }
     });
 

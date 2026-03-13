@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Huang Rui <vowstar@gmail.com>
 
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
     "crates/ptouch-core",
     "crates/ptouch-render",
@@ -12,7 +12,7 @@ members = [
 
 [workspace.package]
 version = "0.2.0"
-edition = "2021"
+edition = "2024"
 authors = ["Huang Rui <vowstar@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/vowstar/ptouch-rs"

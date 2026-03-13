@@ -125,7 +125,7 @@ fn show_text_properties(
         changed = true;
     }
 
-    if let Some(ref mut size) = font_size {
+    if let Some(size) = font_size {
         ui.horizontal(|ui| {
             ui.label("Size:");
             if ui
@@ -222,13 +222,14 @@ fn show_text_properties(
                 .desired_width(60.0)
                 .hint_text("deg"),
         );
-        if resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-            if let Ok(val) = state.rotation_input.parse::<f32>() {
-                let clamped = val.clamp(-360.0, 360.0);
-                *rotation = clamped;
-                state.rotation_input = format!("{}", clamped);
-                changed = true;
-            }
+        if resp.lost_focus()
+            && ui.input(|i| i.key_pressed(egui::Key::Enter))
+            && let Ok(val) = state.rotation_input.parse::<f32>()
+        {
+            let clamped = val.clamp(-360.0, 360.0);
+            *rotation = clamped;
+            state.rotation_input = format!("{}", clamped);
+            changed = true;
         }
     });
 
@@ -251,7 +252,7 @@ fn show_image_properties(
 
     ui.label(format!("File: {}", path.display()));
 
-    if let Some(ref bmp) = bitmap {
+    if let &mut Some(ref bmp) = bitmap {
         ui.label(format!("Original: {} x {} px", bmp.width(), bmp.height()));
     }
 
@@ -270,18 +271,18 @@ fn show_image_properties(
         }
     }
 
-    if ui.button("Change File...").clicked() {
-        if let Some(new_path) = crate::widgets::image_file_dialog().pick_file() {
-            match image_loader::load_image(&new_path, &image_loader::ImageLoadOptions::default()) {
-                Ok(bmp) => {
-                    info!("Changed image to: {}", new_path.display());
-                    *path = new_path;
-                    *bitmap = Some(bmp);
-                    changed = true;
-                }
-                Err(e) => {
-                    error!("Load failed: {}", e);
-                }
+    if ui.button("Change File...").clicked()
+        && let Some(new_path) = crate::widgets::image_file_dialog().pick_file()
+    {
+        match image_loader::load_image(&new_path, &image_loader::ImageLoadOptions::default()) {
+            Ok(bmp) => {
+                info!("Changed image to: {}", new_path.display());
+                *path = new_path;
+                *bitmap = Some(bmp);
+                changed = true;
+            }
+            Err(e) => {
+                error!("Load failed: {}", e);
             }
         }
     }
@@ -299,7 +300,7 @@ fn show_image_properties(
         changed = true;
     }
 
-    if let Some(ref mut h) = target_height {
+    if let Some(h) = target_height {
         ui.horizontal(|ui| {
             ui.label("Height:");
             if ui
@@ -351,13 +352,14 @@ fn show_image_properties(
                 .desired_width(60.0)
                 .hint_text("deg"),
         );
-        if resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-            if let Ok(val) = state.rotation_input.parse::<f32>() {
-                let clamped = val.clamp(-360.0, 360.0);
-                *rotation = clamped;
-                state.rotation_input = format!("{}", clamped);
-                changed = true;
-            }
+        if resp.lost_focus()
+            && ui.input(|i| i.key_pressed(egui::Key::Enter))
+            && let Ok(val) = state.rotation_input.parse::<f32>()
+        {
+            let clamped = val.clamp(-360.0, 360.0);
+            *rotation = clamped;
+            state.rotation_input = format!("{}", clamped);
+            changed = true;
         }
     });
 

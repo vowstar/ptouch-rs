@@ -11,7 +11,7 @@ use std::time::Duration;
 use log::{debug, info, warn};
 use rusb::{Context, DeviceHandle, UsbContext};
 
-use crate::device::{self, DeviceFlags, DeviceInfo, BROTHER_VENDOR_ID};
+use crate::device::{self, BROTHER_VENDOR_ID, DeviceFlags, DeviceInfo};
 use crate::error::{PtouchError, Result};
 use crate::protocol;
 use crate::status::{PrinterStatus, STATUS_PACKET_SIZE};

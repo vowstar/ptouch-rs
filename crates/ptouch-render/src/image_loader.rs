@@ -14,8 +14,8 @@ use std::path::Path;
 use image::imageops::FilterType;
 use image::{DynamicImage, GrayImage};
 
-use crate::bitmap::LabelBitmap;
 use crate::Result;
+use crate::bitmap::LabelBitmap;
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -192,12 +192,13 @@ fn convert_to_bitmap(img: DynamicImage, options: &ImageLoadOptions) -> LabelBitm
     }
 
     // Scale to target height if requested, preserving aspect ratio.
-    if let Some(target_h) = options.target_height {
-        if target_h > 0 && target_h != h {
-            let scale = target_h as f64 / h as f64;
-            let new_w = ((w as f64 * scale).round() as u32).max(1);
-            gray = image::imageops::resize(&gray, new_w, target_h, FilterType::Lanczos3);
-        }
+    if let Some(target_h) = options.target_height
+        && target_h > 0
+        && target_h != h
+    {
+        let scale = target_h as f64 / h as f64;
+        let new_w = ((w as f64 * scale).round() as u32).max(1);
+        gray = image::imageops::resize(&gray, new_w, target_h, FilterType::Lanczos3);
     }
 
     // Determine if the image should be inverted (dark background).

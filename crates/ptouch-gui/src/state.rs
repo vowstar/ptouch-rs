@@ -185,14 +185,14 @@ impl AppState {
 
     /// Ensure the selected element index is valid.
     pub fn validate_selection(&mut self) {
-        if let Some(idx) = self.selected_element {
-            if idx >= self.elements.len() {
-                self.selected_element = if self.elements.is_empty() {
-                    None
-                } else {
-                    Some(self.elements.len() - 1)
-                };
-            }
+        if let Some(idx) = self.selected_element
+            && idx >= self.elements.len()
+        {
+            self.selected_element = if self.elements.is_empty() {
+                None
+            } else {
+                Some(self.elements.len() - 1)
+            };
         }
     }
 }

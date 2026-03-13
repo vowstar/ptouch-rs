@@ -8,9 +8,9 @@
 
 use cosmic_text::{Align, Attrs, Buffer, Color, Family, FontSystem, Metrics, Shaping, SwashCache};
 
-use crate::bitmap::LabelBitmap;
 use crate::RenderError;
 use crate::Result;
+use crate::bitmap::LabelBitmap;
 
 /// Text alignment within the label.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

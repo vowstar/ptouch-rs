@@ -81,32 +81,30 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &mut AppState) {
         if ui
             .add_enabled(connected && !busy && has_bitmap, egui::Button::new("Print"))
             .clicked()
+            && let Some(ref bitmap) = state.preview_bitmap
         {
-            if let Some(ref bitmap) = state.preview_bitmap {
-                let raster_lines = raster::bitmap_to_raster_lines(bitmap, state.printer_max_px);
-                let chain_print = !state.auto_cut;
-                let auto_cut = state.auto_cut;
-                if let Some(ref tx) = state.printer_cmd_tx {
-                    let _ = tx.send(PrinterCommand::Print {
-                        raster_lines,
-                        chain_print,
-                        auto_cut,
-                    });
-                    state.operation_in_progress = true;
-                    state.status_message = "Printing...".to_string();
-                }
+            let raster_lines = raster::bitmap_to_raster_lines(bitmap, state.printer_max_px);
+            let chain_print = !state.auto_cut;
+            let auto_cut = state.auto_cut;
+            if let Some(ref tx) = state.printer_cmd_tx {
+                let _ = tx.send(PrinterCommand::Print {
+                    raster_lines,
+                    chain_print,
+                    auto_cut,
+                });
+                state.operation_in_progress = true;
+                state.status_message = "Printing...".to_string();
             }
         }
 
         if ui
             .add_enabled(connected && !busy, egui::Button::new("Feed & Cut"))
             .clicked()
+            && let Some(ref tx) = state.printer_cmd_tx
         {
-            if let Some(ref tx) = state.printer_cmd_tx {
-                let _ = tx.send(PrinterCommand::FeedAndCut);
-                state.operation_in_progress = true;
-                state.status_message = "Feeding & cutting...".to_string();
-            }
+            let _ = tx.send(PrinterCommand::FeedAndCut);
+            state.operation_in_progress = true;
+            state.status_message = "Feeding & cutting...".to_string();
         }
 
         if ui.button("Export Image").clicked() {
