@@ -87,6 +87,14 @@ static DEVICE_TABLE: &[DeviceInfo] = &[
     },
     DeviceInfo {
         vid: 0x04f9,
+        pid: 0x200f,
+        name: "PT-9500PC",
+        max_px: 384,
+        dpi: 360,
+        flags: DeviceFlags::RASTER_PACKBITS.union(DeviceFlags::HAS_PRECUT),
+    },
+    DeviceInfo {
+        vid: 0x04f9,
         pid: 0x2011,
         name: "PT-2450PC",
         max_px: 128,
@@ -328,7 +336,7 @@ mod tests {
 
     #[test]
     fn test_device_count() {
-        assert_eq!(supported_devices().len(), 28);
+        assert_eq!(supported_devices().len(), 29);
     }
 
     #[test]
