@@ -101,8 +101,10 @@ ptouch list
 | `-c` | `--cut` | Add cut mark |
 | `-p` | `--pad` | Add padding in pixels |
 | | `--chain` | Skip final feed/cut (chained labels) |
+| | `--precut` | Cut before the label |
 | | `--binarize` | Binarization: auto, threshold, dither |
 | | `--copies` | Number of copies |
+| | `--timeout` | Printer timeout in seconds |
 | | `--debug` | Enable debug output |
 
 ## USB Permissions (Linux)
@@ -114,6 +116,34 @@ sudo cp udev/20-usb-ptouch-permissions.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
+
+## USB Driver (Windows)
+
+Communication goes through libusb, which on Windows can only reach a device
+that uses the WinUSB driver. Out of the box Windows binds the printer to its
+own driver (and the official Brother driver does the same), so `ptouch info`
+reports `Device not found` until you switch it. See issue
+[#4](https://github.com/vowstar/ptouch-rs/issues/4).
+
+1. Download [Zadig](https://zadig.akeo.ie/).
+2. Plug in the printer, then choose `Options > List All Devices`.
+3. Select your printer in the list (Brother VID `04F9`).
+4. Pick `WinUSB` as the target driver and click `Replace Driver`.
+5. Run `ptouch info` again.
+
+After this the normal Brother software no longer sees the printer. Undo it any
+time by uninstalling or rolling back the driver in Device Manager.
+
+## USB Driver (macOS)
+
+No driver replacement is needed. Install libusb and it works directly:
+
+```sh
+brew install libusb
+```
+
+If claiming the device fails with a busy or access error, make sure the
+printer is not added as a print queue in System Settings.
 
 ## Project Structure
 
