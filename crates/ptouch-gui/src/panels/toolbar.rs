@@ -7,6 +7,7 @@ use std::path::PathBuf;
 
 use log::{error, info};
 
+use ptouch_render::document::LabelDocument;
 use ptouch_render::raster;
 use ptouch_render::text::TextAlign;
 
@@ -102,7 +103,97 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &mut AppState) {
         if ui.button("Export Image").clicked() {
             do_export_image(state);
         }
+
+        ui.separator();
+
+        if ui.button("Save Layout").clicked() {
+            do_save_layout(state);
+        }
+
+        if ui.button("Open Layout").clicked() {
+            do_open_layout(state);
+        }
     });
+}
+
+/// Save the current design to a `.ptl` layout file (TOML with embedded images).
+fn do_save_layout(state: &mut AppState) {
+    if state.elements.is_empty() {
+        state.status_message = "Nothing to save".to_string();
+        return;
+    }
+
+    let document = LabelDocument {
+        version: ptouch_render::document::DOCUMENT_VERSION,
+        tape_width_mm: state.tape_width_mm,
+        font_name: state.font_name.clone(),
+        font_margin: state.font_margin,
+        elements: state.elements.clone(),
+    };
+
+    let text = match document.to_toml_string() {
+        Ok(text) => text,
+        Err(e) => {
+            state.status_message = format!("Save error: {}", e);
+            error!("Layout serialize error: {}", e);
+            return;
+        }
+    };
+
+    if let Some(path) = crate::widgets::layout_file_dialog()
+        .set_file_name("label.ptl")
+        .save_file()
+    {
+        let save_path: PathBuf = if path.extension().is_none() {
+            path.with_extension("ptl")
+        } else {
+            path
+        };
+        match std::fs::write(&save_path, text) {
+            Ok(()) => {
+                state.status_message = format!("Saved to {}", save_path.display());
+                info!("Saved layout: {}", save_path.display());
+            }
+            Err(e) => {
+                state.status_message = format!("Save error: {}", e);
+                error!("Layout write error: {}", e);
+            }
+        }
+    }
+}
+
+/// Open a `.ptl` layout file, replacing the current design.
+fn do_open_layout(state: &mut AppState) {
+    let Some(path) = crate::widgets::layout_file_dialog().pick_file() else {
+        return;
+    };
+
+    let text = match std::fs::read_to_string(&path) {
+        Ok(text) => text,
+        Err(e) => {
+            state.status_message = format!("Open error: {}", e);
+            error!("Layout read error: {}", e);
+            return;
+        }
+    };
+
+    match LabelDocument::from_toml_str(&text) {
+        Ok(document) => {
+            state.tape_width_mm = document.tape_width_mm;
+            state.update_tape_pixels();
+            state.font_name = document.font_name;
+            state.font_margin = document.font_margin;
+            state.elements = document.elements;
+            state.selected_element = None;
+            state.mark_dirty();
+            state.status_message = format!("Opened {}", path.display());
+            info!("Opened layout: {}", path.display());
+        }
+        Err(e) => {
+            state.status_message = format!("Open error: {}", e);
+            error!("Layout parse error: {}", e);
+        }
+    }
 }
 
 /// Export the current label preview as an image file.

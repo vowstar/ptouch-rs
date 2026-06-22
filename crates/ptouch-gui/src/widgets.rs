@@ -29,6 +29,11 @@ pub fn image_file_dialog() -> rfd::FileDialog {
         .add_filter("TGA", &["tga"])
 }
 
+/// Build a file dialog filtered to layout files (`.ptl`).
+pub fn layout_file_dialog() -> rfd::FileDialog {
+    rfd::FileDialog::new().add_filter("Layout", &["ptl"])
+}
+
 /// iOS-style toggle switch widget.
 ///
 /// Based on the egui demo toggle_switch example.
