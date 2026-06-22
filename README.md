@@ -11,6 +11,7 @@ Rust tool for Brother P-Touch USB label printers. CLI and GUI.
 - Compose multi-element labels (text + image + cut mark + padding)
 - Save and reload designs as self-contained `.ptl` layout files (images
   embedded), then print them from the GUI or CLI
+- Template layouts with `{{name}}` placeholders and batch-print from a CSV
 - Chain print and multi-copy support
 - GUI with live preview, zoom, and drag-and-drop element reordering
 - Export to image (PNG, JPEG, BMP, GIF, TIFF, WebP) without a printer connected
@@ -95,12 +96,38 @@ ptouch info
 ptouch list
 ```
 
+### Layout templates and batch printing
+
+Text in a layout may contain `{{name}}` placeholders. Fill them per print, or
+drive a batch from a CSV file.
+
+```sh
+# See which placeholders a layout declares
+ptouch print --layout badge.ptl --list-vars
+
+# Fill placeholders for a single label
+ptouch print --layout badge.ptl --set name=Alice --set id=A001
+
+# One label per CSV row; the header row names the placeholders
+ptouch print --layout badge.ptl --csv people.csv
+
+# Batch to image files instead of a printer ({n} is the row number)
+ptouch print --layout badge.ptl --csv people.csv -o 'badge-{n}.png'
+
+# CSV from stdin, with a constant value applied to every row
+cat people.csv | ptouch print --layout badge.ptl --csv - --set dept=Eng
+```
+
 ### Print options
 
 | Flag | Long | Description |
 |------|------|-------------|
 | | `TEXT...` | Text lines (max 4) |
 | `-l` | `--layout` | Print a saved layout file (.ptl); overrides content flags |
+| | `--set` | Set a layout placeholder, `KEY=VALUE` (repeatable) |
+| | `--csv` | Batch-print one label per CSV row (`-` for stdin) |
+| | `--list-vars` | List the placeholders a layout declares, then exit |
+| | `--allow-missing` | Render placeholders with no value as blank |
 | `-i` | `--image` | Image file path |
 | `-o` | `--output` | Export to image file instead of printing |
 | `-f` | `--font` | Font name (default: DejaVuSans) |
