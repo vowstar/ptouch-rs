@@ -6,6 +6,7 @@
 //! Supports printing text labels, images, or combinations of both.
 //! Can also export labels to image files (PNG, JPEG, BMP, etc.) for preview.
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::process;
 
@@ -58,6 +59,18 @@ struct PrintArgs {
     /// --pad) are ignored with a warning.
     #[arg(short = 'l', long, value_name = "FILE")]
     layout: Option<String>,
+
+    /// Set a layout placeholder value (repeatable): --set name=Alice
+    #[arg(long = "set", value_name = "KEY=VALUE")]
+    set: Vec<String>,
+
+    /// List the placeholders a layout declares, then exit
+    #[arg(long)]
+    list_vars: bool,
+
+    /// Render placeholders with no value as blank instead of erroring
+    #[arg(long)]
+    allow_missing: bool,
 
     /// Print an image file
     #[arg(short = 'i', long)]
@@ -228,6 +241,58 @@ fn ignored_content_flags(matches: &ArgMatches) -> Vec<String> {
         .collect()
 }
 
+/// Parse `--set KEY=VALUE` arguments into a map. Errors on an entry with no `=`.
+fn parse_set_args(set: &[String]) -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
+    let mut values = BTreeMap::new();
+    for entry in set {
+        let (key, value) = entry
+            .split_once('=')
+            .ok_or_else(|| format!("invalid --set '{}' (expected KEY=VALUE)", entry))?;
+        values.insert(key.to_string(), value.to_string());
+    }
+    Ok(values)
+}
+
+/// Check provided values against the placeholders a layout declares.
+///
+/// Warns once about values that the layout does not use, and (unless
+/// `allow_missing`) errors when a declared placeholder has no value.
+fn validate_vars(
+    declared: &[String],
+    provided: &BTreeSet<String>,
+    allow_missing: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let declared_set: BTreeSet<&String> = declared.iter().collect();
+
+    let unused: Vec<&String> = provided
+        .iter()
+        .filter(|name| !declared_set.contains(name))
+        .collect();
+    if !unused.is_empty() {
+        let names: Vec<&str> = unused.iter().map(|s| s.as_str()).collect();
+        eprintln!(
+            "WARN: value(s) not used by the layout: {}",
+            names.join(", ")
+        );
+    }
+
+    if !allow_missing {
+        let missing: Vec<&str> = declared
+            .iter()
+            .filter(|name| !provided.contains(*name))
+            .map(|s| s.as_str())
+            .collect();
+        if !missing.is_empty() {
+            return Err(format!(
+                "missing value(s) for placeholder(s): {} (pass --set or --allow-missing)",
+                missing.join(", ")
+            )
+            .into());
+        }
+    }
+    Ok(())
+}
+
 /// Initialize env_logger with optional debug level.
 fn init_logging(debug: bool) {
     let level = if debug { "debug" } else { "warn" };
@@ -368,6 +433,12 @@ fn execute_print(args: &PrintArgs, ignored: &[String]) -> Result<(), Box<dyn std
         process::exit(1);
     }
 
+    // Layout-only modifiers make no sense without a layout.
+    if args.layout.is_none() && (!args.set.is_empty() || args.list_vars || args.allow_missing) {
+        eprintln!("Error: --set, --list-vars, and --allow-missing require --layout");
+        process::exit(1);
+    }
+
     if let Some(layout_path) = args.layout.as_deref() {
         if !ignored.is_empty() {
             eprintln!("WARN: --layout is set; ignoring: {}", ignored.join(", "));
@@ -424,7 +495,20 @@ fn execute_print(args: &PrintArgs, ignored: &[String]) -> Result<(), Box<dyn std
 /// Load a `.ptl` layout, render it, and either print it or save as an image.
 fn print_layout(args: &PrintArgs, layout_path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let text = std::fs::read_to_string(layout_path)?;
-    let doc = LabelDocument::from_toml_str(&text)?;
+    let mut doc = LabelDocument::from_toml_str(&text)?;
+
+    if args.list_vars {
+        for name in doc.placeholders() {
+            println!("{}", name);
+        }
+        return Ok(());
+    }
+
+    // Fill placeholders from --set values, rejecting missing ones by default.
+    let values = parse_set_args(&args.set)?;
+    let provided: BTreeSet<String> = values.keys().cloned().collect();
+    validate_vars(&doc.placeholders(), &provided, args.allow_missing)?;
+    doc.apply_values(&values);
 
     let saved_px = tape::find_tape(doc.tape_width_mm).map(|t| u32::from(t.pixels));
 
@@ -687,5 +771,38 @@ mod tests {
             "unexpected ignored flags: {:?}",
             ignored
         );
+    }
+
+    #[test]
+    fn test_parse_set_args_ok() {
+        let set = vec!["name=Alice".to_string(), "id=A=1".to_string()];
+        let values = parse_set_args(&set).unwrap();
+        assert_eq!(values.get("name").map(String::as_str), Some("Alice"));
+        // Only the first '=' splits, so values may contain '='.
+        assert_eq!(values.get("id").map(String::as_str), Some("A=1"));
+    }
+
+    #[test]
+    fn test_parse_set_args_rejects_missing_eq() {
+        assert!(parse_set_args(&["bogus".to_string()]).is_err());
+    }
+
+    #[test]
+    fn test_validate_vars_missing_errors() {
+        let declared = vec!["name".to_string(), "id".to_string()];
+        let provided: BTreeSet<String> = ["name".to_string()].into_iter().collect();
+        assert!(validate_vars(&declared, &provided, false).is_err());
+        // allow_missing turns the error off.
+        assert!(validate_vars(&declared, &provided, true).is_ok());
+    }
+
+    #[test]
+    fn test_validate_vars_unused_is_ok() {
+        let declared = vec!["name".to_string()];
+        let provided: BTreeSet<String> = ["name".to_string(), "extra".to_string()]
+            .into_iter()
+            .collect();
+        // "extra" is unused (warns) but not an error.
+        assert!(validate_vars(&declared, &provided, false).is_ok());
     }
 }
