@@ -4,7 +4,8 @@
 //! Right properties panel for editing selected element attributes.
 
 use log::{error, info};
-use std::path::PathBuf;
+use std::io::Cursor;
+use std::path::{Path, PathBuf};
 
 use ptouch_render::image_loader;
 use ptouch_render::text::TextAlign;
@@ -39,11 +40,13 @@ pub fn show_properties(ui: &mut egui::Ui, state: &mut AppState) {
         }
         LabelElement::Image {
             path,
+            image_data,
             bitmap,
             rotation,
             target_height,
         } => {
-            changed |= show_image_properties(ui, path, bitmap, rotation, target_height, state);
+            changed |=
+                show_image_properties(ui, path, image_data, bitmap, rotation, target_height, state);
         }
         LabelElement::CutMark => {
             ui.label("Cut Mark");
@@ -236,10 +239,41 @@ fn show_text_properties(
     changed
 }
 
+/// Read and decode an image file, updating the embedded bytes and render cache.
+/// Returns true on success.
+fn load_image_into(
+    path: &Path,
+    image_data: &mut Vec<u8>,
+    bitmap: &mut Option<ptouch_render::bitmap::LabelBitmap>,
+) -> bool {
+    let bytes = match std::fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            error!("Image read failed: {}", e);
+            return false;
+        }
+    };
+    match image_loader::load_image_from_reader(
+        Cursor::new(&bytes),
+        &image_loader::ImageLoadOptions::default(),
+    ) {
+        Ok(bmp) => {
+            *image_data = bytes;
+            *bitmap = Some(bmp);
+            true
+        }
+        Err(e) => {
+            error!("Image decode failed: {}", e);
+            false
+        }
+    }
+}
+
 /// Show properties for an image element. Returns true if changed.
 fn show_image_properties(
     ui: &mut egui::Ui,
-    path: &mut PathBuf,
+    path: &mut Option<PathBuf>,
+    image_data: &mut Vec<u8>,
     bitmap: &mut Option<ptouch_render::bitmap::LabelBitmap>,
     rotation: &mut f32,
     target_height: &mut Option<u32>,
@@ -250,7 +284,11 @@ fn show_image_properties(
     ui.label("Image");
     ui.add_space(4.0);
 
-    ui.label(format!("File: {}", path.display()));
+    let file_label = path
+        .as_ref()
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|| "embedded".to_string());
+    ui.label(format!("File: {}", file_label));
 
     if let &mut Some(ref bmp) = bitmap {
         ui.label(format!("Original: {} x {} px", bmp.width(), bmp.height()));
@@ -258,33 +296,22 @@ fn show_image_properties(
 
     ui.add_space(4.0);
 
-    if ui.button("Reload").clicked() {
-        match image_loader::load_image(path, &image_loader::ImageLoadOptions::default()) {
-            Ok(bmp) => {
-                info!("Reloaded image: {}", path.display());
-                *bitmap = Some(bmp);
-                changed = true;
-            }
-            Err(e) => {
-                error!("Reload failed: {}", e);
-            }
-        }
+    // Reload re-reads the original file when its path is still known.
+    if let Some(p) = path.clone()
+        && ui.button("Reload").clicked()
+        && load_image_into(&p, image_data, bitmap)
+    {
+        info!("Reloaded image: {}", p.display());
+        changed = true;
     }
 
     if ui.button("Change File...").clicked()
         && let Some(new_path) = crate::widgets::image_file_dialog().pick_file()
+        && load_image_into(&new_path, image_data, bitmap)
     {
-        match image_loader::load_image(&new_path, &image_loader::ImageLoadOptions::default()) {
-            Ok(bmp) => {
-                info!("Changed image to: {}", new_path.display());
-                *path = new_path;
-                *bitmap = Some(bmp);
-                changed = true;
-            }
-            Err(e) => {
-                error!("Load failed: {}", e);
-            }
-        }
+        info!("Changed image to: {}", new_path.display());
+        *path = Some(new_path);
+        changed = true;
     }
 
     ui.add_space(8.0);

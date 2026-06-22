@@ -3,11 +3,11 @@
 
 //! Application state for the P-Touch GUI.
 
-use std::path::PathBuf;
 use std::sync::mpsc;
 
 use ptouch_render::bitmap::LabelBitmap;
-use ptouch_render::text::TextAlign;
+
+pub use ptouch_render::document::LabelElement;
 
 /// Commands sent from the UI thread to the printer worker.
 pub enum PrinterCommand {
@@ -40,57 +40,6 @@ pub enum PrinterResponse {
     FeedAndCutDone,
     /// An operation failed.
     Error(String),
-}
-
-/// A single element in the label composition.
-#[derive(Debug, Clone)]
-pub enum LabelElement {
-    /// A text block with content, optional font size, alignment, and rotation.
-    Text {
-        content: String,
-        font_size: Option<f32>,
-        align: TextAlign,
-        /// Rotation angle in degrees (clockwise). 0.0 = horizontal.
-        rotation: f32,
-    },
-    /// An image loaded from a file.
-    Image {
-        path: PathBuf,
-        bitmap: Option<LabelBitmap>,
-        /// Rotation angle in degrees (clockwise). 0.0 = horizontal.
-        rotation: f32,
-        /// Target height in pixels. None = auto (fit to tape height).
-        target_height: Option<u32>,
-    },
-    /// A cut mark separator.
-    CutMark,
-    /// Horizontal padding in pixels.
-    Padding { pixels: u32 },
-}
-
-impl LabelElement {
-    /// Returns a short display name for the element list.
-    pub fn display_name(&self) -> String {
-        match self {
-            LabelElement::Text { content, .. } => {
-                let preview: String = content.chars().take(20).collect();
-                if content.len() > 20 {
-                    format!("Text: {}...", preview)
-                } else {
-                    format!("Text: {}", preview)
-                }
-            }
-            LabelElement::Image { path, .. } => {
-                let name = path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_else(|| "unknown".to_string());
-                format!("Image: {}", name)
-            }
-            LabelElement::CutMark => "Cut Mark".to_string(),
-            LabelElement::Padding { pixels } => format!("Padding: {} px", pixels),
-        }
-    }
 }
 
 /// Central application state shared across all panels.

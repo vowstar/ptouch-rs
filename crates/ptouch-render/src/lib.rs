@@ -9,6 +9,7 @@
 pub mod base64_bytes;
 pub mod bitmap;
 pub mod compose;
+pub mod document;
 pub mod font;
 pub mod image_loader;
 pub mod raster;

@@ -7,7 +7,6 @@ use std::path::PathBuf;
 
 use log::{error, info};
 
-use ptouch_render::image_loader;
 use ptouch_render::raster;
 use ptouch_render::text::TextAlign;
 
@@ -29,31 +28,24 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &mut AppState) {
             info!("Added text element");
         }
 
-        if ui.button("Add Image").clicked() {
-            // Open a file dialog for image files
-            if let Some(path) = crate::widgets::image_file_dialog().pick_file() {
-                let bitmap = match image_loader::load_image(
-                    &path,
-                    &image_loader::ImageLoadOptions::default(),
-                ) {
-                    Ok(bmp) => {
-                        info!("Loaded image: {}", path.display());
-                        Some(bmp)
-                    }
-                    Err(e) => {
-                        error!("Failed to load image: {}", e);
-                        state.status_message = format!("Image load error: {}", e);
-                        None
-                    }
-                };
-                state.elements.push(LabelElement::Image {
-                    path,
-                    bitmap,
-                    rotation: 0.0,
-                    target_height: None,
-                });
-                state.selected_element = Some(state.elements.len() - 1);
-                state.mark_dirty();
+        if ui.button("Add Image").clicked()
+            && let Some(path) = crate::widgets::image_file_dialog().pick_file()
+        {
+            // Read the original source bytes so the image is embedded in the
+            // label and stays self-contained when saved to a layout file.
+            match std::fs::read(&path) {
+                Ok(bytes) => {
+                    info!("Loaded image: {}", path.display());
+                    state
+                        .elements
+                        .push(LabelElement::image_from_bytes(Some(path), bytes));
+                    state.selected_element = Some(state.elements.len() - 1);
+                    state.mark_dirty();
+                }
+                Err(e) => {
+                    error!("Failed to read image: {}", e);
+                    state.status_message = format!("Image read error: {}", e);
+                }
             }
         }
 

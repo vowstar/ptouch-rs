@@ -7,14 +7,11 @@ use std::sync::mpsc;
 
 use log::{error, info};
 
-use ptouch_render::bitmap::LabelBitmap;
-use ptouch_render::compose;
-use ptouch_render::image_loader;
 use ptouch_render::text::TextRenderer;
 
 use crate::panels;
 use crate::printer_worker;
-use crate::state::{AppState, LabelElement, PrinterResponse};
+use crate::state::{AppState, PrinterResponse};
 
 /// The main P-Touch GUI application.
 pub struct PtouchApp {
@@ -63,114 +60,20 @@ impl PtouchApp {
             return;
         }
 
-        let print_width = self.state.tape_width_px;
-        let mut result: Option<LabelBitmap> = None;
-
-        for element in &self.state.elements {
-            let segment = match element {
-                LabelElement::Text {
-                    content,
-                    font_size,
-                    align,
-                    rotation,
-                } => {
-                    if content.is_empty() {
-                        continue;
-                    }
-                    let lines: Vec<&str> = content.lines().collect();
-
-                    let norm = ((*rotation % 360.0) + 360.0) % 360.0;
-                    let is_rotated = !(norm.abs() < 0.5 || (norm - 360.0).abs() < 0.5);
-
-                    // For rotated text with auto font size, calculate a size
-                    // that fits within tape_height after rotation.
-                    let effective_font_size =
-                        rotation_aware_font_size(*font_size, *rotation, &lines, print_width);
-
-                    // For rotated text, use a taller render area so all lines
-                    // are visible (the height becomes tape length after rotation).
-                    let render_height = if is_rotated {
-                        if let Some(fs) = effective_font_size {
-                            let line_h = (fs * 1.2).ceil();
-                            let text_h = (lines.len() as f32 * line_h).ceil() as u32
-                                + self.state.font_margin * 2;
-                            text_h.max(print_width)
-                        } else {
-                            print_width
-                        }
-                    } else {
-                        print_width
-                    };
-
-                    let bmp = match self.renderer.render_text(
-                        &lines,
-                        render_height,
-                        &self.state.font_name,
-                        effective_font_size,
-                        self.state.font_margin,
-                        *align,
-                    ) {
-                        Ok(bmp) => bmp,
-                        Err(e) => {
-                            error!("Text render failed: {}", e);
-                            self.state.status_message = format!("Text render error: {}", e);
-                            continue;
-                        }
-                    };
-
-                    if is_rotated {
-                        // Trim whitespace so the rotated bounding box reflects
-                        // actual text content, not full tape-height padding.
-                        bmp.trim_vertical()
-                            .rotate(*rotation)
-                            .fit_height(print_width)
-                    } else {
-                        bmp
-                    }
-                }
-                LabelElement::Image {
-                    path,
-                    bitmap,
-                    rotation,
-                    target_height,
-                } => {
-                    let bmp = if let Some(bmp) = bitmap {
-                        bmp.clone()
-                    } else {
-                        match image_loader::load_image(
-                            path,
-                            &image_loader::ImageLoadOptions::default(),
-                        ) {
-                            Ok(bmp) => bmp,
-                            Err(e) => {
-                                error!("Image load failed: {}", e);
-                                self.state.status_message = format!("Image load error: {}", e);
-                                continue;
-                            }
-                        }
-                    };
-
-                    // Scale to target height (auto = tape height, manual = specified)
-                    let scale_h = target_height.unwrap_or(print_width);
-                    let bmp = bmp.scale_to_height(scale_h);
-
-                    let norm = ((*rotation % 360.0) + 360.0) % 360.0;
-                    let is_rotated = !(norm.abs() < 0.5 || (norm - 360.0).abs() < 0.5);
-                    if is_rotated {
-                        bmp.rotate(*rotation).fit_height(print_width)
-                    } else {
-                        bmp.fit_height(print_width)
-                    }
-                }
-                LabelElement::CutMark => compose::cutmark(print_width),
-                LabelElement::Padding { pixels } => compose::padding(print_width, *pixels),
-            };
-
-            result = Some(match result {
-                Some(prev) => prev.append(&segment),
-                None => segment,
-            });
-        }
+        let result = match ptouch_render::document::render_elements(
+            &self.state.elements,
+            self.state.tape_width_px,
+            &self.state.font_name,
+            self.state.font_margin,
+            &mut self.renderer,
+        ) {
+            Ok(result) => result,
+            Err(e) => {
+                error!("Render failed: {}", e);
+                self.state.status_message = format!("Render error: {}", e);
+                None
+            }
+        };
 
         if let Some(ref bitmap) = result {
             let rgba = bitmap.to_rgba_image();
@@ -203,49 +106,6 @@ impl PtouchApp {
 
         self.state.preview_bitmap = result;
         info!("Preview updated");
-    }
-}
-
-/// Calculate font size that fits within `tape_height` after rotation.
-///
-/// For 0 degrees, returns the original font_size (None = let renderer auto-size).
-/// For other angles, estimates the maximum font size whose rotated bounding box
-/// fits within the tape height.
-fn rotation_aware_font_size(
-    font_size: Option<f32>,
-    rotation_deg: f32,
-    lines: &[&str],
-    tape_height: u32,
-) -> Option<f32> {
-    // User-specified font size: use it directly, no auto-adjustment
-    if font_size.is_some() {
-        return font_size;
-    }
-
-    let norm = ((rotation_deg % 360.0) + 360.0) % 360.0;
-    // No rotation or effectively 0/360: let renderer auto-size normally
-    if norm.abs() < 0.5 || (norm - 360.0).abs() < 0.5 {
-        return None;
-    }
-
-    let angle_rad = norm.to_radians();
-    let sin_a = angle_rad.sin().abs();
-    let cos_a = angle_rad.cos().abs();
-    let num_lines = lines.len().max(1) as f32;
-    let max_chars = lines.iter().map(|l| l.chars().count()).max().unwrap_or(1) as f32;
-    let available = tape_height as f32;
-
-    // Rotated bounding box height:
-    //   bbox_h = text_width * |sin| + text_height * |cos|
-    // where text_width ~ max_chars * font_size * 0.6
-    //       text_height ~ num_lines * font_size * 1.2
-    // Solve for font_size:
-    //   font_size = available / (max_chars * 0.6 * |sin| + num_lines * 1.2 * |cos|)
-    let denom = max_chars * 0.6 * sin_a + num_lines * 1.2 * cos_a;
-    if denom > 0.01 {
-        Some((available / denom).max(4.0))
-    } else {
-        None
     }
 }
 

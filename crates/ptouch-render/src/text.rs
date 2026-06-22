@@ -7,13 +7,15 @@
 //! Supports auto-sizing, alignment, and font selection.
 
 use cosmic_text::{Align, Attrs, Buffer, Color, Family, FontSystem, Metrics, Shaping, SwashCache};
+use serde::{Deserialize, Serialize};
 
 use crate::RenderError;
 use crate::Result;
 use crate::bitmap::LabelBitmap;
 
 /// Text alignment within the label.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum TextAlign {
     /// Align text to the left edge.
     Left,
