@@ -6,6 +6,7 @@
 //! This crate provides bitmap rendering, text layout, image loading,
 //! and raster conversion for label printing.
 
+pub mod base64_bytes;
 pub mod bitmap;
 pub mod compose;
 pub mod font;
