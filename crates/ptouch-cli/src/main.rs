@@ -9,7 +9,8 @@
 use std::path::Path;
 use std::process;
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::parser::ValueSource;
+use clap::{ArgMatches, CommandFactory, FromArgMatches, Parser, Subcommand, ValueEnum};
 use log::debug;
 
 use ptouch_core::device::{self, DeviceFlags, DeviceInfo};
@@ -18,6 +19,7 @@ use ptouch_core::tape;
 use ptouch_core::transport::PtouchDevice;
 
 use ptouch_render::bitmap::LabelBitmap;
+use ptouch_render::document::{self, LabelDocument};
 use ptouch_render::image_loader;
 use ptouch_render::raster;
 use ptouch_render::text::{TextAlign, TextRenderer};
@@ -50,6 +52,12 @@ struct PrintArgs {
     /// Text lines to print (each argument = one line, max 4)
     #[arg(value_name = "TEXT")]
     text: Vec<String>,
+
+    /// Print a saved layout file (.ptl). The layout is authoritative; ad-hoc
+    /// content flags (text, --image, --font, --size, --align, --margin, --cut,
+    /// --pad) are ignored with a warning.
+    #[arg(short = 'l', long, value_name = "FILE")]
+    layout: Option<String>,
 
     /// Print an image file
     #[arg(short = 'i', long)]
@@ -162,7 +170,11 @@ impl BinarizeArg {
 // ---------------------------------------------------------------------------
 
 fn main() {
-    let cli = Cli::parse();
+    let matches = Cli::command().get_matches();
+    let cli = match Cli::from_arg_matches(&matches) {
+        Ok(cli) => cli,
+        Err(e) => e.exit(),
+    };
 
     match cli.command {
         Commands::List => execute_list(),
@@ -176,12 +188,44 @@ fn main() {
         }
         Commands::Print(args) => {
             init_logging(args.debug);
-            if let Err(e) = execute_print(&args) {
+            // When a layout drives the label, ad-hoc content flags do not
+            // apply; collect the ones the user typed so we can warn.
+            let ignored = if args.layout.is_some() {
+                ignored_content_flags(&matches)
+            } else {
+                Vec::new()
+            };
+            if let Err(e) = execute_print(&args, &ignored) {
                 eprintln!("Error: {}", e);
                 process::exit(1);
             }
         }
     }
+}
+
+/// Ad-hoc content flags overridden when `--layout` is set. Keep in sync with
+/// `PrintArgs`; the `content_flag_ids_resolve` test guards against renames.
+const CONTENT_FLAG_IDS: &[&str] = &[
+    "text", "image", "font", "size", "align", "margin", "cut", "pad",
+];
+
+/// Return the display names of content flags the user explicitly passed on the
+/// command line (defaults do not count), for the warn-and-ignore message.
+fn ignored_content_flags(matches: &ArgMatches) -> Vec<String> {
+    let Some(sub) = matches.subcommand_matches("print") else {
+        return Vec::new();
+    };
+    CONTENT_FLAG_IDS
+        .iter()
+        .filter(|id| sub.value_source(id) == Some(ValueSource::CommandLine))
+        .map(|id| {
+            if *id == "text" {
+                "TEXT".to_string()
+            } else {
+                format!("--{}", id)
+            }
+        })
+        .collect()
 }
 
 /// Initialize env_logger with optional debug level.
@@ -317,11 +361,18 @@ fn execute_info(_args: &InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
 // Subcommand: print
 // ---------------------------------------------------------------------------
 
-/// Build a label from text/images and either print it or save as PNG.
-fn execute_print(args: &PrintArgs) -> Result<(), Box<dyn std::error::Error>> {
+/// Build a label from a layout file or ad-hoc text/images, then print or save.
+fn execute_print(args: &PrintArgs, ignored: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(layout_path) = args.layout.as_deref() {
+        if !ignored.is_empty() {
+            eprintln!("WARN: --layout is set; ignoring: {}", ignored.join(", "));
+        }
+        return print_layout(args, layout_path);
+    }
+
     // Validate arguments
     if args.text.is_empty() && args.image.is_none() {
-        eprintln!("Error: nothing to print (provide text or --image)");
+        eprintln!("Error: nothing to print (provide text, --image, or --layout)");
         process::exit(1);
     }
 
@@ -355,10 +406,82 @@ fn execute_print(args: &PrintArgs) -> Result<(), Box<dyn std::error::Error>> {
             (u32::from(width), max, Some(dev))
         };
 
-    // Build the label bitmap
     let bitmap = build_label(args, print_width)?;
+    emit_label(&bitmap, args, max_px, device.as_mut())?;
 
-    // Output: save to PNG or print to device
+    if let Some(dev) = device {
+        dev.close()?;
+    }
+
+    Ok(())
+}
+
+/// Load a `.ptl` layout, render it, and either print it or save as an image.
+fn print_layout(args: &PrintArgs, layout_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let text = std::fs::read_to_string(layout_path)?;
+    let doc = LabelDocument::from_toml_str(&text)?;
+
+    let saved_px = tape::find_tape(doc.tape_width_mm).map(|t| u32::from(t.pixels));
+
+    // Resolve the print width and optionally open the device.
+    //   --tape-width: forced PNG width (requires --output)
+    //   --output only: PNG export at the saved width, no printer needed
+    //   otherwise: print at the printer's actual width, warn on mismatch
+    let (print_width, max_px, mut device): (u32, u16, Option<PtouchDevice>) =
+        if let Some(w) = args.tape_width {
+            if args.output.is_none() {
+                eprintln!("Error: --tape-width requires --output");
+                process::exit(1);
+            }
+            (w, w as u16, None)
+        } else if args.output.is_some() {
+            let w = saved_px.ok_or_else(|| {
+                PtouchError::StatusError("unknown saved tape width; pass --tape-width".to_string())
+            })?;
+            (w, w as u16, None)
+        } else {
+            let mut dev = PtouchDevice::open_first()?;
+            dev.init()?;
+            let printer_px = u32::from(dev.tape_width_px().ok_or_else(|| {
+                PtouchError::StatusError("Could not determine tape width".to_string())
+            })?);
+            if saved_px.is_some_and(|s| s != printer_px) {
+                let printer_mm = dev.status().map(|s| s.media_width).unwrap_or(0);
+                eprintln!(
+                    "WARN: layout saved for {}mm, printer has {}mm; refitting to {}mm",
+                    doc.tape_width_mm, printer_mm, printer_mm
+                );
+            }
+            let max = dev.max_px();
+            (printer_px, max, Some(dev))
+        };
+
+    let mut renderer = TextRenderer::new();
+    let bitmap = document::render_elements(
+        &doc.elements,
+        print_width,
+        &doc.font_name,
+        doc.font_margin,
+        &mut renderer,
+    )?
+    .ok_or_else(|| PtouchError::SendFailed("layout produced no output".to_string()))?;
+
+    emit_label(&bitmap, args, max_px, device.as_mut())?;
+
+    if let Some(dev) = device {
+        dev.close()?;
+    }
+
+    Ok(())
+}
+
+/// Save a rendered label to an image file or print it to the device.
+fn emit_label(
+    bitmap: &LabelBitmap,
+    args: &PrintArgs,
+    max_px: u16,
+    device: Option<&mut PtouchDevice>,
+) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(ref output_path) = args.output {
         bitmap.save(Path::new(output_path))?;
         let tape_mm = bitmap.width() as f64 / 180.0 * 25.4;
@@ -369,18 +492,12 @@ fn execute_print(args: &PrintArgs) -> Result<(), Box<dyn std::error::Error>> {
             bitmap.height(),
             tape_mm
         );
-    } else if let Some(ref mut dev) = device {
-        print_to_device(dev, &bitmap, max_px, args)?;
+    } else if let Some(dev) = device {
+        print_to_device(dev, bitmap, max_px, args)?;
     } else {
         eprintln!("Error: no output destination (use --output or connect a printer)");
         process::exit(1);
     }
-
-    // Close the device if we opened one
-    if let Some(dev) = device {
-        dev.close()?;
-    }
-
     Ok(())
 }
 
@@ -516,4 +633,47 @@ fn print_to_device(
     );
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn print_matches(argv: &[&str]) -> ArgMatches {
+        Cli::command().get_matches_from(argv)
+    }
+
+    #[test]
+    fn test_content_flag_ids_resolve() {
+        let cmd = Cli::command();
+        let print = cmd.find_subcommand("print").expect("print subcommand");
+        for id in CONTENT_FLAG_IDS {
+            assert!(
+                print.get_arguments().any(|a| a.get_id() == *id),
+                "content flag id '{}' not found in print args",
+                id
+            );
+        }
+    }
+
+    #[test]
+    fn test_typed_content_flags_are_reported() {
+        let matches = print_matches(&["ptouch", "print", "Hello", "-s", "24", "-l", "x.ptl"]);
+        let ignored = ignored_content_flags(&matches);
+        assert!(ignored.contains(&"TEXT".to_string()));
+        assert!(ignored.contains(&"--size".to_string()));
+        assert!(!ignored.contains(&"--font".to_string()));
+    }
+
+    #[test]
+    fn test_defaulted_flags_are_not_reported() {
+        // Only --layout is given; defaults (font, align, ...) must not warn.
+        let matches = print_matches(&["ptouch", "print", "-l", "x.ptl"]);
+        let ignored = ignored_content_flags(&matches);
+        assert!(
+            ignored.is_empty(),
+            "unexpected ignored flags: {:?}",
+            ignored
+        );
+    }
 }
