@@ -14,6 +14,7 @@ use std::path::PathBuf;
 use log::error;
 use serde::{Deserialize, Serialize};
 
+use crate::RenderError;
 use crate::Result;
 use crate::bitmap::LabelBitmap;
 use crate::compose;
@@ -36,6 +37,51 @@ pub struct LabelDocument {
     pub font_margin: u32,
     /// Elements in composition order (left to right).
     pub elements: Vec<LabelElement>,
+}
+
+impl LabelDocument {
+    /// Serialize the document to a TOML string.
+    pub fn to_toml_string(&self) -> Result<String> {
+        Ok(toml::to_string(self)?)
+    }
+
+    /// Parse a document from a TOML string.
+    ///
+    /// Rejects an unsupported format version and decodes every embedded image
+    /// into its render cache, so the returned document is ready to render.
+    pub fn from_toml_str(text: &str) -> Result<Self> {
+        let mut doc: LabelDocument = toml::from_str(text)?;
+        if doc.version == 0 || doc.version > DOCUMENT_VERSION {
+            return Err(RenderError::Layout(format!(
+                "unsupported layout version {} (this build supports up to {})",
+                doc.version, DOCUMENT_VERSION
+            )));
+        }
+        doc.decode_image_caches()?;
+        Ok(doc)
+    }
+
+    /// Decode every image element's embedded bytes into its render cache.
+    ///
+    /// Returns an error if any embedded image cannot be decoded, so a corrupt
+    /// layout fails loudly rather than rendering blank.
+    pub fn decode_image_caches(&mut self) -> Result<()> {
+        for element in &mut self.elements {
+            if let LabelElement::Image {
+                image_data, bitmap, ..
+            } = element
+                && bitmap.is_none()
+                && !image_data.is_empty()
+            {
+                let decoded = image_loader::load_image_from_reader(
+                    Cursor::new(image_data.as_slice()),
+                    &ImageLoadOptions::default(),
+                )?;
+                *bitmap = Some(decoded);
+            }
+        }
+        Ok(())
+    }
 }
 
 /// A single element in the label composition.
@@ -434,6 +480,102 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(bmp.height(), 64);
+    }
+
+    /// Build a small document containing one of each element kind.
+    fn sample_document() -> LabelDocument {
+        LabelDocument {
+            version: DOCUMENT_VERSION,
+            tape_width_mm: 12,
+            font_name: "DejaVuSans".into(),
+            font_margin: 2,
+            elements: vec![
+                LabelElement::Text {
+                    content: "Hi".into(),
+                    font_size: Some(24.0),
+                    align: TextAlign::Center,
+                    rotation: 0.0,
+                },
+                LabelElement::image_from_bytes(Some("logo.png".into()), png_bytes(8, 8)),
+                LabelElement::CutMark,
+                LabelElement::Padding { pixels: 20 },
+            ],
+        }
+    }
+
+    #[test]
+    fn test_document_round_trip_all_kinds() {
+        let doc = sample_document();
+        let text = doc.to_toml_string().unwrap();
+        let parsed = LabelDocument::from_toml_str(&text).unwrap();
+
+        assert_eq!(parsed.elements.len(), 4);
+        assert_eq!(parsed.tape_width_mm, 12);
+        assert_eq!(parsed.font_name, "DejaVuSans");
+
+        // Embedded image bytes survive the round-trip exactly.
+        match (&doc.elements[1], &parsed.elements[1]) {
+            (
+                LabelElement::Image { image_data: a, .. },
+                LabelElement::Image {
+                    image_data: b,
+                    bitmap,
+                    ..
+                },
+            ) => {
+                assert_eq!(a, b);
+                // The render cache is rebuilt on load.
+                assert!(bitmap.is_some());
+            }
+            _ => panic!("expected image elements"),
+        }
+    }
+
+    #[test]
+    fn test_cutmark_serializes_as_tagged_table() {
+        let doc = sample_document();
+        let text = doc.to_toml_string().unwrap();
+        assert!(text.contains("cut_mark"));
+    }
+
+    #[test]
+    fn test_newer_version_is_rejected() {
+        let doc = LabelDocument {
+            version: DOCUMENT_VERSION + 1,
+            tape_width_mm: 12,
+            font_name: "x".into(),
+            font_margin: 0,
+            elements: vec![LabelElement::CutMark],
+        };
+        let text = doc.to_toml_string().unwrap();
+        assert!(LabelDocument::from_toml_str(&text).is_err());
+    }
+
+    #[test]
+    fn test_corrupt_image_data_is_rejected() {
+        let doc = LabelDocument {
+            version: DOCUMENT_VERSION,
+            tape_width_mm: 12,
+            font_name: "x".into(),
+            font_margin: 0,
+            elements: vec![LabelElement::Image {
+                path: None,
+                image_data: b"not a real image".to_vec(),
+                bitmap: None,
+                rotation: 0.0,
+                target_height: None,
+            }],
+        };
+        let text = doc.to_toml_string().unwrap();
+        assert!(LabelDocument::from_toml_str(&text).is_err());
+    }
+
+    #[test]
+    fn test_invalid_base64_is_rejected() {
+        let text = "version = 1\ntape_width_mm = 12\nfont_name = \"x\"\n\
+                    font_margin = 0\n\n[[elements]]\ntype = \"image\"\n\
+                    image_data = \"not valid base64 !!!\"\nrotation = 0.0\n";
+        assert!(LabelDocument::from_toml_str(text).is_err());
     }
 
     #[test]

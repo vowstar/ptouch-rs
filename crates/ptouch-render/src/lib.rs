@@ -33,6 +33,22 @@ pub enum RenderError {
     /// Dimension mismatch during bitmap operations.
     #[error("Dimension mismatch: {0}")]
     DimensionMismatch(String),
+
+    /// A layout document (de)serialization error occurred.
+    #[error("Layout error: {0}")]
+    Layout(String),
+}
+
+impl From<toml::ser::Error> for RenderError {
+    fn from(e: toml::ser::Error) -> Self {
+        RenderError::Layout(e.to_string())
+    }
+}
+
+impl From<toml::de::Error> for RenderError {
+    fn from(e: toml::de::Error) -> Self {
+        RenderError::Layout(e.to_string())
+    }
 }
 
 /// Result type alias for render operations.
