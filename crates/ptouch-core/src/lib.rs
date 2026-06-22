@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Huang Rui <vowstar@gmail.com>
 
 //! Brother P-Touch printer USB protocol library.

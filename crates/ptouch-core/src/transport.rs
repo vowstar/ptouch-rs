@@ -1,5 +1,9 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Huang Rui <vowstar@gmail.com>
+// SPDX-FileCopyrightText: Dominic Radermacher and the ptouch-print contributors
+//
+// Portions derived from ptouch-print, licensed GPL-3.0-or-later:
+// https://git.familie-radermacher.ch/linux/ptouch-print.git
 
 //! USB transport layer for Brother P-Touch printers.
 //!

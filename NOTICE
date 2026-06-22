@@ -1,0 +1,19 @@
+ptouch-rs
+Copyright 2026 Huang Rui <vowstar@gmail.com>
+
+This project's printer protocol and device support layer is derived from
+ptouch-print by Dominic Radermacher and the ptouch-print contributors, which
+is licensed under the GNU General Public License version 3.
+
+    ptouch-print: https://git.familie-radermacher.ch/linux/ptouch-print.git
+
+The Brother P-Touch device table, capability flags, status protocol, command
+construction, and raster bit-packing in ptouch-rs are based on that work, so
+those parts and the distributed binaries are licensed GPL-3.0-or-later. With
+gratitude to the ptouch-print authors for the reverse engineering that made
+this possible.
+
+Original, independently written parts of this project (the egui GUI, the
+command-line front end, and the rendering code other than raster conversion)
+are additionally available under the MIT license. See README.md for the
+per-directory breakdown and LICENSE / LICENSE-MIT for the full texts.

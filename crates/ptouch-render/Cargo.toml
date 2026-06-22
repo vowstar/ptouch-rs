@@ -7,7 +7,9 @@ description = "Label rendering engine for Brother P-Touch printers"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license.workspace = true
+# Most render source is MIT. raster.rs is GPL and the crate links the GPL
+# ptouch-core crate, so the distributed crate is GPL-3.0-or-later.
+license = "MIT AND GPL-3.0-or-later"
 repository.workspace = true
 
 [dependencies]

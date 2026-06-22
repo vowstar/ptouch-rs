@@ -194,4 +194,25 @@ crates/
 
 ## License
 
-MIT -- see [LICENSE](LICENSE).
+This project's printer protocol and device layer is derived from
+[ptouch-print](https://git.familie-radermacher.ch/linux/ptouch-print.git) by
+Dominic Radermacher and the ptouch-print contributors, which is licensed under
+the GPLv3. Thanks to them for the reverse engineering that made this possible.
+
+Because of that, the project as a whole and the distributed `ptouch` and
+`ptouch-gui` binaries are licensed **GPL-3.0-or-later** (see [LICENSE](LICENSE)).
+
+Per-directory licensing (each source file carries an SPDX header):
+
+| Path | License | Notes |
+|------|---------|-------|
+| `crates/ptouch-core/` | GPL-3.0-or-later | Device table, flags, status protocol, command construction. Derived from ptouch-print. |
+| `crates/ptouch-render/src/raster.rs` | GPL-3.0-or-later | Raster bit-packing. Derived from ptouch-print. |
+| `crates/ptouch-render/` (other files) | MIT | Bitmap, text, image loading, composition. Original work. |
+| `crates/ptouch-cli/` | MIT | Original work. |
+| `crates/ptouch-gui/` | MIT | Original work. |
+
+The MIT-licensed files are reusable on their own under the MIT license (see
+[LICENSE-MIT](LICENSE-MIT)). Any program that links `ptouch-core`, including the
+binaries in this repository, is covered by the GPLv3. See [NOTICE](NOTICE) for
+attribution details.

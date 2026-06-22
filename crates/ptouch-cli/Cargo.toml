@@ -7,7 +7,9 @@ description = "Command-line tool for Brother P-Touch label printers"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license.workspace = true
+# Original CLI source is MIT, but the binary links the GPL ptouch-core crate,
+# so the distributed program is GPL-3.0-or-later.
+license = "MIT AND GPL-3.0-or-later"
 repository.workspace = true
 
 [[bin]]
