@@ -7,6 +7,8 @@
 //! Can also export labels to image files (PNG, JPEG, BMP, etc.) for preview.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::fs::File;
+use std::io::{self, Read};
 use std::path::Path;
 use std::process;
 
@@ -37,6 +39,9 @@ struct Cli {
 }
 
 #[derive(Subcommand)]
+// Print carries many options; it is constructed once at startup, so the size
+// difference between subcommands does not matter here.
+#[allow(clippy::large_enum_variant)]
 enum Commands {
     /// Print labels with text, images, or both
     Print(PrintArgs),
@@ -63,6 +68,11 @@ struct PrintArgs {
     /// Set a layout placeholder value (repeatable): --set name=Alice
     #[arg(long = "set", value_name = "KEY=VALUE")]
     set: Vec<String>,
+
+    /// Print one label per row of a CSV file ('-' for stdin); the header row
+    /// names the placeholders. With --output, include '{n}' for the row number.
+    #[arg(long, value_name = "FILE")]
+    csv: Option<String>,
 
     /// List the placeholders a layout declares, then exit
     #[arg(long)]
@@ -434,8 +444,10 @@ fn execute_print(args: &PrintArgs, ignored: &[String]) -> Result<(), Box<dyn std
     }
 
     // Layout-only modifiers make no sense without a layout.
-    if args.layout.is_none() && (!args.set.is_empty() || args.list_vars || args.allow_missing) {
-        eprintln!("Error: --set, --list-vars, and --allow-missing require --layout");
+    if args.layout.is_none()
+        && (!args.set.is_empty() || args.csv.is_some() || args.list_vars || args.allow_missing)
+    {
+        eprintln!("Error: --set, --csv, --list-vars, and --allow-missing require --layout");
         process::exit(1);
     }
 
@@ -504,54 +516,110 @@ fn print_layout(args: &PrintArgs, layout_path: &str) -> Result<(), Box<dyn std::
         return Ok(());
     }
 
+    if let Some(csv_path) = args.csv.as_deref() {
+        return print_layout_batch(args, doc, csv_path);
+    }
+
     // Fill placeholders from --set values, rejecting missing ones by default.
     let values = parse_set_args(&args.set)?;
     let provided: BTreeSet<String> = values.keys().cloned().collect();
     validate_vars(&doc.placeholders(), &provided, args.allow_missing)?;
     doc.apply_values(&values);
 
-    let saved_px = tape::find_tape(doc.tape_width_mm).map(|t| u32::from(t.pixels));
+    let (print_width, max_px, mut device) = resolve_layout_target(args, &doc)?;
+    let bitmap = render_layout(&doc, print_width)?;
+    emit_label(&bitmap, args, max_px, device.as_mut())?;
 
-    // Resolve the print width and optionally open the device.
-    //   --tape-width: forced PNG width (requires --output)
-    //   --output only: PNG export at the saved width, no printer needed
-    //   otherwise: print at the printer's actual width, warn on mismatch
-    let (print_width, max_px, mut device): (u32, u16, Option<PtouchDevice>) =
-        if let Some(w) = args.tape_width {
-            if args.output.is_none() {
-                eprintln!("Error: --tape-width requires --output");
-                process::exit(1);
-            }
-            (w, w as u16, None)
-        } else if args.output.is_some() {
-            let w = saved_px.ok_or_else(|| {
-                PtouchError::StatusError("unknown saved tape width; pass --tape-width".to_string())
-            })?;
-            (w, w as u16, None)
+    if let Some(dev) = device {
+        dev.close()?;
+    }
+
+    Ok(())
+}
+
+/// Print one label per CSV row, substituting the header columns (plus any
+/// `--set` constants) into the layout placeholders.
+fn print_layout_batch(
+    args: &PrintArgs,
+    doc: LabelDocument,
+    csv_path: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(output) = &args.output
+        && !output.contains("{n}")
+    {
+        eprintln!("Error: with --csv, --output must contain '{{n}}' (e.g. label-{{n}}.png)");
+        process::exit(1);
+    }
+
+    let base = parse_set_args(&args.set)?;
+    let reader: Box<dyn Read> = if csv_path == "-" {
+        Box::new(io::stdin())
+    } else {
+        Box::new(File::open(csv_path)?)
+    };
+    let mut rdr = csv::Reader::from_reader(reader);
+    let headers: Vec<String> = rdr.headers()?.iter().map(|s| s.to_string()).collect();
+
+    // Validate the placeholders against the CSV columns plus any --set keys.
+    let mut provided: BTreeSet<String> = headers.iter().cloned().collect();
+    provided.extend(base.keys().cloned());
+    validate_vars(&doc.placeholders(), &provided, args.allow_missing)?;
+
+    let (print_width, max_px, mut device) = resolve_layout_target(args, &doc)?;
+
+    let mut count = 0usize;
+    for record in rdr.records() {
+        let record = record?;
+        let row: Vec<String> = record.iter().map(|s| s.to_string()).collect();
+        let values = build_row_values(&base, &headers, &row);
+
+        let mut row_doc = doc.clone();
+        row_doc.apply_values(&values);
+        let bitmap = render_layout(&row_doc, print_width)?;
+
+        count += 1;
+        if let Some(output) = &args.output {
+            let path = output.replace("{n}", &count.to_string());
+            bitmap.save(Path::new(&path))?;
+            println!("Saved row {} to '{}'", count, path);
+        } else if let Some(dev) = device.as_mut() {
+            print_to_device(dev, &bitmap, max_px, args)?;
         } else {
-            let mut dev = PtouchDevice::open_first()?;
-            dev.init()?;
-            let printer_px = u32::from(dev.tape_width_px().ok_or_else(|| {
-                PtouchError::StatusError("Could not determine tape width".to_string())
-            })?);
-            if saved_px.is_some_and(|s| s != printer_px) {
-                let printer_mm = dev.status().map(|s| s.media_width).unwrap_or(0);
-                if printer_mm > 0 {
-                    eprintln!(
-                        "WARN: layout saved for {}mm, printer has {}mm; refitting to printer tape",
-                        doc.tape_width_mm, printer_mm
-                    );
-                } else {
-                    eprintln!(
-                        "WARN: layout saved for {}mm tape; refitting to the printer tape",
-                        doc.tape_width_mm
-                    );
-                }
-            }
-            let max = dev.max_px();
-            (printer_px, max, Some(dev))
-        };
+            eprintln!("Error: no output destination (use --output or connect a printer)");
+            process::exit(1);
+        }
+    }
 
+    if let Some(dev) = device {
+        dev.close()?;
+    }
+
+    if count == 0 {
+        eprintln!("WARN: CSV had no data rows; nothing printed");
+    } else {
+        println!("Processed {} row(s)", count);
+    }
+    Ok(())
+}
+
+/// Merge `--set` constants with one CSV row's columns (row values win).
+fn build_row_values(
+    base: &BTreeMap<String, String>,
+    headers: &[String],
+    record: &[String],
+) -> BTreeMap<String, String> {
+    let mut values = base.clone();
+    for (header, value) in headers.iter().zip(record.iter()) {
+        values.insert(header.clone(), value.clone());
+    }
+    values
+}
+
+/// Render a (placeholder-resolved) layout document to a single bitmap.
+fn render_layout(
+    doc: &LabelDocument,
+    print_width: u32,
+) -> Result<LabelBitmap, Box<dyn std::error::Error>> {
     let mut renderer = TextRenderer::new();
     let bitmap = document::render_elements(
         &doc.elements,
@@ -561,14 +629,54 @@ fn print_layout(args: &PrintArgs, layout_path: &str) -> Result<(), Box<dyn std::
         &mut renderer,
     )?
     .ok_or_else(|| PtouchError::SendFailed("layout produced no output".to_string()))?;
+    Ok(bitmap)
+}
 
-    emit_label(&bitmap, args, max_px, device.as_mut())?;
+/// Resolve the print width, max pixels, and optional device for a layout.
+///
+///   - `--tape-width`: forced PNG width (requires `--output`)
+///   - `--output` only: PNG export at the saved width, no printer needed
+///   - otherwise: print at the printer's actual width, warn on mismatch
+fn resolve_layout_target(
+    args: &PrintArgs,
+    doc: &LabelDocument,
+) -> Result<(u32, u16, Option<PtouchDevice>), Box<dyn std::error::Error>> {
+    let saved_px = tape::find_tape(doc.tape_width_mm).map(|t| u32::from(t.pixels));
 
-    if let Some(dev) = device {
-        dev.close()?;
+    if let Some(w) = args.tape_width {
+        if args.output.is_none() {
+            eprintln!("Error: --tape-width requires --output");
+            process::exit(1);
+        }
+        Ok((w, w as u16, None))
+    } else if args.output.is_some() {
+        let w = saved_px.ok_or_else(|| {
+            PtouchError::StatusError("unknown saved tape width; pass --tape-width".to_string())
+        })?;
+        Ok((w, w as u16, None))
+    } else {
+        let mut dev = PtouchDevice::open_first()?;
+        dev.init()?;
+        let printer_px = u32::from(dev.tape_width_px().ok_or_else(|| {
+            PtouchError::StatusError("Could not determine tape width".to_string())
+        })?);
+        if saved_px.is_some_and(|s| s != printer_px) {
+            let printer_mm = dev.status().map(|s| s.media_width).unwrap_or(0);
+            if printer_mm > 0 {
+                eprintln!(
+                    "WARN: layout saved for {}mm, printer has {}mm; refitting to printer tape",
+                    doc.tape_width_mm, printer_mm
+                );
+            } else {
+                eprintln!(
+                    "WARN: layout saved for {}mm tape; refitting to the printer tape",
+                    doc.tape_width_mm
+                );
+            }
+        }
+        let max = dev.max_px();
+        Ok((printer_px, max, Some(dev)))
     }
-
-    Ok(())
 }
 
 /// Save a rendered label to an image file or print it to the device.
@@ -804,5 +912,23 @@ mod tests {
             .collect();
         // "extra" is unused (warns) but not an error.
         assert!(validate_vars(&declared, &provided, false).is_ok());
+    }
+
+    #[test]
+    fn test_build_row_values_row_overrides_base() {
+        let mut base = BTreeMap::new();
+        base.insert("name".to_string(), "Default".to_string());
+        base.insert("dept".to_string(), "Eng".to_string());
+        let headers = vec!["name".to_string(), "id".to_string()];
+        let record = vec!["Alice".to_string(), "A001".to_string()];
+        let values = build_row_values(&base, &headers, &record);
+        assert_eq!(values.get("name").map(String::as_str), Some("Alice")); // row wins
+        assert_eq!(values.get("id").map(String::as_str), Some("A001")); // from row
+        assert_eq!(values.get("dept").map(String::as_str), Some("Eng")); // base kept
+    }
+
+    #[test]
+    fn test_output_n_token_replacement() {
+        assert_eq!("label-{n}.png".replace("{n}", "3"), "label-3.png");
     }
 }
