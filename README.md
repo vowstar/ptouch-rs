@@ -9,6 +9,8 @@ Rust tool for Brother P-Touch USB label printers. CLI and GUI.
 - Print text labels with custom font, size, alignment and rotation
 - Print images (PNG, JPEG, GIF, BMP, TIFF, WebP, SVG, and more)
 - Compose multi-element labels (text + image + cut mark + padding)
+- Save and reload designs as self-contained `.ptl` layout files (images
+  embedded), then print them from the GUI or CLI
 - Chain print and multi-copy support
 - GUI with live preview, zoom, and drag-and-drop element reordering
 - Export to image (PNG, JPEG, BMP, GIF, TIFF, WebP) without a printer connected
@@ -54,6 +56,7 @@ ptouch-gui
 - Add/edit/reorder text, images, cut marks, padding
 - Free-angle text rotation with auto font sizing
 - Tape width selection
+- Save/Open layout (`.ptl`) with images embedded for portability
 - Print to connected printer or export to image file
 - Feed and cut tape without printing
 
@@ -79,6 +82,12 @@ ptouch print "Name" -i photo.png -c
 ptouch print "Preview" -o label.png -w 76
 ptouch print "Preview" -o label.bmp -w 76
 
+# Print a layout designed in the GUI (images are embedded in the file)
+ptouch print --layout label.ptl
+
+# Render a layout to an image without a printer (uses the saved tape width)
+ptouch print --layout label.ptl -o label.png
+
 # Show printer info
 ptouch info
 
@@ -91,6 +100,7 @@ ptouch list
 | Flag | Long | Description |
 |------|------|-------------|
 | | `TEXT...` | Text lines (max 4) |
+| `-l` | `--layout` | Print a saved layout file (.ptl); overrides content flags |
 | `-i` | `--image` | Image file path |
 | `-o` | `--output` | Export to image file instead of printing |
 | `-f` | `--font` | Font name (default: DejaVuSans) |

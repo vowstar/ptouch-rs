@@ -36,12 +36,18 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &mut AppState) {
             // label and stays self-contained when saved to a layout file.
             match std::fs::read(&path) {
                 Ok(bytes) => {
-                    info!("Loaded image: {}", path.display());
-                    state
-                        .elements
-                        .push(LabelElement::image_from_bytes(Some(path), bytes));
-                    state.selected_element = Some(state.elements.len() - 1);
-                    state.mark_dirty();
+                    let element = LabelElement::image_from_bytes(Some(path.clone()), bytes);
+                    // Reject files that do not decode, so a saved layout can
+                    // always be reopened.
+                    if matches!(element, LabelElement::Image { bitmap: None, .. }) {
+                        error!("Unsupported or corrupt image: {}", path.display());
+                        state.status_message = format!("Image load error: {}", path.display());
+                    } else {
+                        info!("Loaded image: {}", path.display());
+                        state.elements.push(element);
+                        state.selected_element = Some(state.elements.len() - 1);
+                        state.mark_dirty();
+                    }
                 }
                 Err(e) => {
                     error!("Failed to read image: {}", e);

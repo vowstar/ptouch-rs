@@ -363,6 +363,11 @@ fn execute_info(_args: &InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
 
 /// Build a label from a layout file or ad-hoc text/images, then print or save.
 fn execute_print(args: &PrintArgs, ignored: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    if args.tape_width == Some(0) {
+        eprintln!("Error: --tape-width must be greater than 0");
+        process::exit(1);
+    }
+
     if let Some(layout_path) = args.layout.as_deref() {
         if !ignored.is_empty() {
             eprintln!("WARN: --layout is set; ignoring: {}", ignored.join(", "));
@@ -447,10 +452,17 @@ fn print_layout(args: &PrintArgs, layout_path: &str) -> Result<(), Box<dyn std::
             })?);
             if saved_px.is_some_and(|s| s != printer_px) {
                 let printer_mm = dev.status().map(|s| s.media_width).unwrap_or(0);
-                eprintln!(
-                    "WARN: layout saved for {}mm, printer has {}mm; refitting to {}mm",
-                    doc.tape_width_mm, printer_mm, printer_mm
-                );
+                if printer_mm > 0 {
+                    eprintln!(
+                        "WARN: layout saved for {}mm, printer has {}mm; refitting to printer tape",
+                        doc.tape_width_mm, printer_mm
+                    );
+                } else {
+                    eprintln!(
+                        "WARN: layout saved for {}mm tape; refitting to the printer tape",
+                        doc.tape_width_mm
+                    );
+                }
             }
             let max = dev.max_px();
             (printer_px, max, Some(dev))
