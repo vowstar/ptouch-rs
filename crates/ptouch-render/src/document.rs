@@ -8,6 +8,7 @@
 //! drives both the GUI canvas and command-line rendering, so a design composed
 //! in one can be reproduced exactly in the other.
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::io::Cursor;
 use std::path::PathBuf;
 
@@ -82,6 +83,82 @@ impl LabelDocument {
         }
         Ok(())
     }
+
+    /// Collect the unique `{{name}}` placeholder names used in text elements.
+    ///
+    /// The result is sorted for stable display and de-duplication.
+    pub fn placeholders(&self) -> Vec<String> {
+        let mut names = BTreeSet::new();
+        for element in &self.elements {
+            if let LabelElement::Text { content, .. } = element {
+                collect_placeholder_names(content, &mut names);
+            }
+        }
+        names.into_iter().collect()
+    }
+
+    /// Replace `{{name}}` placeholders in all text elements using `values`.
+    ///
+    /// A placeholder with no matching value is replaced with an empty string;
+    /// callers that want to reject missing values should check
+    /// [`LabelDocument::placeholders`] against the provided keys first.
+    pub fn apply_values(&mut self, values: &BTreeMap<String, String>) {
+        for element in &mut self.elements {
+            if let LabelElement::Text { content, .. } = element {
+                *content = substitute_placeholders(content, |name| values.get(name).cloned());
+            }
+        }
+    }
+}
+
+/// True if `name` is a valid placeholder identifier: non-empty and made of
+/// ASCII letters, digits, or underscores.
+fn is_valid_placeholder(name: &str) -> bool {
+    !name.is_empty() && name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')
+}
+
+/// Collect placeholder names from `content` into `names`.
+fn collect_placeholder_names(content: &str, names: &mut BTreeSet<String>) {
+    let mut rest = content;
+    while let Some(start) = rest.find("{{") {
+        let after = &rest[start + 2..];
+        let Some(end) = after.find("}}") else {
+            break;
+        };
+        let name = after[..end].trim();
+        if is_valid_placeholder(name) {
+            names.insert(name.to_string());
+        }
+        rest = &after[end + 2..];
+    }
+}
+
+/// Replace every valid `{{name}}` in `content`. `lookup` returns the value for a
+/// name, or `None` to substitute an empty string. Text that is not a valid
+/// placeholder is left untouched.
+fn substitute_placeholders(content: &str, lookup: impl Fn(&str) -> Option<String>) -> String {
+    let mut result = String::with_capacity(content.len());
+    let mut rest = content;
+    while let Some(start) = rest.find("{{") {
+        let after = &rest[start + 2..];
+        let Some(end) = after.find("}}") else {
+            break;
+        };
+        let name = after[..end].trim();
+        if is_valid_placeholder(name) {
+            result.push_str(&rest[..start]);
+            if let Some(value) = lookup(name) {
+                result.push_str(&value);
+            }
+            rest = &after[end + 2..];
+        } else {
+            // Not a placeholder; keep the literal "{{" and continue past it.
+            result.push_str(&rest[..start + 2]);
+            rest = after;
+        }
+    }
+    result.push_str(rest);
+    result
 }
 
 /// A single element in the label composition.
@@ -576,6 +653,78 @@ mod tests {
                     font_margin = 0\n\n[[elements]]\ntype = \"image\"\n\
                     image_data = \"not valid base64 !!!\"\nrotation = 0.0\n";
         assert!(LabelDocument::from_toml_str(text).is_err());
+    }
+
+    fn text_doc(content: &str) -> LabelDocument {
+        LabelDocument {
+            version: DOCUMENT_VERSION,
+            tape_width_mm: 12,
+            font_name: "x".into(),
+            font_margin: 0,
+            elements: vec![LabelElement::Text {
+                content: content.into(),
+                font_size: Some(24.0),
+                align: TextAlign::Left,
+                rotation: 0.0,
+            }],
+        }
+    }
+
+    fn text_of(doc: &LabelDocument) -> &str {
+        match &doc.elements[0] {
+            LabelElement::Text { content, .. } => content,
+            _ => panic!("expected text"),
+        }
+    }
+
+    #[test]
+    fn test_placeholders_unique_sorted() {
+        let doc = text_doc("{{name}} {{id}}\n{{name}}");
+        assert_eq!(
+            doc.placeholders(),
+            vec!["id".to_string(), "name".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_placeholders_ignore_invalid() {
+        // Spaces make it not a placeholder; it stays literal and is not listed.
+        let doc = text_doc("{{ not a var }} {{ok}}");
+        assert_eq!(doc.placeholders(), vec!["ok".to_string()]);
+    }
+
+    #[test]
+    fn test_apply_values_substitutes() {
+        let mut doc = text_doc("Hi {{name}} ({{id}})");
+        let mut values = BTreeMap::new();
+        values.insert("name".to_string(), "Alice".to_string());
+        values.insert("id".to_string(), "A001".to_string());
+        doc.apply_values(&values);
+        assert_eq!(text_of(&doc), "Hi Alice (A001)");
+    }
+
+    #[test]
+    fn test_apply_values_blanks_unresolved() {
+        let mut doc = text_doc("Hi {{name}}!");
+        doc.apply_values(&BTreeMap::new());
+        assert_eq!(text_of(&doc), "Hi !");
+    }
+
+    #[test]
+    fn test_apply_values_trims_and_keeps_literals() {
+        let mut doc = text_doc("{{ name }} {{bad var}}");
+        let mut values = BTreeMap::new();
+        values.insert("name".to_string(), "Bob".to_string());
+        doc.apply_values(&values);
+        // Whitespace inside braces is tolerated; the invalid one stays literal.
+        assert_eq!(text_of(&doc), "Bob {{bad var}}");
+    }
+
+    #[test]
+    fn test_unterminated_placeholder_left_intact() {
+        let mut doc = text_doc("price {{name");
+        doc.apply_values(&BTreeMap::new());
+        assert_eq!(text_of(&doc), "price {{name");
     }
 
     #[test]
