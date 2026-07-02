@@ -614,7 +614,10 @@ mod tests {
             }
         }
         // The source is asymmetric, so the flip must actually change something.
-        assert!(differs, "expected an asymmetric image so the flip is visible");
+        assert!(
+            differs,
+            "expected an asymmetric image so the flip is visible"
+        );
     }
 
     #[test]
