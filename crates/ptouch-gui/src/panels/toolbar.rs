@@ -136,8 +136,8 @@ fn do_save_layout(state: &mut AppState) {
         tape_width_mm: state.tape_width_mm,
         font_name: state.font_name.clone(),
         font_margin: state.font_margin,
-        flip_h: false,
-        flip_v: false,
+        flip_h: state.overall_flip_h,
+        flip_v: state.overall_flip_v,
         elements: state.elements.clone(),
     };
 
@@ -193,6 +193,8 @@ fn do_open_layout(state: &mut AppState) {
             state.update_tape_pixels();
             state.font_name = document.font_name;
             state.font_margin = document.font_margin;
+            state.overall_flip_h = document.flip_h;
+            state.overall_flip_v = document.flip_v;
             state.elements = document.elements;
             state.selected_element = None;
             state.mark_dirty();

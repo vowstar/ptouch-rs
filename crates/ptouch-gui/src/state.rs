@@ -56,6 +56,10 @@ pub struct AppState {
     pub font_name: String,
     /// Font top/bottom margin in pixels.
     pub font_margin: u32,
+    /// Mirror the whole composed label left-right (horizontal).
+    pub overall_flip_h: bool,
+    /// Mirror the whole composed label top-bottom (vertical).
+    pub overall_flip_v: bool,
     /// Cached list of available system font family names.
     pub available_fonts: Vec<String>,
     /// The rendered preview bitmap (1-bit).
@@ -99,6 +103,8 @@ impl Default for AppState {
             tape_width_px: 76,
             font_name: "DejaVuSans".to_string(),
             font_margin: 0,
+            overall_flip_h: false,
+            overall_flip_v: false,
             available_fonts: Vec::new(),
             preview_bitmap: None,
             preview_texture: None,

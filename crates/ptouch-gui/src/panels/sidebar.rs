@@ -18,6 +18,8 @@ pub fn show_sidebar(ui: &mut egui::Ui, state: &mut AppState) {
         ui.separator();
         show_print_options(ui, state);
         ui.separator();
+        show_mirror_section(ui, state);
+        ui.separator();
         show_elements_section(ui, state);
     });
 }
@@ -78,6 +80,30 @@ fn show_print_options(ui: &mut egui::Ui, state: &mut AppState) {
         ui.label(label);
         ui.add(crate::widgets::toggle(&mut state.auto_cut));
     });
+}
+
+/// Whole-label mirror section: flip the entire composed label.
+///
+/// This applies once after all elements are composed and is separate from the
+/// per-element flip on the properties panel.
+fn show_mirror_section(ui: &mut egui::Ui, state: &mut AppState) {
+    ui.heading("Mirror");
+    ui.add_space(4.0);
+
+    if ui
+        .checkbox(&mut state.overall_flip_h, "Flip horizontal (left-right)")
+        .changed()
+    {
+        state.mark_dirty();
+        info!("Whole-label horizontal flip: {}", state.overall_flip_h);
+    }
+    if ui
+        .checkbox(&mut state.overall_flip_v, "Flip vertical (top-bottom)")
+        .changed()
+    {
+        state.mark_dirty();
+        info!("Whole-label vertical flip: {}", state.overall_flip_v);
+    }
 }
 
 /// Element list section with reorder and delete controls.

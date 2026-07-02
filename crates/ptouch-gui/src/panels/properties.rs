@@ -35,9 +35,21 @@ pub fn show_properties(ui: &mut egui::Ui, state: &mut AppState) {
             font_size,
             align,
             rotation,
-            ..
+            flip_h,
+            flip_v,
         } => {
-            changed |= show_text_properties(ui, content, font_size, align, rotation, state);
+            changed |= show_text_properties(
+                ui,
+                TextProps {
+                    content,
+                    font_size,
+                    align,
+                    rotation,
+                    flip_h,
+                    flip_v,
+                },
+                state,
+            );
         }
         LabelElement::Image {
             path,
@@ -45,10 +57,22 @@ pub fn show_properties(ui: &mut egui::Ui, state: &mut AppState) {
             bitmap,
             rotation,
             target_height,
-            ..
+            flip_h,
+            flip_v,
         } => {
-            changed |=
-                show_image_properties(ui, path, image_data, bitmap, rotation, target_height, state);
+            changed |= show_image_properties(
+                ui,
+                ImageProps {
+                    path,
+                    image_data,
+                    bitmap,
+                    rotation,
+                    target_height,
+                    flip_h,
+                    flip_v,
+                },
+                state,
+            );
         }
         LabelElement::CutMark => {
             ui.label("Cut Mark");
@@ -66,15 +90,54 @@ pub fn show_properties(ui: &mut egui::Ui, state: &mut AppState) {
     }
 }
 
+/// Mutable references to a text element's editable fields.
+struct TextProps<'a> {
+    content: &'a mut String,
+    font_size: &'a mut Option<f32>,
+    align: &'a mut TextAlign,
+    rotation: &'a mut f32,
+    flip_h: &'a mut bool,
+    flip_v: &'a mut bool,
+}
+
+/// Mutable references to an image element's editable fields.
+struct ImageProps<'a> {
+    path: &'a mut Option<PathBuf>,
+    image_data: &'a mut Vec<u8>,
+    bitmap: &'a mut Option<ptouch_render::bitmap::LabelBitmap>,
+    rotation: &'a mut f32,
+    target_height: &'a mut Option<u32>,
+    flip_h: &'a mut bool,
+    flip_v: &'a mut bool,
+}
+
+/// Two checkboxes for per-element horizontal/vertical mirroring. Returns true if
+/// either changed. Shared by the text and image property panels.
+fn show_flip_controls(ui: &mut egui::Ui, flip_h: &mut bool, flip_v: &mut bool) -> bool {
+    let mut changed = false;
+    ui.label("Mirror:");
+    if ui
+        .checkbox(flip_h, "Flip horizontal (left-right)")
+        .changed()
+    {
+        changed = true;
+    }
+    if ui.checkbox(flip_v, "Flip vertical (top-bottom)").changed() {
+        changed = true;
+    }
+    changed
+}
+
 /// Show properties for a text element. Returns true if any value changed.
-fn show_text_properties(
-    ui: &mut egui::Ui,
-    content: &mut String,
-    font_size: &mut Option<f32>,
-    align: &mut TextAlign,
-    rotation: &mut f32,
-    state: &mut AppState,
-) -> bool {
+fn show_text_properties(ui: &mut egui::Ui, props: TextProps, state: &mut AppState) -> bool {
+    let TextProps {
+        content,
+        font_size,
+        align,
+        rotation,
+        flip_h,
+        flip_v,
+    } = props;
     let mut changed = false;
 
     ui.label("Text Content:");
@@ -238,6 +301,9 @@ fn show_text_properties(
         }
     });
 
+    ui.add_space(4.0);
+    changed |= show_flip_controls(ui, flip_h, flip_v);
+
     changed
 }
 
@@ -272,15 +338,16 @@ fn load_image_into(
 }
 
 /// Show properties for an image element. Returns true if changed.
-fn show_image_properties(
-    ui: &mut egui::Ui,
-    path: &mut Option<PathBuf>,
-    image_data: &mut Vec<u8>,
-    bitmap: &mut Option<ptouch_render::bitmap::LabelBitmap>,
-    rotation: &mut f32,
-    target_height: &mut Option<u32>,
-    state: &mut AppState,
-) -> bool {
+fn show_image_properties(ui: &mut egui::Ui, props: ImageProps, state: &mut AppState) -> bool {
+    let ImageProps {
+        path,
+        image_data,
+        bitmap,
+        rotation,
+        target_height,
+        flip_h,
+        flip_v,
+    } = props;
     let mut changed = false;
 
     ui.label("Image");
@@ -391,6 +458,9 @@ fn show_image_properties(
             changed = true;
         }
     });
+
+    ui.add_space(4.0);
+    changed |= show_flip_controls(ui, flip_h, flip_v);
 
     changed
 }

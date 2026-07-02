@@ -75,6 +75,11 @@ impl PtouchApp {
             }
         };
 
+        // Whole-label mirroring is applied once, after the elements are
+        // composed, independently of any per-element flips.
+        let result =
+            result.map(|bmp| bmp.mirrored(self.state.overall_flip_h, self.state.overall_flip_v));
+
         if let Some(ref bitmap) = result {
             let rgba = bitmap.to_rgba_image();
             let max_side = ctx.input(|i| i.max_texture_side);
