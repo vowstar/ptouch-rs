@@ -122,6 +122,16 @@ struct PrintArgs {
     #[arg(short = 'p', long)]
     pad: Option<u32>,
 
+    /// Mirror the whole label left-right (horizontal). With --layout, the
+    /// layout's saved flip wins and this is ignored with a warning.
+    #[arg(long)]
+    flip_h: bool,
+
+    /// Mirror the whole label top-bottom (vertical). With --layout, the
+    /// layout's saved flip wins and this is ignored with a warning.
+    #[arg(long)]
+    flip_v: bool,
+
     /// Skip final feed and cut (for chained labels)
     #[arg(long)]
     chain: bool,
@@ -229,7 +239,7 @@ fn main() {
 /// Ad-hoc content flags overridden when `--layout` is set. Keep in sync with
 /// `PrintArgs`; the `content_flag_ids_resolve` test guards against renames.
 const CONTENT_FLAG_IDS: &[&str] = &[
-    "text", "image", "font", "size", "align", "margin", "cut", "pad",
+    "text", "image", "font", "size", "align", "margin", "cut", "pad", "flip_h", "flip_v",
 ];
 
 /// Return the display names of content flags the user explicitly passed on the
@@ -245,7 +255,8 @@ fn ignored_content_flags(matches: &ArgMatches) -> Vec<String> {
             if *id == "text" {
                 "TEXT".to_string()
             } else {
-                format!("--{}", id)
+                // clap derives long flags with hyphens (flip_h -> --flip-h).
+                format!("--{}", id.replace('_', "-"))
             }
         })
         .collect()
@@ -494,7 +505,8 @@ fn execute_print(args: &PrintArgs, ignored: &[String]) -> Result<(), Box<dyn std
             (u32::from(width), max, Some(dev))
         };
 
-    let bitmap = build_label(args, print_width)?;
+    // Whole-label mirroring applies once, after the label is composed.
+    let bitmap = build_label(args, print_width)?.mirrored(args.flip_h, args.flip_v);
     emit_label(&bitmap, args, max_px, device.as_mut())?;
 
     if let Some(dev) = device {
@@ -629,7 +641,8 @@ fn render_layout(
         &mut renderer,
     )?
     .ok_or_else(|| PtouchError::SendFailed("layout produced no output".to_string()))?;
-    Ok(bitmap)
+    // The layout's saved whole-label flip is applied after composition.
+    Ok(bitmap.mirrored(doc.flip_h, doc.flip_v))
 }
 
 /// Resolve the print width, max pixels, and optional device for a layout.
@@ -862,11 +875,16 @@ mod tests {
 
     #[test]
     fn test_typed_content_flags_are_reported() {
-        let matches = print_matches(&["ptouch", "print", "Hello", "-s", "24", "-l", "x.ptl"]);
+        let matches = print_matches(&[
+            "ptouch", "print", "Hello", "-s", "24", "--flip-h", "-l", "x.ptl",
+        ]);
         let ignored = ignored_content_flags(&matches);
         assert!(ignored.contains(&"TEXT".to_string()));
         assert!(ignored.contains(&"--size".to_string()));
+        // Underscore ids are shown with hyphens, matching the real flag name.
+        assert!(ignored.contains(&"--flip-h".to_string()));
         assert!(!ignored.contains(&"--font".to_string()));
+        assert!(!ignored.contains(&"--flip-v".to_string()));
     }
 
     #[test]
