@@ -23,6 +23,8 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &mut AppState) {
                 font_size: None,
                 align: TextAlign::Left,
                 rotation: 0.0,
+                flip_h: false,
+                flip_v: false,
             });
             state.selected_element = Some(state.elements.len() - 1);
             state.mark_dirty();
@@ -134,6 +136,8 @@ fn do_save_layout(state: &mut AppState) {
         tape_width_mm: state.tape_width_mm,
         font_name: state.font_name.clone(),
         font_margin: state.font_margin,
+        flip_h: false,
+        flip_v: false,
         elements: state.elements.clone(),
     };
 

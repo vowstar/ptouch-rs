@@ -36,6 +36,14 @@ pub struct LabelDocument {
     pub font_name: String,
     /// Font top/bottom margin in pixels.
     pub font_margin: u32,
+    /// Mirror the whole composed label left-right (horizontal). Applied once,
+    /// after all elements are composed, independently of per-element flips.
+    #[serde(default)]
+    pub flip_h: bool,
+    /// Mirror the whole composed label top-bottom (vertical). Applied once,
+    /// after all elements are composed, independently of per-element flips.
+    #[serde(default)]
+    pub flip_v: bool,
     /// Elements in composition order (left to right).
     pub elements: Vec<LabelElement>,
 }
@@ -176,6 +184,14 @@ pub enum LabelElement {
         align: TextAlign,
         /// Rotation angle in degrees (clockwise). 0.0 = horizontal.
         rotation: f32,
+        /// Mirror this element left-right (horizontal). Applied to the element's
+        /// own bitmap, before it is composed into the label.
+        #[serde(default)]
+        flip_h: bool,
+        /// Mirror this element top-bottom (vertical). Applied to the element's
+        /// own bitmap, before it is composed into the label.
+        #[serde(default)]
+        flip_v: bool,
     },
     /// An image embedded as its original source bytes.
     Image {
@@ -193,6 +209,14 @@ pub enum LabelElement {
         /// Target height in pixels. `None` = auto (fit to tape height).
         #[serde(skip_serializing_if = "Option::is_none")]
         target_height: Option<u32>,
+        /// Mirror this element left-right (horizontal). Applied to the element's
+        /// own bitmap, before it is composed into the label.
+        #[serde(default)]
+        flip_h: bool,
+        /// Mirror this element top-bottom (vertical). Applied to the element's
+        /// own bitmap, before it is composed into the label.
+        #[serde(default)]
+        flip_v: bool,
     },
     /// A cut mark separator.
     CutMark,
@@ -218,6 +242,8 @@ impl LabelElement {
             bitmap,
             rotation: 0.0,
             target_height: None,
+            flip_h: false,
+            flip_v: false,
         }
     }
 
@@ -283,6 +309,8 @@ pub fn render_elements(
                 font_size,
                 align,
                 rotation,
+                flip_h,
+                flip_v,
             } => match render_text_segment(
                 renderer,
                 content,
@@ -295,7 +323,7 @@ pub fn render_elements(
                     margin: font_margin,
                 },
             ) {
-                Some(seg) => seg,
+                Some(seg) => seg.mirrored(*flip_h, *flip_v),
                 None => continue,
             },
             LabelElement::Image {
@@ -303,6 +331,8 @@ pub fn render_elements(
                 bitmap,
                 rotation,
                 target_height,
+                flip_h,
+                flip_v,
                 ..
             } => match render_image_segment(
                 bitmap.as_ref(),
@@ -311,7 +341,7 @@ pub fn render_elements(
                 *target_height,
                 tape_width_px,
             ) {
-                Some(seg) => seg,
+                Some(seg) => seg.mirrored(*flip_h, *flip_v),
                 None => continue,
             },
             LabelElement::CutMark => compose::cutmark(tape_width_px),
@@ -491,6 +521,139 @@ mod tests {
         buf
     }
 
+    /// Encode a PNG whose left half is black and right half is white.
+    fn png_left_black(w: u32, h: u32) -> Vec<u8> {
+        let img = image::RgbaImage::from_fn(w, h, |x, _| {
+            if x < w / 2 {
+                image::Rgba([0, 0, 0, 255])
+            } else {
+                image::Rgba([255, 255, 255, 255])
+            }
+        });
+        let mut buf = Vec::new();
+        let encoder = image::codecs::png::PngEncoder::new(Cursor::new(&mut buf));
+        image::ImageEncoder::write_image(
+            encoder,
+            img.as_raw(),
+            w,
+            h,
+            image::ExtendedColorType::Rgba8,
+        )
+        .unwrap();
+        buf
+    }
+
+    /// Build an image element with an explicit horizontal flip.
+    fn flipped_image_element(image_data: Vec<u8>, flip_h: bool) -> LabelElement {
+        match LabelElement::image_from_bytes(None, image_data) {
+            LabelElement::Image {
+                path,
+                image_data,
+                bitmap,
+                rotation,
+                target_height,
+                flip_v,
+                ..
+            } => LabelElement::Image {
+                path,
+                image_data,
+                bitmap,
+                rotation,
+                target_height,
+                flip_h,
+                flip_v,
+            },
+            other => other,
+        }
+    }
+
+    #[test]
+    fn test_per_element_flip_h_mirrors_image() {
+        let mut renderer = TextRenderer::new();
+        let data = png_left_black(40, 40);
+
+        let plain = render_elements(
+            &[flipped_image_element(data.clone(), false)],
+            64,
+            "",
+            0,
+            &mut renderer,
+        )
+        .unwrap()
+        .unwrap();
+        let flipped = render_elements(
+            &[flipped_image_element(data, true)],
+            64,
+            "",
+            0,
+            &mut renderer,
+        )
+        .unwrap()
+        .unwrap();
+
+        assert_eq!(plain.width(), flipped.width());
+        assert_eq!(plain.height(), flipped.height());
+        let w = plain.width();
+
+        // The flipped element is the plain one mirrored left-right: pixel (x,y)
+        // in the flip equals (w-1-x, y) in the plain. This holds whichever side
+        // binarization decided was black.
+        let mut differs = false;
+        for y in 0..plain.height() {
+            for x in 0..w {
+                assert_eq!(
+                    flipped.get_pixel(x, y),
+                    plain.get_pixel(w - 1 - x, y),
+                    "mirror mismatch at ({}, {})",
+                    x,
+                    y
+                );
+                if plain.get_pixel(x, y) != plain.get_pixel(w - 1 - x, y) {
+                    differs = true;
+                }
+            }
+        }
+        // The source is asymmetric, so the flip must actually change something.
+        assert!(differs, "expected an asymmetric image so the flip is visible");
+    }
+
+    #[test]
+    fn test_flip_fields_round_trip() {
+        let mut doc = sample_document();
+        doc.flip_h = true;
+        if let LabelElement::Text { flip_v, .. } = &mut doc.elements[0] {
+            *flip_v = true;
+        }
+        let parsed = LabelDocument::from_toml_str(&doc.to_toml_string().unwrap()).unwrap();
+        assert!(parsed.flip_h);
+        assert!(!parsed.flip_v);
+        match &parsed.elements[0] {
+            LabelElement::Text { flip_h, flip_v, .. } => {
+                assert!(!flip_h);
+                assert!(flip_v);
+            }
+            _ => panic!("expected text element"),
+        }
+    }
+
+    #[test]
+    fn test_old_layout_without_flip_defaults_false() {
+        // A v1 layout written before the mirror feature has no flip fields.
+        let text = "version = 1\ntape_width_mm = 12\nfont_name = \"x\"\n\
+                    font_margin = 0\n\n[[elements]]\ntype = \"text\"\n\
+                    content = \"hi\"\nalign = \"left\"\nrotation = 0.0\n";
+        let doc = LabelDocument::from_toml_str(text).unwrap();
+        assert!(!doc.flip_h);
+        assert!(!doc.flip_v);
+        match &doc.elements[0] {
+            LabelElement::Text { flip_h, flip_v, .. } => {
+                assert!(!flip_h);
+                assert!(!flip_v);
+            }
+            _ => panic!("expected text element"),
+        }
+    }
+
     #[test]
     fn test_empty_elements_returns_none() {
         let mut renderer = TextRenderer::new();
@@ -518,6 +681,8 @@ mod tests {
             font_size: Some(24.0),
             align: TextAlign::Left,
             rotation: 0.0,
+            flip_h: false,
+            flip_v: false,
         }];
         let result = render_elements(&elements, 64, "", 0, &mut renderer).unwrap();
         assert!(result.is_none());
@@ -550,6 +715,8 @@ mod tests {
                 bitmap,
                 rotation: 90.0,
                 target_height,
+                flip_h: false,
+                flip_v: false,
             },
             other => other,
         };
@@ -566,12 +733,16 @@ mod tests {
             tape_width_mm: 12,
             font_name: "DejaVuSans".into(),
             font_margin: 2,
+            flip_h: false,
+            flip_v: false,
             elements: vec![
                 LabelElement::Text {
                     content: "Hi".into(),
                     font_size: Some(24.0),
                     align: TextAlign::Center,
                     rotation: 0.0,
+                    flip_h: false,
+                    flip_v: false,
                 },
                 LabelElement::image_from_bytes(Some("logo.png".into()), png_bytes(8, 8)),
                 LabelElement::CutMark,
@@ -622,6 +793,8 @@ mod tests {
             tape_width_mm: 12,
             font_name: "x".into(),
             font_margin: 0,
+            flip_h: false,
+            flip_v: false,
             elements: vec![LabelElement::CutMark],
         };
         let text = doc.to_toml_string().unwrap();
@@ -635,12 +808,16 @@ mod tests {
             tape_width_mm: 12,
             font_name: "x".into(),
             font_margin: 0,
+            flip_h: false,
+            flip_v: false,
             elements: vec![LabelElement::Image {
                 path: None,
                 image_data: b"not a real image".to_vec(),
                 bitmap: None,
                 rotation: 0.0,
                 target_height: None,
+                flip_h: false,
+                flip_v: false,
             }],
         };
         let text = doc.to_toml_string().unwrap();
@@ -661,11 +838,15 @@ mod tests {
             tape_width_mm: 12,
             font_name: "x".into(),
             font_margin: 0,
+            flip_h: false,
+            flip_v: false,
             elements: vec![LabelElement::Text {
                 content: content.into(),
                 font_size: Some(24.0),
                 align: TextAlign::Left,
                 rotation: 0.0,
+                flip_h: false,
+                flip_v: false,
             }],
         }
     }

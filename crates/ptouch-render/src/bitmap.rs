@@ -294,6 +294,51 @@ impl LabelBitmap {
         result
     }
 
+    /// Mirror the bitmap left-right (horizontal flip).
+    ///
+    /// Column `x` maps to `width - 1 - x`; rows are unchanged. Lossless and
+    /// pixel-exact. Dimensions are preserved.
+    pub fn flip_horizontal(&self) -> LabelBitmap {
+        let mut result = LabelBitmap::new(self.width, self.height);
+        for y in 0..self.height {
+            for x in 0..self.width {
+                if self.get_pixel(x, y) {
+                    result.set_pixel(self.width - 1 - x, y, true);
+                }
+            }
+        }
+        result
+    }
+
+    /// Mirror the bitmap top-bottom (vertical flip).
+    ///
+    /// Row `y` maps to `height - 1 - y`; columns are unchanged. Lossless and
+    /// pixel-exact. Dimensions are preserved.
+    pub fn flip_vertical(&self) -> LabelBitmap {
+        let mut result = LabelBitmap::new(self.width, self.height);
+        for y in 0..self.height {
+            for x in 0..self.width {
+                if self.get_pixel(x, y) {
+                    result.set_pixel(x, self.height - 1 - y, true);
+                }
+            }
+        }
+        result
+    }
+
+    /// Apply optional horizontal and/or vertical mirroring.
+    ///
+    /// Returns a clone when neither flip is requested, so callers can pass the
+    /// stored flags unconditionally.
+    pub fn mirrored(&self, flip_h: bool, flip_v: bool) -> LabelBitmap {
+        match (flip_h, flip_v) {
+            (false, false) => self.clone(),
+            (true, false) => self.flip_horizontal(),
+            (false, true) => self.flip_vertical(),
+            (true, true) => self.flip_horizontal().flip_vertical(),
+        }
+    }
+
     /// Adjust bitmap to a target height by centering vertically.
     ///
     /// If the current height is greater than `target_height`, the bitmap is
@@ -691,5 +736,57 @@ mod tests {
         let bmp = LabelBitmap::new(10, 10);
         let scaled = bmp.scale_to_height(0);
         assert_eq!(scaled.height(), 0);
+    }
+
+    #[test]
+    fn test_flip_horizontal() {
+        let mut bmp = LabelBitmap::new(4, 2);
+        bmp.set_pixel(0, 0, true);
+        bmp.set_pixel(3, 1, true);
+        let f = bmp.flip_horizontal();
+        assert_eq!(f.width(), 4);
+        assert_eq!(f.height(), 2);
+        // x=0 -> x=3, x=3 -> x=0; rows unchanged.
+        assert!(f.get_pixel(3, 0));
+        assert!(f.get_pixel(0, 1));
+        assert!(!f.get_pixel(0, 0));
+    }
+
+    #[test]
+    fn test_flip_vertical() {
+        let mut bmp = LabelBitmap::new(2, 4);
+        bmp.set_pixel(0, 0, true);
+        bmp.set_pixel(1, 3, true);
+        let f = bmp.flip_vertical();
+        assert_eq!(f.width(), 2);
+        assert_eq!(f.height(), 4);
+        // y=0 -> y=3, y=3 -> y=0; columns unchanged.
+        assert!(f.get_pixel(0, 3));
+        assert!(f.get_pixel(1, 0));
+        assert!(!f.get_pixel(0, 0));
+    }
+
+    #[test]
+    fn test_flip_horizontal_twice_is_identity() {
+        let mut bmp = LabelBitmap::new(5, 3);
+        bmp.set_pixel(1, 0, true);
+        bmp.set_pixel(4, 2, true);
+        let back = bmp.flip_horizontal().flip_horizontal();
+        assert!(back.get_pixel(1, 0));
+        assert!(back.get_pixel(4, 2));
+    }
+
+    #[test]
+    fn test_mirrored_combinations() {
+        let mut bmp = LabelBitmap::new(3, 3);
+        bmp.set_pixel(0, 0, true);
+        // No flip: unchanged.
+        assert!(bmp.mirrored(false, false).get_pixel(0, 0));
+        // Both: corner (0,0) -> (2,2).
+        assert!(bmp.mirrored(true, true).get_pixel(2, 2));
+        // Horizontal only: (0,0) -> (2,0).
+        assert!(bmp.mirrored(true, false).get_pixel(2, 0));
+        // Vertical only: (0,0) -> (0,2).
+        assert!(bmp.mirrored(false, true).get_pixel(0, 2));
     }
 }

@@ -35,6 +35,7 @@ pub fn show_properties(ui: &mut egui::Ui, state: &mut AppState) {
             font_size,
             align,
             rotation,
+            ..
         } => {
             changed |= show_text_properties(ui, content, font_size, align, rotation, state);
         }
@@ -44,6 +45,7 @@ pub fn show_properties(ui: &mut egui::Ui, state: &mut AppState) {
             bitmap,
             rotation,
             target_height,
+            ..
         } => {
             changed |=
                 show_image_properties(ui, path, image_data, bitmap, rotation, target_height, state);
