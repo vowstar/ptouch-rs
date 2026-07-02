@@ -56,6 +56,7 @@ ptouch-gui
 - Live label preview with zoom
 - Add/edit/reorder text, images, cut marks, padding
 - Free-angle text rotation with auto font sizing
+- Mirror the whole label or a single element (horizontal/vertical)
 - Tape width selection
 - Save/Open layout (`.ptl`) with images embedded for portability
 - Print to connected printer or export to image file
@@ -78,6 +79,9 @@ ptouch print -i logo.png
 
 # Text + image + cut mark
 ptouch print "Name" -i photo.png -c
+
+# Mirror the whole label left-right (e.g. clear tape read from the back)
+ptouch print "MIRROR" --flip-h
 
 # Export to image file (no printer needed, format from extension)
 ptouch print "Preview" -o label.png -w 76
@@ -137,6 +141,8 @@ cat people.csv | ptouch print --layout badge.ptl --csv - --set dept=Eng
 | `-w` | `--tape-width` | Force tape width in pixels (with `-o`) |
 | `-c` | `--cut` | Add cut mark |
 | `-p` | `--pad` | Add padding in pixels |
+| | `--flip-h` | Mirror the whole label left-right (horizontal) |
+| | `--flip-v` | Mirror the whole label top-bottom (vertical) |
 | | `--chain` | Skip final feed/cut (chained labels) |
 | | `--precut` | Cut before the label |
 | | `--binarize` | Binarization: auto, threshold, dither |
