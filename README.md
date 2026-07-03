@@ -47,6 +47,23 @@ cargo build --release --workspace
 
 Binaries: `target/release/ptouch` (CLI), `target/release/ptouch-gui` (GUI).
 
+libusb is compiled in statically (`rusb` vendored), so the binaries carry no
+external libusb dependency.
+
+## Prebuilt Packages
+
+Each release publishes ready-to-use downloads on the
+[releases page](https://github.com/vowstar/ptouch-rs/releases):
+
+- **Linux**: `.deb` and `.rpm` that install the CLI, the GUI, the desktop entry,
+  the icon, and the udev rule (the post-install step reloads udev), plus the raw
+  binaries.
+- **macOS**: `ptouch-gui-macos-arm64.app.zip` (a `.app` bundle with the icon)
+  and the raw `ptouch` CLI binary. The app is unsigned, so on first launch
+  right-click the app and choose Open, or run
+  `xattr -dr com.apple.quarantine ptouch-gui.app`.
+- **Windows**: `ptouch.exe` and `ptouch-gui.exe` (the icon is embedded).
+
 ## GUI
 
 ```sh
@@ -152,7 +169,8 @@ cat people.csv | ptouch print --layout badge.ptl --csv - --set dept=Eng
 
 ## USB Permissions (Linux)
 
-Copy the udev rules file:
+The `.deb`/`.rpm` install and load this rule for you. To do it manually, copy
+the udev rules file:
 
 ```sh
 sudo cp data/udev/20-usb-ptouch-permissions.rules /etc/udev/rules.d/
@@ -162,8 +180,8 @@ sudo udevadm trigger
 
 ## Desktop Integration (Linux)
 
-Install the desktop entry and icon so `ptouch-gui` appears in your application
-menu:
+The `.deb`/`.rpm` already install these. To do it manually, install the desktop
+entry and icon so `ptouch-gui` appears in your application menu:
 
 ```sh
 sudo install -Dm644 data/io.github.vowstar.ptouch-gui.desktop \

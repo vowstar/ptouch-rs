@@ -1,0 +1,42 @@
+# nfpm config: build the Linux .deb and .rpm for a release.
+# Docs: https://nfpm.goreleaser.com
+#
+# libusb is compiled in statically (rusb "vendored"), so there is no libusb
+# runtime dependency; the vendored libusb still links libudev dynamically.
+name: ptouch
+arch: amd64
+platform: linux
+version: ${VERSION}
+section: utils
+priority: optional
+maintainer: Huang Rui <vowstar@gmail.com>
+description: |
+  Tools for Brother P-Touch label printers.
+  Command-line (ptouch) and GUI (ptouch-gui) for composing and printing labels.
+vendor: vowstar
+homepage: https://github.com/vowstar/ptouch-rs
+license: GPL-3.0-or-later
+
+contents:
+  - src: ./target/x86_64-unknown-linux-gnu/release/ptouch
+    dst: /usr/bin/ptouch
+  - src: ./target/x86_64-unknown-linux-gnu/release/ptouch-gui
+    dst: /usr/bin/ptouch-gui
+  - src: ./data/io.github.vowstar.ptouch-gui.desktop
+    dst: /usr/share/applications/io.github.vowstar.ptouch-gui.desktop
+  - src: ./data/io.github.vowstar.ptouch-gui.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/io.github.vowstar.ptouch-gui.svg
+  - src: ./data/udev/20-usb-ptouch-permissions.rules
+    dst: /usr/lib/udev/rules.d/20-usb-ptouch-permissions.rules
+
+scripts:
+  postinstall: ./packaging/postinstall.sh
+
+# Per-distro name for the libudev runtime library the vendored libusb needs.
+overrides:
+  deb:
+    depends:
+      - libudev1
+  rpm:
+    depends:
+      - systemd-libs

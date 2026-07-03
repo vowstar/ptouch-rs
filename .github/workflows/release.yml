@@ -64,6 +64,49 @@ jobs:
           path: target/${{ matrix.target }}/release/${{ matrix.artifact_gui }}
           if-no-files-found: error
 
+      # macOS: assemble a .app bundle (binary + icns + Info.plist) and zip it
+      # with ditto so the bundle's structure is preserved.
+      - name: Package macOS .app bundle
+        if: runner.os == 'macOS'
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          app="ptouch-gui.app"
+          mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+          cp "target/${{ matrix.target }}/release/ptouch-gui" "$app/Contents/MacOS/ptouch-gui"
+          chmod +x "$app/Contents/MacOS/ptouch-gui"
+          cp data/macos/ptouch-gui.icns "$app/Contents/Resources/ptouch-gui.icns"
+          sed "s/__VERSION__/${version}/g" data/macos/Info.plist > "$app/Contents/Info.plist"
+          ditto -c -k --keepParent "$app" "ptouch-gui-${{ matrix.asset_suffix }}.app.zip"
+
+      - name: Upload macOS .app bundle
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ptouch-gui-${{ matrix.asset_suffix }}-app
+          path: ptouch-gui-${{ matrix.asset_suffix }}.app.zip
+          if-no-files-found: error
+
+      # Linux: build .deb and .rpm with nfpm; they install the binaries, the
+      # desktop entry, the icon, and the udev rule (postinst reloads udev).
+      - name: Package .deb and .rpm
+        if: runner.os == 'Linux'
+        run: |
+          export VERSION="${GITHUB_REF_NAME#v}"
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0
+          nfpm="$(go env GOPATH)/bin/nfpm"
+          mkdir -p dist
+          "$nfpm" package -f packaging/nfpm.yaml -p deb -t "dist/ptouch_${VERSION}_amd64.deb"
+          "$nfpm" package -f packaging/nfpm.yaml -p rpm -t "dist/ptouch-${VERSION}.x86_64.rpm"
+          ls -l dist
+
+      - name: Upload Linux packages
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ptouch-linux-packages
+          path: dist/*
+          if-no-files-found: error
+
   release:
     name: Create Release
     needs: build
@@ -87,6 +130,9 @@ jobs:
           cp artifacts/ptouch-gui-windows-amd64/ptouch-gui.exe release/ptouch-gui-windows-amd64.exe
           cp artifacts/ptouch-macos-arm64/ptouch release/ptouch-macos-arm64
           cp artifacts/ptouch-gui-macos-arm64/ptouch-gui release/ptouch-gui-macos-arm64
+          cp artifacts/ptouch-gui-macos-arm64-app/*.app.zip release/
+          cp artifacts/ptouch-linux-packages/*.deb release/
+          cp artifacts/ptouch-linux-packages/*.rpm release/
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
