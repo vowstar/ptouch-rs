@@ -173,6 +173,20 @@ sudo install -Dm644 data/io.github.vowstar.ptouch-gui.svg \
 sudo gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true
 ```
 
+## Application Icon
+
+`data/io.github.vowstar.ptouch-gui.svg` is the single source of truth. The
+raster forms are generated from it by `scripts/gen-icons.sh` (needs
+`rsvg-convert`, `magick`, and `python3`) and committed so normal builds need no
+rasterizer:
+
+- `crates/ptouch-gui/assets/icon.png` embedded as the runtime window icon
+- `data/windows/ptouch-gui.ico` embedded into the `.exe` by `build.rs`
+- `data/macos/ptouch-gui.icns` used by `cargo bundle` for the macOS `.app`
+
+Regenerate after editing the SVG, then commit the result. CI checks that the
+committed rasters still match the SVG.
+
 ## USB Driver (Windows)
 
 Communication goes through libusb, which on Windows can only reach a device

@@ -16,6 +16,17 @@ repository.workspace = true
 name = "ptouch-gui"
 path = "src/main.rs"
 
+# macOS: consumed by `cargo bundle` to produce a .app with a Dock/Finder icon.
+# Inert for a normal `cargo build`. The .icns comes from scripts/gen-icons.sh.
+[package.metadata.bundle]
+name = "P-Touch Label Printer"
+identifier = "io.github.vowstar.ptouch-gui"
+icon = ["../../data/macos/ptouch-gui.icns"]
+
+# Windows: build.rs uses winresource to embed the icon into the executable.
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"
+
 [dependencies]
 ptouch-core = { path = "../ptouch-core" }
 ptouch-render = { path = "../ptouch-render" }
