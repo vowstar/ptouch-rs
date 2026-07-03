@@ -11,7 +11,9 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-rusb = "0.9"
+# vendored: statically compile libusb from source so release binaries carry no
+# external libusb dependency (self-contained .app / AppImage / .exe).
+rusb = { version = "0.9", features = ["vendored"] }
 thiserror = "2.0"
 log = "0.4"
 bitflags = { version = "2.6", features = ["serde"] }
