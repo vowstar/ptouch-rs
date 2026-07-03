@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=P-Touch
+GenericName=Label Printer
+Comment=Design and print labels for Brother P-Touch printers
+Exec=ptouch-gui
+Icon=io.github.vowstar.ptouch-gui
+Terminal=false
+Categories=Utility;Printing;
+Keywords=label;printer;ptouch;brother;tape;
+StartupNotify=true
+StartupWMClass=io.github.vowstar.ptouch-gui

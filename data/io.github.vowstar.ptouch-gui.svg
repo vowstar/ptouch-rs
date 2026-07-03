@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <title>ptouch-gui</title>
+  <desc>A cream paper label strip with a folded corner and the letter P, on a gruvbox dark tile.</desc>
+
+  <!-- App tile: gruvbox dark background -->
+  <rect width="512" height="512" rx="112" fill="#282828"/>
+
+  <!-- Paper strip (gruvbox cream) with the top-right corner folded away -->
+  <path d="M90 168 L362 168 L422 228 L422 344 L90 344 Z" fill="#ebdbb2"/>
+
+  <!-- Folded corner flap (darker cream = paper underside) -->
+  <path d="M362 168 L422 228 L362 228 Z" fill="#bdae93"/>
+
+  <!-- Letter P (gruvbox orange), drawn as a stroked path so it needs no font -->
+  <path d="M210 322 L210 194 A62 40 0 1 1 210 274"
+        fill="none" stroke="#d65d0e" stroke-width="36"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

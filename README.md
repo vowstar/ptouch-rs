@@ -155,9 +155,22 @@ cat people.csv | ptouch print --layout badge.ptl --csv - --set dept=Eng
 Copy the udev rules file:
 
 ```sh
-sudo cp udev/20-usb-ptouch-permissions.rules /etc/udev/rules.d/
+sudo cp data/udev/20-usb-ptouch-permissions.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules
 sudo udevadm trigger
+```
+
+## Desktop Integration (Linux)
+
+Install the desktop entry and icon so `ptouch-gui` appears in your application
+menu:
+
+```sh
+sudo install -Dm644 data/io.github.vowstar.ptouch-gui.desktop \
+  /usr/share/applications/io.github.vowstar.ptouch-gui.desktop
+sudo install -Dm644 data/io.github.vowstar.ptouch-gui.svg \
+  /usr/share/icons/hicolor/scalable/apps/io.github.vowstar.ptouch-gui.svg
+sudo gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true
 ```
 
 ## USB Driver (Windows)
