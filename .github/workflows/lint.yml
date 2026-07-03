@@ -53,3 +53,38 @@ jobs:
           libxkbcommon-dev libssl-dev
 
       - run: cargo clippy --workspace -- -D warnings
+
+  icons:
+    name: Icons
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install icon tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin imagemagick
+
+      - name: Check raster icons match the SVG
+        run: |
+          # Rasterized bytes vary across librsvg/ImageMagick versions, so this
+          # compares pixels (with fuzz), not file bytes: it catches a design
+          # change that forgot to regenerate, without false-failing on encoder
+          # noise. Regenerate with scripts/gen-icons.sh when the SVG changes.
+          fresh="$(mktemp --suffix=.png)"
+          rsvg-convert -w 256 -h 256 \
+            data/io.github.vowstar.ptouch-gui.svg -o "$fresh"
+          ae="$(magick compare -metric AE -fuzz 4% \
+            crates/ptouch-gui/assets/icon.png "$fresh" null: 2>&1 || true)"
+          ae="${ae%%.*}"; ae="${ae:-0}"
+          echo "differing pixels: $ae / 65536"
+          if [ "$ae" -gt 400 ]; then
+            echo "ERROR: crates/ptouch-gui/assets/icon.png is stale."
+            echo "Run scripts/gen-icons.sh and commit the result."
+            exit 1
+          fi
+          file data/windows/ptouch-gui.ico | grep -q "icon resource" \
+            || { echo "ERROR: data/windows/ptouch-gui.ico is not a valid .ico"; exit 1; }
+          head -c4 data/macos/ptouch-gui.icns | grep -q "icns" \
+            || { echo "ERROR: data/macos/ptouch-gui.icns is not a valid .icns"; exit 1; }
+          echo "icons OK"
