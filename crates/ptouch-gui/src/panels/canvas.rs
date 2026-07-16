@@ -68,7 +68,7 @@ pub fn show_canvas(ui: &mut egui::Ui, state: &mut AppState) {
             ui.painter().rect_stroke(
                 label_rect,
                 0.0,
-                egui::Stroke::new(1.0, egui::Color32::from_gray(128)),
+                egui::Stroke::new(1.0_f32, egui::Color32::from_gray(128)),
                 egui::StrokeKind::Outside,
             );
 
