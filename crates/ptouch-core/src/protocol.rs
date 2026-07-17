@@ -188,6 +188,69 @@ pub fn rasterline_blank(max_px: u16) -> Vec<u8> {
     vec![0u8; (max_px as usize).div_ceil(8)]
 }
 
+/// Options for building a print job command stream.
+#[derive(Debug, Clone, Copy)]
+pub struct JobOptions {
+    /// Media width in mm from the printer status (used by the info command).
+    pub media_width: u8,
+    /// Chain print: skip the final feed and cut.
+    pub chain_print: bool,
+    /// Request the precut command (only sent if the device supports it).
+    pub precut: bool,
+}
+
+/// Build the complete command stream for one print job.
+///
+/// Returns the commands in send order, one chunk per USB transfer. Keeping
+/// the chunks separate preserves the transfer timing of the original
+/// per-command sends (a single huge transfer could stall on the printer's
+/// internal buffer).
+///
+/// Sequence: packbits -> rasterstart -> info -> d460bt_magic -> precut ->
+/// d460bt_chain -> raster lines -> finalize
+pub fn build_print_job(lines: &[Vec<u8>], flags: DeviceFlags, opts: &JobOptions) -> Vec<Vec<u8>> {
+    let use_packbits = flags.contains(DeviceFlags::RASTER_PACKBITS);
+    let is_d460bt = flags.contains(DeviceFlags::D460BT_MAGIC);
+
+    let mut job: Vec<Vec<u8>> = Vec::with_capacity(lines.len() + 8);
+
+    if use_packbits {
+        job.push(cmd_enable_packbits());
+    }
+
+    job.push(cmd_raster_start(flags));
+
+    if flags.contains(DeviceFlags::USE_INFO_CMD) {
+        job.push(cmd_info(opts.media_width, lines.len() as u32, flags));
+    }
+
+    if is_d460bt {
+        job.push(cmd_d460bt_magic());
+    }
+
+    if flags.contains(DeviceFlags::HAS_PRECUT) && opts.precut {
+        job.push(cmd_precut(true));
+    }
+
+    if is_d460bt && opts.chain_print {
+        job.push(cmd_d460bt_chain());
+    }
+
+    for line in lines {
+        if rasterline_is_blank(line) {
+            job.push(cmd_line_feed());
+        } else if use_packbits {
+            job.push(cmd_send_raster_packbits(line));
+        } else {
+            job.push(cmd_send_raster(line));
+        }
+    }
+
+    job.push(cmd_finalize(opts.chain_print, flags));
+
+    job
+}
+
 /// Check if a raster line is entirely blank (all zeros).
 pub fn rasterline_is_blank(line: &[u8]) -> bool {
     line.iter().all(|&b| b == 0)
@@ -308,5 +371,108 @@ mod tests {
     fn test_cmd_page_flags() {
         let cmd = cmd_page_flags(0x0300);
         assert_eq!(cmd, vec![0x1B, 0x69, 0x64, 0x00, 0x03]);
+    }
+
+    // -- Whole-job byte stream tests --
+    //
+    // These pin the exact command sequence sent to the printer so protocol
+    // changes are visible in review as byte-level diffs.
+
+    fn flat(job: &[Vec<u8>]) -> Vec<u8> {
+        job.concat()
+    }
+
+    #[test]
+    fn test_job_plain_raster() {
+        // Device without packbits (e.g. PT-2430PC): raw G lines only.
+        let lines = vec![vec![0xFF, 0x00], vec![0x00, 0x00]];
+        let opts = JobOptions {
+            media_width: 12,
+            chain_print: false,
+            precut: false,
+        };
+        let job = build_print_job(&lines, DeviceFlags::NONE, &opts);
+        let expected: Vec<u8> = [
+            vec![0x1B, 0x69, 0x52, 0x01],       // ESC i R 01 raster start
+            vec![0x47, 0x02, 0x00, 0xFF, 0x00], // G len data
+            vec![0x5A],                         // Z blank line
+            vec![0x1A],                         // print with feeding
+        ]
+        .concat();
+        assert_eq!(flat(&job), expected);
+    }
+
+    #[test]
+    fn test_job_packbits_p700() {
+        // PT-P700 class: packbits framing plus ESC i a mode switch.
+        let lines = vec![vec![0xAA, 0x55]];
+        let flags = DeviceFlags::RASTER_PACKBITS
+            .union(DeviceFlags::P700_INIT)
+            .union(DeviceFlags::HAS_PRECUT);
+        let opts = JobOptions {
+            media_width: 24,
+            chain_print: false,
+            precut: true,
+        };
+        let job = build_print_job(&lines, flags, &opts);
+        let expected: Vec<u8> = [
+            vec![0x4D, 0x02],                         // M 02 select packbits
+            vec![0x1B, 0x69, 0x61, 0x01],             // ESC i a 01 raster mode
+            vec![0x1B, 0x69, 0x4D, 0x40],             // ESC i M precut on
+            vec![0x47, 0x03, 0x00, 0x01, 0xAA, 0x55], // G with packbits run
+            vec![0x1A],
+        ]
+        .concat();
+        assert_eq!(flat(&job), expected);
+    }
+
+    #[test]
+    fn test_job_chain_print() {
+        let lines = vec![vec![0x01]];
+        let opts = JobOptions {
+            media_width: 12,
+            chain_print: true,
+            precut: false,
+        };
+        let job = build_print_job(&lines, DeviceFlags::NONE, &opts);
+        assert_eq!(job.last().unwrap(), &vec![0x0C]); // form feed, no cut
+    }
+
+    #[test]
+    fn test_job_precut_requires_device_support() {
+        let lines = vec![vec![0x01]];
+        let opts = JobOptions {
+            media_width: 12,
+            chain_print: false,
+            precut: true,
+        };
+        let job = build_print_job(&lines, DeviceFlags::NONE, &opts);
+        assert!(!flat(&job).windows(3).any(|w| w == [0x1B, 0x69, 0x4D]));
+    }
+
+    #[test]
+    fn test_job_d460bt() {
+        let lines = vec![vec![0x01]];
+        let flags = DeviceFlags::P700_INIT
+            .union(DeviceFlags::USE_INFO_CMD)
+            .union(DeviceFlags::D460BT_MAGIC);
+        let opts = JobOptions {
+            media_width: 12,
+            chain_print: true,
+            precut: false,
+        };
+        let job = build_print_job(&lines, flags, &opts);
+        let expected: Vec<u8> = [
+            vec![0x1B, 0x69, 0x61, 0x01], // raster mode
+            vec![
+                0x1B, 0x69, 0x7A, 0x00, 0x00, 12, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00,
+            ], // ESC i z info
+            vec![0x1B, 0x69, 0x64, 0x01, 0x00, 0x4D, 0x00], // D460BT magic
+            vec![0x1B, 0x69, 0x4B, 0x00, 0x00], // D460BT chain
+            vec![0x47, 0x01, 0x00, 0x01],
+            vec![0x1A], // D460BT always ejects
+        ]
+        .concat();
+        assert_eq!(flat(&job), expected);
     }
 }

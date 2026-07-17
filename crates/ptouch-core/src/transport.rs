@@ -379,59 +379,15 @@ impl PtouchDevice {
             return Err(PtouchError::NotInitialized);
         }
 
-        let flags = self.dev_info.flags;
-        let use_packbits = flags.contains(DeviceFlags::RASTER_PACKBITS);
-        let use_info = flags.contains(DeviceFlags::USE_INFO_CMD);
-        let has_precut = flags.contains(DeviceFlags::HAS_PRECUT);
-        let is_d460bt = flags.contains(DeviceFlags::D460BT_MAGIC);
+        let opts = protocol::JobOptions {
+            media_width: self.status.as_ref().map_or(0, |s| s.media_width),
+            chain_print,
+            precut,
+        };
 
-        // Brother P-Touch print command sequence:
-        // packbits -> rasterstart -> info -> d460bt_magic -> precut ->
-        // d460bt_chain -> raster lines -> finalize
-
-        // 1. Enable PackBits compression (before rasterstart)
-        if use_packbits {
-            self.send(&protocol::cmd_enable_packbits())?;
+        for chunk in protocol::build_print_job(lines, self.dev_info.flags, &opts) {
+            self.send(&chunk)?;
         }
-
-        // 2. Start raster mode (sent per-job)
-        self.send(&protocol::cmd_raster_start(flags))?;
-
-        // 3. Send info command with label metadata
-        if use_info {
-            let media_width = self.status.as_ref().map_or(0, |s| s.media_width);
-            let raster_lines = lines.len() as u32;
-            self.send(&protocol::cmd_info(media_width, raster_lines, flags))?;
-        }
-
-        // 4. D460BT magic sequence (sent per print job)
-        if is_d460bt {
-            self.send(&protocol::cmd_d460bt_magic())?;
-        }
-
-        // 5. Pre-cut setting (only when user explicitly requests it)
-        if has_precut && precut {
-            self.send(&protocol::cmd_precut(true))?;
-        }
-
-        // 6. D460BT chain command (before raster data)
-        if is_d460bt && chain_print {
-            self.send(&protocol::cmd_d460bt_chain())?;
-        }
-
-        // 7. Send raster lines
-        for line in lines {
-            if protocol::rasterline_is_blank(line) {
-                self.send(&protocol::cmd_line_feed())?;
-            } else if use_packbits {
-                self.send(&protocol::cmd_send_raster_packbits(line))?;
-            } else {
-                self.send(&protocol::cmd_send_raster(line))?;
-            }
-        }
-
-        // 8. Finalize
-        self.send(&protocol::cmd_finalize(chain_print, flags))?;
 
         // Wait for printing completed status
         let mut response_buf = [0u8; STATUS_PACKET_SIZE];
@@ -467,35 +423,18 @@ impl PtouchDevice {
             return Err(PtouchError::NotInitialized);
         }
 
-        let flags = self.dev_info.flags;
-        let use_packbits = flags.contains(DeviceFlags::RASTER_PACKBITS);
-        let use_info = flags.contains(DeviceFlags::USE_INFO_CMD);
-        let is_d460bt = flags.contains(DeviceFlags::D460BT_MAGIC);
+        // One blank line makes the printer engage the feed mechanism.
+        let lines = vec![protocol::rasterline_blank(self.dev_info.max_px)];
+        let opts = protocol::JobOptions {
+            media_width: self.status.as_ref().map_or(0, |s| s.media_width),
+            chain_print: false,
+            precut: false,
+        };
 
-        // A small number of blank lines to make the printer engage
-        let blank_lines = 1;
-
-        if use_packbits {
-            self.send(&protocol::cmd_enable_packbits())?;
-        }
-        self.send(&protocol::cmd_raster_start(flags))?;
-
-        if use_info {
-            let media_width = self.status.as_ref().map_or(0, |s| s.media_width);
-            self.send(&protocol::cmd_info(media_width, blank_lines, flags))?;
+        for chunk in protocol::build_print_job(&lines, self.dev_info.flags, &opts) {
+            self.send(&chunk)?;
         }
 
-        if is_d460bt {
-            self.send(&protocol::cmd_d460bt_magic())?;
-        }
-
-        // Send blank raster lines (line feed = blank line)
-        for _ in 0..blank_lines {
-            self.send(&protocol::cmd_line_feed())?;
-        }
-
-        // Eject and cut
-        self.send(&protocol::cmd_finalize(false, flags))?;
         info!("Feed and cut");
         Ok(())
     }
