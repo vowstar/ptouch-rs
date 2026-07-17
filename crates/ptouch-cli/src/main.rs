@@ -451,14 +451,12 @@ fn execute_info(_args: &InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
     println!("  Max printable:  {} px", max_px);
     println!("  Resolution:     {} DPI", dpi);
 
-    // Try to find tape info from the table
-    let tapes = tape::supported_tapes(dpi);
-    for t in tapes {
-        if Some(t.pixels) == tape_width_px {
-            println!("  Tape size:      {} mm", t.width_mm);
-            println!("  Margin:         {:.1} mm", t.margin_mm);
-            break;
-        }
+    // Look up tape info by the reported media width. The pixel value from
+    // the transport is clamped to the head width, so it cannot be used as
+    // a reverse lookup key.
+    if let Some(t) = tape::find_tape(status.media_width, dpi) {
+        println!("  Tape size:      {} mm", t.width_mm);
+        println!("  Margin:         {:.1} mm", t.margin_mm);
     }
 
     dev.close()?;
@@ -697,19 +695,20 @@ fn resolve_layout_target(
         let printer_px = u32::from(dev.tape_width_px().ok_or_else(|| {
             PtouchError::StatusError("Could not determine tape width".to_string())
         })?);
-        if saved_px.is_some_and(|s| s != printer_px) {
-            let printer_mm = dev.status().map(|s| s.media_width).unwrap_or(0);
-            if printer_mm > 0 {
-                eprintln!(
-                    "WARN: layout saved for {}mm, printer has {}mm; refitting to printer tape",
-                    doc.tape_width_mm, printer_mm
-                );
-            } else {
-                eprintln!(
-                    "WARN: layout saved for {}mm tape; refitting to the printer tape",
-                    doc.tape_width_mm
-                );
-            }
+        // Warn on a real tape width mismatch. A pixel difference alone just
+        // means the printer resolution differs from the design resolution,
+        // and the refit to printer_px already handles that.
+        let printer_mm = dev.status().map(|s| s.media_width).unwrap_or(0);
+        if printer_mm > 0 && printer_mm != doc.tape_width_mm {
+            eprintln!(
+                "WARN: layout saved for {}mm, printer has {}mm; refitting to printer tape",
+                doc.tape_width_mm, printer_mm
+            );
+        } else if printer_mm == 0 && saved_px.is_some_and(|s| s != printer_px) {
+            eprintln!(
+                "WARN: layout saved for {}mm tape; refitting to the printer tape",
+                doc.tape_width_mm
+            );
         }
         let max = dev.max_px();
         Ok((printer_px, max, Some(dev)))
