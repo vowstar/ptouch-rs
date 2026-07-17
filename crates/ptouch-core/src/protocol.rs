@@ -206,17 +206,18 @@ pub struct JobOptions {
 /// per-command sends (a single huge transfer could stall on the printer's
 /// internal buffer).
 ///
-/// Sequence: packbits -> rasterstart -> info -> d460bt_magic -> precut ->
-/// d460bt_chain -> raster lines -> finalize
+/// Sequence: rasterstart -> info -> d460bt_magic -> precut ->
+/// d460bt_chain -> packbits -> raster lines -> finalize
+///
+/// The compression select (M) is the last control code before the raster
+/// data, as specified by the Brother raster command references (e.g.
+/// PT-P900 reference, section 2.2.3). Printers that boot in ESC/P mode
+/// (PT-9700PC) lock up when M arrives before the raster mode switch.
 pub fn build_print_job(lines: &[Vec<u8>], flags: DeviceFlags, opts: &JobOptions) -> Vec<Vec<u8>> {
     let use_packbits = flags.contains(DeviceFlags::RASTER_PACKBITS);
     let is_d460bt = flags.contains(DeviceFlags::D460BT_MAGIC);
 
     let mut job: Vec<Vec<u8>> = Vec::with_capacity(lines.len() + 8);
-
-    if use_packbits {
-        job.push(cmd_enable_packbits());
-    }
 
     job.push(cmd_raster_start(flags));
 
@@ -234,6 +235,10 @@ pub fn build_print_job(lines: &[Vec<u8>], flags: DeviceFlags, opts: &JobOptions)
 
     if is_d460bt && opts.chain_print {
         job.push(cmd_d460bt_chain());
+    }
+
+    if use_packbits {
+        job.push(cmd_enable_packbits());
     }
 
     for line in lines {
@@ -416,14 +421,32 @@ mod tests {
         };
         let job = build_print_job(&lines, flags, &opts);
         let expected: Vec<u8> = [
-            vec![0x4D, 0x02],                         // M 02 select packbits
             vec![0x1B, 0x69, 0x61, 0x01],             // ESC i a 01 raster mode
             vec![0x1B, 0x69, 0x4D, 0x40],             // ESC i M precut on
+            vec![0x4D, 0x02],                         // M 02, last before data
             vec![0x47, 0x03, 0x00, 0x01, 0xAA, 0x55], // G with packbits run
             vec![0x1A],
         ]
         .concat();
         assert_eq!(flat(&job), expected);
+    }
+
+    #[test]
+    fn test_job_compression_select_is_last_control_code() {
+        // Brother raster references place the compression select (M)
+        // immediately before the raster data. Windows driver captures
+        // (rasterprynt, PT-9800PCN) confirm this order. Printers that
+        // boot in ESC/P mode lock up when M arrives earlier.
+        let lines = vec![vec![0xFF]];
+        let flags = DeviceFlags::RASTER_PACKBITS.union(DeviceFlags::HAS_PRECUT);
+        let opts = JobOptions {
+            media_width: 12,
+            chain_print: false,
+            precut: true,
+        };
+        let job = build_print_job(&lines, flags, &opts);
+        let m_pos = job.iter().position(|c| c == &vec![0x4D, 0x02]).unwrap();
+        assert_eq!(job[m_pos + 1][0], 0x47, "raster data must follow M");
     }
 
     #[test]
