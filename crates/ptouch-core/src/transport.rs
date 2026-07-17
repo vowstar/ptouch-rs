@@ -367,24 +367,37 @@ impl PtouchDevice {
     /// * `lines` - Raster image data, one byte-slice per line.
     /// * `chain_print` - If true, don't cut the tape (chain mode).
     /// * `precut` - If true AND device supports precut, send precut command.
+    /// * `quality` - Print quality mode (device must support non-standard).
     ///
     /// # Errors
     ///
-    /// Returns [`PtouchError::NotInitialized`] if [`init`](Self::init) was not called.
+    /// Returns [`PtouchError::NotInitialized`] if [`init`](Self::init) was
+    /// not called, or [`PtouchError::UnsupportedQuality`] if a non-standard
+    /// quality is requested on a device without quality modes.
     pub fn print_raster(
         &mut self,
         lines: &[Vec<u8>],
         chain_print: bool,
         precut: bool,
+        quality: protocol::PrintQuality,
     ) -> Result<()> {
         if !self.initialized {
             return Err(PtouchError::NotInitialized);
+        }
+
+        if quality != protocol::PrintQuality::Standard
+            && !self.dev_info.flags.contains(DeviceFlags::LEGACY_HIRES)
+        {
+            return Err(PtouchError::UnsupportedQuality(
+                self.dev_info.name.to_string(),
+            ));
         }
 
         let opts = protocol::JobOptions {
             media_width: self.status.as_ref().map_or(0, |s| s.media_width),
             chain_print,
             precut,
+            quality,
         };
 
         for chunk in protocol::build_print_job(lines, self.dev_info.flags, &opts) {
@@ -429,8 +442,7 @@ impl PtouchDevice {
         let lines = vec![protocol::rasterline_blank(self.dev_info.max_px)];
         let opts = protocol::JobOptions {
             media_width: self.status.as_ref().map_or(0, |s| s.media_width),
-            chain_print: false,
-            precut: false,
+            ..protocol::JobOptions::default()
         };
 
         for chunk in protocol::build_print_job(&lines, self.dev_info.flags, &opts) {

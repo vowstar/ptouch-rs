@@ -55,4 +55,8 @@ pub enum PtouchError {
     /// The printer has not been initialized yet.
     #[error("Printer not initialized")]
     NotInitialized,
+
+    /// The requested print quality is not supported by this device.
+    #[error("Print quality not supported by {0}")]
+    UnsupportedQuality(String),
 }

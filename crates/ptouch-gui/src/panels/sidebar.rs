@@ -5,6 +5,7 @@
 
 use log::info;
 
+use ptouch_core::protocol::PrintQuality;
 use ptouch_core::tape;
 
 use crate::state::{AppState, PrinterCommand};
@@ -71,7 +72,7 @@ fn show_tape_section(ui: &mut egui::Ui, state: &mut AppState) {
         });
 }
 
-/// Print options: auto-cut toggle.
+/// Print options: auto-cut toggle and quality selection.
 fn show_print_options(ui: &mut egui::Ui, state: &mut AppState) {
     ui.heading("Print Options");
     ui.add_space(4.0);
@@ -80,6 +81,25 @@ fn show_print_options(ui: &mut egui::Ui, state: &mut AppState) {
         ui.label(label);
         ui.add(crate::widgets::toggle(&mut state.auto_cut));
     });
+
+    if state.printer_quality_modes {
+        let quality_label = |q: PrintQuality| match q {
+            PrintQuality::Standard => "Standard",
+            PrintQuality::HighRes => "High resolution",
+            PrintQuality::Draft => "Draft (high speed)",
+        };
+        egui::ComboBox::from_label("Quality")
+            .selected_text(quality_label(state.print_quality))
+            .show_ui(ui, |ui| {
+                for q in [
+                    PrintQuality::Standard,
+                    PrintQuality::HighRes,
+                    PrintQuality::Draft,
+                ] {
+                    ui.selectable_value(&mut state.print_quality, q, quality_label(q));
+                }
+            });
+    }
 }
 
 /// Whole-label mirror section: flip the entire composed label.

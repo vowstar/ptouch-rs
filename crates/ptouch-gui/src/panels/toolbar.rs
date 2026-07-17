@@ -92,6 +92,7 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &mut AppState) {
                     raster_lines,
                     chain_print,
                     auto_cut,
+                    quality: state.print_quality,
                 });
                 state.operation_in_progress = true;
                 state.status_message = "Printing...".to_string();

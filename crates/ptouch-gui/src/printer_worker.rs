@@ -11,6 +11,8 @@ use std::time::Duration;
 
 use log::{error, info};
 
+use ptouch_core::device::DeviceFlags;
+use ptouch_core::protocol::PrintQuality;
 use ptouch_core::transport::PtouchDevice;
 
 use crate::state::{PrinterCommand, PrinterResponse};
@@ -39,8 +41,16 @@ pub fn printer_worker(
                 raster_lines,
                 chain_print,
                 auto_cut,
+                quality,
             }) => {
-                do_print(&resp_tx, &ctx, &raster_lines, chain_print, auto_cut);
+                do_print(
+                    &resp_tx,
+                    &ctx,
+                    &raster_lines,
+                    chain_print,
+                    auto_cut,
+                    quality,
+                );
             }
             Ok(PrinterCommand::FeedAndCut) => {
                 do_feed_and_cut(&resp_tx, &ctx);
@@ -63,6 +73,7 @@ fn do_poll(resp_tx: &mpsc::Sender<PrinterResponse>, ctx: &egui::Context) {
         Ok(mut dev) => {
             let max_px = dev.max_px();
             let dpi = dev.device_info().dpi;
+            let quality_modes = dev.flags().contains(DeviceFlags::LEGACY_HIRES);
             let model_name = dev.device_info().name.to_string();
             match dev.query_status() {
                 Ok(status) => {
@@ -75,6 +86,7 @@ fn do_poll(resp_tx: &mpsc::Sender<PrinterResponse>, ctx: &egui::Context) {
                         media_type,
                         max_px,
                         dpi,
+                        quality_modes,
                     }
                 }
                 Err(e) => {
@@ -97,6 +109,7 @@ fn do_print(
     raster_lines: &[Vec<u8>],
     chain_print: bool,
     auto_cut: bool,
+    quality: PrintQuality,
 ) {
     let result = (|| -> Result<(), String> {
         let mut dev = PtouchDevice::open_first().map_err(|e| format!("Connect error: {}", e))?;
@@ -106,7 +119,7 @@ fn do_print(
             return Err(msg);
         }
         let r = dev
-            .print_raster(raster_lines, chain_print, auto_cut)
+            .print_raster(raster_lines, chain_print, auto_cut, quality)
             .map_err(|e| format!("Print error: {}", e));
         let _ = dev.close();
         r

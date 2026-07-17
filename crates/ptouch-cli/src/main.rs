@@ -18,6 +18,7 @@ use log::debug;
 
 use ptouch_core::device::{self, DeviceFlags, DeviceInfo};
 use ptouch_core::error::PtouchError;
+use ptouch_core::protocol::PrintQuality;
 use ptouch_core::tape;
 use ptouch_core::transport::PtouchDevice;
 
@@ -140,6 +141,10 @@ struct PrintArgs {
     #[arg(long)]
     precut: bool,
 
+    /// Print quality (high and draft need a printer with quality modes)
+    #[arg(long, value_enum, default_value = "standard")]
+    quality: QualityArg,
+
     /// Number of copies
     #[arg(long, default_value = "1")]
     copies: u32,
@@ -177,6 +182,23 @@ impl AlignArg {
             AlignArg::Left => TextAlign::Left,
             AlignArg::Center => TextAlign::Center,
             AlignArg::Right => TextAlign::Right,
+        }
+    }
+}
+
+#[derive(ValueEnum, Clone, Copy, Debug)]
+enum QualityArg {
+    Standard,
+    High,
+    Draft,
+}
+
+impl QualityArg {
+    fn to_print_quality(self) -> PrintQuality {
+        match self {
+            QualityArg::Standard => PrintQuality::Standard,
+            QualityArg::High => PrintQuality::HighRes,
+            QualityArg::Draft => PrintQuality::Draft,
         }
     }
 }
@@ -841,7 +863,12 @@ fn print_to_device(
             chain_print
         );
 
-        dev.print_raster(&raster_lines, chain_print, args.precut)?;
+        dev.print_raster(
+            &raster_lines,
+            chain_print,
+            args.precut,
+            args.quality.to_print_quality(),
+        )?;
     }
 
     let tape_mm = bitmap.width() as f64 / f64::from(dev.device_info().dpi) * 25.4;

@@ -35,6 +35,9 @@ bitflags! {
         const HAS_PRECUT      = 1 << 5;
         /// Device requires D460BT magic initialization.
         const D460BT_MAGIC    = 1 << 6;
+        /// Device selects print quality via the legacy ESC i c command
+        /// (PT-9500PC generation of 360 dpi printers).
+        const LEGACY_HIRES    = 1 << 7;
     }
 }
 
@@ -95,7 +98,9 @@ static DEVICE_TABLE: &[DeviceInfo] = &[
         name: "PT-9500PC",
         max_px: 384,
         dpi: 360,
-        flags: DeviceFlags::RASTER_PACKBITS.union(DeviceFlags::HAS_PRECUT),
+        flags: DeviceFlags::RASTER_PACKBITS
+            .union(DeviceFlags::HAS_PRECUT)
+            .union(DeviceFlags::LEGACY_HIRES),
     },
     DeviceInfo {
         vid: 0x04f9,
@@ -105,7 +110,8 @@ static DEVICE_TABLE: &[DeviceInfo] = &[
         dpi: 360,
         flags: DeviceFlags::RASTER_PACKBITS
             .union(DeviceFlags::P700_INIT)
-            .union(DeviceFlags::HAS_PRECUT),
+            .union(DeviceFlags::HAS_PRECUT)
+            .union(DeviceFlags::LEGACY_HIRES),
     },
     DeviceInfo {
         vid: 0x04f9,

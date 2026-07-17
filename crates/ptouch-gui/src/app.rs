@@ -125,11 +125,13 @@ impl eframe::App for PtouchApp {
                     media_type,
                     max_px,
                     dpi,
+                    quality_modes,
                 } => {
                     self.state.printer_connected = true;
                     self.state.operation_in_progress = false;
                     self.state.printer_max_px = max_px;
                     self.state.printer_dpi = dpi;
+                    self.state.printer_quality_modes = quality_modes;
                     self.state.printer_model =
                         Some(format!("{}: {} mm {}", model_name, media_width, media_type));
                     self.state.printer_status = Some("Connected".to_string());
@@ -152,6 +154,7 @@ impl eframe::App for PtouchApp {
                     self.state.printer_connected = false;
                     self.state.operation_in_progress = false;
                     self.state.printer_max_px = 0;
+                    self.state.printer_quality_modes = false;
                 }
                 PrinterResponse::PrintDone => {
                     self.state.operation_in_progress = false;

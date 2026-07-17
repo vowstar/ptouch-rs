@@ -17,6 +17,7 @@ pub mod transport;
 // Re-export commonly used types at the crate root.
 pub use device::{DeviceFlags, DeviceInfo};
 pub use error::{PtouchError, Result};
+pub use protocol::PrintQuality;
 pub use status::PrinterStatus;
 pub use tape::TapeInfo;
 pub use transport::PtouchDevice;

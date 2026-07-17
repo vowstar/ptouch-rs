@@ -5,6 +5,7 @@
 
 use std::sync::mpsc;
 
+use ptouch_core::protocol::PrintQuality;
 use ptouch_render::bitmap::LabelBitmap;
 
 pub use ptouch_render::document::LabelElement;
@@ -18,6 +19,7 @@ pub enum PrinterCommand {
         raster_lines: Vec<Vec<u8>>,
         chain_print: bool,
         auto_cut: bool,
+        quality: PrintQuality,
     },
     /// Feed tape forward and cut.
     FeedAndCut,
@@ -32,6 +34,7 @@ pub enum PrinterResponse {
         media_type: String,
         max_px: u16,
         dpi: u16,
+        quality_modes: bool,
     },
     /// No printer found or previously connected printer lost.
     Disconnected,
@@ -93,6 +96,10 @@ pub struct AppState {
     pub printer_max_px: u16,
     /// Print resolution of the connected printer (180 when disconnected).
     pub printer_dpi: u16,
+    /// Whether the connected printer supports print quality modes.
+    pub printer_quality_modes: bool,
+    /// Selected print quality for the next print job.
+    pub print_quality: PrintQuality,
     /// Channel sender for commands to the printer worker thread.
     pub printer_cmd_tx: Option<mpsc::Sender<PrinterCommand>>,
 }
@@ -124,6 +131,8 @@ impl Default for AppState {
             operation_in_progress: false,
             printer_max_px: 0,
             printer_dpi: 180,
+            printer_quality_modes: false,
+            print_quality: PrintQuality::Standard,
             printer_cmd_tx: None,
         }
     }
