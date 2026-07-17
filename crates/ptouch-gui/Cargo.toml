@@ -34,13 +34,11 @@ egui = "0.33"
 eframe = { version = "0.33", default-features = false, features = [
     "accesskit",
     "default_fonts",
-    "wgpu",
     "glow",
     "wayland",
     "x11",
     "persistence",
 ] }
-wgpu = { version = "27", default-features = false, features = ["vulkan", "gles", "wgsl", "std"] }
 egui_extras = { version = "0.33", features = ["image"] }
 rfd = "0.17"
 serde = { version = "1.0", features = ["derive"] }
