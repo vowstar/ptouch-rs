@@ -99,6 +99,16 @@ static DEVICE_TABLE: &[DeviceInfo] = &[
     },
     DeviceInfo {
         vid: 0x04f9,
+        pid: 0x203c,
+        name: "PT-9700PC",
+        max_px: 384,
+        dpi: 360,
+        flags: DeviceFlags::RASTER_PACKBITS
+            .union(DeviceFlags::P700_INIT)
+            .union(DeviceFlags::HAS_PRECUT),
+    },
+    DeviceInfo {
+        vid: 0x04f9,
         pid: 0x2011,
         name: "PT-2450PC",
         max_px: 128,
@@ -340,7 +350,18 @@ mod tests {
 
     #[test]
     fn test_device_count() {
-        assert_eq!(supported_devices().len(), 29);
+        assert_eq!(supported_devices().len(), 30);
+    }
+
+    #[test]
+    fn test_pt9700pc() {
+        let dev = find_device(0x04f9, 0x203c).unwrap();
+        assert_eq!(dev.name, "PT-9700PC");
+        assert_eq!(dev.max_px, 384);
+        assert_eq!(dev.dpi, 360);
+        assert!(dev.flags.contains(DeviceFlags::RASTER_PACKBITS));
+        assert!(dev.flags.contains(DeviceFlags::P700_INIT));
+        assert!(dev.flags.contains(DeviceFlags::HAS_PRECUT));
     }
 
     #[test]
