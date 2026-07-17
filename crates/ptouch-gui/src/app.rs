@@ -132,6 +132,11 @@ impl eframe::App for PtouchApp {
                     self.state.printer_max_px = max_px;
                     self.state.printer_dpi = dpi;
                     self.state.printer_quality_modes = quality_modes;
+                    // A stale non-standard quality from a previous printer
+                    // would make every print fail with the selector hidden.
+                    if !quality_modes {
+                        self.state.print_quality = ptouch_core::protocol::PrintQuality::Standard;
+                    }
                     self.state.printer_model =
                         Some(format!("{}: {} mm {}", model_name, media_width, media_type));
                     self.state.printer_status = Some("Connected".to_string());
@@ -153,8 +158,9 @@ impl eframe::App for PtouchApp {
                     }
                     self.state.printer_connected = false;
                     self.state.operation_in_progress = false;
-                    self.state.printer_max_px = 0;
-                    self.state.printer_quality_modes = false;
+                    // Keep printer_max_px, printer_dpi, and quality state:
+                    // the canvas must not resize on a transient disconnect,
+                    // and printing is gated on printer_connected anyway.
                 }
                 PrinterResponse::PrintDone => {
                     self.state.operation_in_progress = false;

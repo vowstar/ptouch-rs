@@ -92,11 +92,13 @@ pub struct AppState {
     pub printer_connected: bool,
     /// Whether a printer operation (print, feed & cut) is in progress.
     pub operation_in_progress: bool,
-    /// Maximum printable pixels for the connected printer.
+    /// Maximum printable pixels of the last connected printer (0 initially).
     pub printer_max_px: u16,
-    /// Print resolution of the connected printer (180 when disconnected).
+    /// Print resolution of the last connected printer (180 initially).
+    /// Kept across disconnects so the canvas does not resize on a
+    /// transient USB glitch.
     pub printer_dpi: u16,
-    /// Whether the connected printer supports print quality modes.
+    /// Whether the last connected printer supports print quality modes.
     pub printer_quality_modes: bool,
     /// Selected print quality for the next print job.
     pub print_quality: PrintQuality,
