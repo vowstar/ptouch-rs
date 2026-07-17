@@ -244,6 +244,19 @@ crates/
   ptouch-gui/     -- GUI binary (egui)
 ```
 
+## Protocol References
+
+The protocol and device layer is derived from ptouch-print (see License
+below). Protocol details are additionally cross-checked against Brother's
+published command references and the device behavior documented by other
+open source drivers:
+
+- [Brother PT-P900/P900W/P950NW Raster Command Reference](https://download.brother.com/welcome/docp100407/cv_ptp900_eng_raster_102.pdf)
+- [Brother PT-9700PC/PT-9800PCN ESC/P Command Reference](https://download.brother.com/welcome/docp000584/cv_pt9700_eng_escp_103.pdf)
+- [printer-driver-ptouch](https://github.com/philpem/printer-driver-ptouch)
+- [rasterprynt](https://github.com/boxine/rasterprynt)
+- [pyPTouch](https://github.com/amathieson/pyPTouch)
+
 ## License
 
 This project's printer protocol and device layer is derived from

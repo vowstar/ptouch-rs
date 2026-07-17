@@ -13,6 +13,21 @@ those parts and the distributed binaries are licensed GPL-3.0-or-later. With
 gratitude to the ptouch-print authors for the reverse engineering that made
 this possible.
 
+The protocol implementation is additionally informed by Brother's published
+command references and by the device behavior documented in these projects:
+
+    Brother PT-P900/P900W/P950NW Raster Command Reference
+    https://download.brother.com/welcome/docp100407/cv_ptp900_eng_raster_102.pdf
+
+    Brother PT-9700PC/PT-9800PCN ESC/P Command Reference
+    https://download.brother.com/welcome/docp000584/cv_pt9700_eng_escp_103.pdf
+
+    printer-driver-ptouch: https://github.com/philpem/printer-driver-ptouch
+    rasterprynt: https://github.com/boxine/rasterprynt
+    pyPTouch: https://github.com/amathieson/pyPTouch
+
+With thanks to their authors for documenting these printers.
+
 Original, independently written parts of this project (the egui GUI, the
 command-line front end, and the rendering code other than raster conversion)
 are additionally available under the MIT license. See README.md for the
