@@ -102,6 +102,11 @@ static TAPE_TABLE_360: &[TapeInfo] = &[
         margin_mm: 3.0,
     }, // 18 mm tape
     TapeInfo {
+        width_mm: 21,
+        pixels: 248,
+        margin_mm: 3.0,
+    }, // 21 mm tape (no official 360 dpi value, doubled 180 dpi area)
+    TapeInfo {
         width_mm: 24,
         pixels: 320,
         margin_mm: 3.0,
@@ -161,7 +166,20 @@ mod tests {
     #[test]
     fn test_tape_count() {
         assert_eq!(supported_tapes(180).len(), 8);
-        assert_eq!(supported_tapes(360).len(), 7);
+        assert_eq!(supported_tapes(360).len(), 8);
+    }
+
+    #[test]
+    fn test_both_tables_cover_the_same_widths() {
+        // A tape that resolves at 180 dpi must also resolve at 360 dpi,
+        // otherwise switching printers turns a working tape into an error.
+        for t in supported_tapes(180) {
+            assert!(
+                find_tape(t.width_mm, 360).is_some(),
+                "{} mm missing from 360 dpi table",
+                t.width_mm
+            );
+        }
     }
 
     #[test]
@@ -182,7 +200,7 @@ mod tests {
         assert_eq!(tape_pixels(6, 360), Some(64));
         // 36mm = 454 on the P900 560 pin head; 384 pin heads clamp to 384
         assert_eq!(tape_pixels(36, 360), Some(454));
-        // 21mm has no documented 360 dpi print area
-        assert_eq!(tape_pixels(21, 360), None);
+        // 21mm has no documented 360 dpi print area, doubled 180 dpi value
+        assert_eq!(tape_pixels(21, 360), Some(248));
     }
 }
