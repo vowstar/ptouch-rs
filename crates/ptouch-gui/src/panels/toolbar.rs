@@ -135,6 +135,7 @@ fn do_save_layout(state: &mut AppState) {
     let document = LabelDocument {
         version: ptouch_render::document::DOCUMENT_VERSION,
         tape_width_mm: state.tape_width_mm,
+        dpi: state.printer_dpi,
         font_name: state.font_name.clone(),
         font_margin: state.font_margin,
         flip_h: state.overall_flip_h,

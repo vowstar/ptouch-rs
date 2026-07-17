@@ -25,6 +25,11 @@ use crate::text::{TextAlign, TextRenderer};
 /// Current on-disk layout format version.
 pub const DOCUMENT_VERSION: u32 = 1;
 
+/// Default design resolution for layouts saved before the dpi field existed.
+fn default_dpi() -> u16 {
+    180
+}
+
 /// A complete label design: global settings plus an ordered element list.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LabelDocument {
@@ -32,6 +37,11 @@ pub struct LabelDocument {
     pub version: u32,
     /// Tape width in millimeters the design was created for.
     pub tape_width_mm: u8,
+    /// Print resolution in dpi the design was created for. Element sizes
+    /// and positions are pixels at this resolution. Layouts from before
+    /// this field default to 180 dpi.
+    #[serde(default = "default_dpi")]
+    pub dpi: u16,
     /// Font family name used for text elements.
     pub font_name: String,
     /// Font top/bottom margin in pixels.
@@ -734,6 +744,7 @@ mod tests {
         LabelDocument {
             version: DOCUMENT_VERSION,
             tape_width_mm: 12,
+            dpi: 180,
             font_name: "DejaVuSans".into(),
             font_margin: 2,
             flip_h: false,
@@ -794,6 +805,7 @@ mod tests {
         let doc = LabelDocument {
             version: DOCUMENT_VERSION + 1,
             tape_width_mm: 12,
+            dpi: 180,
             font_name: "x".into(),
             font_margin: 0,
             flip_h: false,
@@ -809,6 +821,7 @@ mod tests {
         let doc = LabelDocument {
             version: DOCUMENT_VERSION,
             tape_width_mm: 12,
+            dpi: 180,
             font_name: "x".into(),
             font_margin: 0,
             flip_h: false,
@@ -839,6 +852,7 @@ mod tests {
         LabelDocument {
             version: DOCUMENT_VERSION,
             tape_width_mm: 12,
+            dpi: 180,
             font_name: "x".into(),
             font_margin: 0,
             flip_h: false,

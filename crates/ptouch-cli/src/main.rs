@@ -676,9 +676,9 @@ fn resolve_layout_target(
     args: &PrintArgs,
     doc: &LabelDocument,
 ) -> Result<(u32, u16, Option<PtouchDevice>), Box<dyn std::error::Error>> {
-    // Offline export renders at 180 dpi; printing uses the printer's own
-    // status-derived width, so a 360 dpi printer just triggers the refit path.
-    let saved_px = tape::find_tape(doc.tape_width_mm, 180).map(|t| u32::from(t.pixels));
+    // Offline export renders at the resolution the layout was designed at;
+    // printing uses the printer's own status-derived width.
+    let saved_px = tape::find_tape(doc.tape_width_mm, doc.dpi).map(|t| u32::from(t.pixels));
 
     if let Some(w) = args.tape_width {
         if args.output.is_none() {
