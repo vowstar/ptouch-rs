@@ -31,6 +31,7 @@ pub enum PrinterResponse {
         media_width: u8,
         media_type: String,
         max_px: u16,
+        dpi: u16,
     },
     /// No printer found or previously connected printer lost.
     Disconnected,
@@ -90,6 +91,8 @@ pub struct AppState {
     pub operation_in_progress: bool,
     /// Maximum printable pixels for the connected printer.
     pub printer_max_px: u16,
+    /// Print resolution of the connected printer (180 when disconnected).
+    pub printer_dpi: u16,
     /// Channel sender for commands to the printer worker thread.
     pub printer_cmd_tx: Option<mpsc::Sender<PrinterCommand>>,
 }
@@ -120,16 +123,23 @@ impl Default for AppState {
             printer_connected: false,
             operation_in_progress: false,
             printer_max_px: 0,
+            printer_dpi: 180,
             printer_cmd_tx: None,
         }
     }
 }
 
 impl AppState {
-    /// Update the tape width in pixels based on the current tape_width_mm.
+    /// Update the tape width in pixels based on the current tape_width_mm
+    /// and the connected printer's resolution.
     pub fn update_tape_pixels(&mut self) {
-        if let Some(tape) = ptouch_core::tape::find_tape(self.tape_width_mm) {
-            self.tape_width_px = u32::from(tape.pixels);
+        if let Some(tape) = ptouch_core::tape::find_tape(self.tape_width_mm, self.printer_dpi) {
+            let px = u32::from(tape.pixels);
+            self.tape_width_px = if self.printer_max_px > 0 {
+                px.min(u32::from(self.printer_max_px))
+            } else {
+                px
+            };
         }
     }
 

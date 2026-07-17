@@ -430,7 +430,7 @@ fn execute_info(_args: &InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
     println!("  Resolution:     {} DPI", dpi);
 
     // Try to find tape info from the table
-    let tapes = tape::supported_tapes();
+    let tapes = tape::supported_tapes(dpi);
     for t in tapes {
         if Some(t.pixels) == tape_width_px {
             println!("  Tape size:      {} mm", t.width_mm);
@@ -654,7 +654,9 @@ fn resolve_layout_target(
     args: &PrintArgs,
     doc: &LabelDocument,
 ) -> Result<(u32, u16, Option<PtouchDevice>), Box<dyn std::error::Error>> {
-    let saved_px = tape::find_tape(doc.tape_width_mm).map(|t| u32::from(t.pixels));
+    // Offline export renders at 180 dpi; printing uses the printer's own
+    // status-derived width, so a 360 dpi printer just triggers the refit path.
+    let saved_px = tape::find_tape(doc.tape_width_mm, 180).map(|t| u32::from(t.pixels));
 
     if let Some(w) = args.tape_width {
         if args.output.is_none() {
@@ -701,7 +703,8 @@ fn emit_label(
 ) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(ref output_path) = args.output {
         bitmap.save(Path::new(output_path))?;
-        let tape_mm = bitmap.width() as f64 / 180.0 * 25.4;
+        let dpi = device.as_ref().map_or(180, |d| d.device_info().dpi);
+        let tape_mm = bitmap.width() as f64 / f64::from(dpi) * 25.4;
         println!(
             "Saved to '{}' ({}x{} px, {:.1} mm of tape)",
             output_path,
@@ -841,7 +844,7 @@ fn print_to_device(
         dev.print_raster(&raster_lines, chain_print, args.precut)?;
     }
 
-    let tape_mm = bitmap.width() as f64 / 180.0 * 25.4;
+    let tape_mm = bitmap.width() as f64 / f64::from(dev.device_info().dpi) * 25.4;
     println!(
         "Printed {} cop{} ({:.1} mm of tape each)",
         total_copies,

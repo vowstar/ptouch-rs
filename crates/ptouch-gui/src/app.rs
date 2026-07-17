@@ -124,16 +124,23 @@ impl eframe::App for PtouchApp {
                     media_width,
                     media_type,
                     max_px,
+                    dpi,
                 } => {
                     self.state.printer_connected = true;
                     self.state.operation_in_progress = false;
                     self.state.printer_max_px = max_px;
+                    self.state.printer_dpi = dpi;
                     self.state.printer_model =
                         Some(format!("{}: {} mm {}", model_name, media_width, media_type));
                     self.state.printer_status = Some("Connected".to_string());
-                    if media_width > 0 && media_width != self.state.tape_width_mm {
+                    if media_width > 0 {
                         self.state.tape_width_mm = media_width;
-                        self.state.update_tape_pixels();
+                    }
+                    // Re-derive pixels: the width or the printer dpi may
+                    // have changed. Only re-render when they actually did.
+                    let old_px = self.state.tape_width_px;
+                    self.state.update_tape_pixels();
+                    if self.state.tape_width_px != old_px {
                         self.state.mark_dirty();
                     }
                 }

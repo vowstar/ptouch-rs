@@ -62,6 +62,7 @@ fn do_poll(resp_tx: &mpsc::Sender<PrinterResponse>, ctx: &egui::Context) {
     let resp = match PtouchDevice::open_first() {
         Ok(mut dev) => {
             let max_px = dev.max_px();
+            let dpi = dev.device_info().dpi;
             let model_name = dev.device_info().name.to_string();
             match dev.query_status() {
                 Ok(status) => {
@@ -73,6 +74,7 @@ fn do_poll(resp_tx: &mpsc::Sender<PrinterResponse>, ctx: &egui::Context) {
                         media_width,
                         media_type,
                         max_px,
+                        dpi,
                     }
                 }
                 Err(e) => {

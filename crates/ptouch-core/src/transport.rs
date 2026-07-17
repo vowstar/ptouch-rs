@@ -344,8 +344,10 @@ impl PtouchDevice {
             warn!("Printer reports error: {}", status.error_description());
         }
 
-        // Resolve tape width to pixel count
-        self.tape_width_px = tape::tape_pixels(status.media_width);
+        // Resolve tape width to pixel count for this printer's resolution,
+        // clamped to the head width (wide tapes exceed narrow heads).
+        self.tape_width_px = tape::tape_pixels(status.media_width, self.dev_info.dpi)
+            .map(|px| px.min(self.dev_info.max_px));
         if self.tape_width_px.is_none() && status.media_width != 0 {
             warn!("Unknown tape width: {} mm", status.media_width);
         }

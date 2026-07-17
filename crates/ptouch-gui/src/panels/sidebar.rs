@@ -51,7 +51,7 @@ fn show_tape_section(ui: &mut egui::Ui, state: &mut AppState) {
     ui.heading("Tape");
     ui.add_space(4.0);
 
-    let tapes = tape::supported_tapes();
+    let tapes = tape::supported_tapes(state.printer_dpi);
     let current_label = format!("{} mm ({} px)", state.tape_width_mm, state.tape_width_px);
 
     egui::ComboBox::from_label("Width")
@@ -63,7 +63,7 @@ fn show_tape_section(ui: &mut egui::Ui, state: &mut AppState) {
                     .selectable_value(&mut state.tape_width_mm, t.width_mm, &label)
                     .clicked()
                 {
-                    state.tape_width_px = u32::from(t.pixels);
+                    state.update_tape_pixels();
                     state.mark_dirty();
                     info!("Tape changed: {} mm", t.width_mm);
                 }
