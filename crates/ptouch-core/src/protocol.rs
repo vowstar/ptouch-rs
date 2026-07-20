@@ -19,18 +19,17 @@ use crate::device::DeviceFlags;
 ///
 /// On 360 dpi printers the head resolution is fixed at 360 dpi across the
 /// tape, but the feed resolution along the tape can be doubled (high
-/// resolution, 360x720) or halved (draft, 360x180). Physical label length
-/// is preserved by duplicating or dropping raster lines.
+/// resolution, 360x720). Physical label length is preserved by duplicating
+/// raster lines.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PrintQuality {
     /// Normal 1:1 printing (e.g. 360x360 dpi).
     #[default]
     Standard,
     /// High resolution: double feed resolution (e.g. 360x720 dpi).
-    /// Requires laminated TZe or HG tape.
+    /// Brother documents this mode as HG tape only on the PT-9700PC
+    /// generation.
     HighRes,
-    /// Draft / high speed: half feed resolution (e.g. 360x180 dpi).
-    Draft,
 }
 
 /// Construct the initialization sequence.
@@ -148,15 +147,6 @@ pub fn cmd_legacy_hires(media_width: u8, hires: bool) -> Vec<u8> {
     }
 }
 
-/// Construct the advanced mode command (ESC i K) with the draft bit.
-///
-/// Bit 0 selects draft (high speed) printing per the Brother PT-P900
-/// raster reference. Untested on the PT-9500PC generation, which has no
-/// public raster reference.
-pub fn cmd_advanced_mode_draft() -> Vec<u8> {
-    vec![0x1B, 0x69, 0x4B, 0x01]
-}
-
 /// Construct the D460BT magic initialization command.
 ///
 /// Sends ESC i d followed by 4 parameter bytes:
@@ -263,33 +253,28 @@ pub fn build_print_job(lines: &[Vec<u8>], flags: DeviceFlags, opts: &JobOptions)
     let use_packbits = flags.contains(DeviceFlags::RASTER_PACKBITS);
     let is_d460bt = flags.contains(DeviceFlags::D460BT_MAGIC);
 
-    // Quality modes change the feed resolution along the tape. Keep the
-    // physical length by duplicating lines (high resolution) or dropping
-    // every other line (draft).
+    // High resolution doubles the feed resolution along the tape. Keep the
+    // physical length by duplicating every raster line.
     let quality = if flags.contains(DeviceFlags::LEGACY_HIRES) {
         opts.quality
     } else {
         PrintQuality::Standard
     };
-    let (repeat, step) = match quality {
-        PrintQuality::Standard => (1, 1),
-        PrintQuality::HighRes => (2, 1),
-        PrintQuality::Draft => (1, 2),
+    let repeat = match quality {
+        PrintQuality::Standard => 1,
+        PrintQuality::HighRes => 2,
     };
-    let selected: Vec<&Vec<u8>> = lines.iter().step_by(step).collect();
-    let line_count = (selected.len() * repeat) as u32;
+    let line_count = (lines.len() * repeat) as u32;
 
-    let mut job: Vec<Vec<u8>> = Vec::with_capacity(selected.len() * repeat + 8);
+    let mut job: Vec<Vec<u8>> = Vec::with_capacity(lines.len() * repeat + 8);
 
     job.push(cmd_raster_start(flags));
 
     // The standard quality path stays byte identical to the verified
     // stream; quality commands are only sent when a non-default mode is
     // requested on a device that supports it.
-    match quality {
-        PrintQuality::Standard => {}
-        PrintQuality::HighRes => job.push(cmd_legacy_hires(opts.media_width, true)),
-        PrintQuality::Draft => job.push(cmd_advanced_mode_draft()),
+    if quality == PrintQuality::HighRes {
+        job.push(cmd_legacy_hires(opts.media_width, true));
     }
 
     if flags.contains(DeviceFlags::USE_INFO_CMD) {
@@ -312,7 +297,7 @@ pub fn build_print_job(lines: &[Vec<u8>], flags: DeviceFlags, opts: &JobOptions)
         job.push(cmd_enable_packbits());
     }
 
-    for line in selected {
+    for line in lines {
         for _ in 0..repeat {
             if rasterline_is_blank(line) {
                 job.push(cmd_line_feed());
@@ -618,28 +603,6 @@ mod tests {
             vec![0x47, 0x02, 0x00, 0x00, 0xAA],                 // line 1 repeated
             vec![0x47, 0x02, 0x00, 0x00, 0x55],                 // line 2
             vec![0x47, 0x02, 0x00, 0x00, 0x55],                 // line 2 repeated
-            vec![0x1A],
-        ]
-        .concat();
-        assert_eq!(flat(&job), expected);
-    }
-
-    #[test]
-    fn test_job_draft_quality() {
-        // Draft halves the feed resolution: every other line is dropped.
-        let lines = vec![vec![0x01], vec![0x02], vec![0x03]];
-        let opts = JobOptions {
-            media_width: 12,
-            quality: PrintQuality::Draft,
-            ..JobOptions::default()
-        };
-        let job = build_print_job(&lines, pt9700_flags(), &opts);
-        let expected: Vec<u8> = [
-            vec![0x1B, 0x69, 0x61, 0x01],       // raster mode
-            vec![0x1B, 0x69, 0x4B, 0x01],       // ESC i K draft bit
-            vec![0x4D, 0x02],                   // packbits
-            vec![0x47, 0x02, 0x00, 0x00, 0x01], // line 1
-            vec![0x47, 0x02, 0x00, 0x00, 0x03], // line 3 (line 2 dropped)
             vec![0x1A],
         ]
         .concat();
