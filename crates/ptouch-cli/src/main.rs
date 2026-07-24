@@ -141,7 +141,7 @@ struct PrintArgs {
     #[arg(long)]
     precut: bool,
 
-    /// Print quality (high needs a printer with quality modes)
+    /// Print quality (high and draft need a printer with quality modes)
     #[arg(long, value_enum, default_value = "standard")]
     quality: QualityArg,
 
@@ -190,6 +190,7 @@ impl AlignArg {
 enum QualityArg {
     Standard,
     High,
+    Draft,
 }
 
 impl QualityArg {
@@ -197,6 +198,7 @@ impl QualityArg {
         match self {
             QualityArg::Standard => PrintQuality::Standard,
             QualityArg::High => PrintQuality::HighRes,
+            QualityArg::Draft => PrintQuality::Draft,
         }
     }
 }
