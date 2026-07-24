@@ -86,11 +86,16 @@ fn show_print_options(ui: &mut egui::Ui, state: &mut AppState) {
         let quality_label = |q: PrintQuality| match q {
             PrintQuality::Standard => "Standard",
             PrintQuality::HighRes => "High resolution",
+            PrintQuality::Draft => "Draft (high speed)",
         };
         egui::ComboBox::from_label("Quality")
             .selected_text(quality_label(state.print_quality))
             .show_ui(ui, |ui| {
-                for q in [PrintQuality::Standard, PrintQuality::HighRes] {
+                for q in [
+                    PrintQuality::Standard,
+                    PrintQuality::HighRes,
+                    PrintQuality::Draft,
+                ] {
                     ui.selectable_value(&mut state.print_quality, q, quality_label(q));
                 }
             });

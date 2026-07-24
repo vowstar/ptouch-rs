@@ -13,7 +13,7 @@ Rust tool for Brother P-Touch USB label printers. CLI and GUI.
   embedded), then print them from the GUI or CLI
 - Template layouts with `{{name}}` placeholders and batch-print from a CSV
 - Chain print and multi-copy support
-- High resolution mode (360x720) on 360 dpi models
+- Print quality modes on 360 dpi models (high resolution 360x720, draft 360x180)
 - GUI with live preview, zoom, and drag-and-drop element reordering
 - Export to image (PNG, JPEG, BMP, GIF, TIFF, WebP) without a printer connected
 - Feed and cut tape without printing
