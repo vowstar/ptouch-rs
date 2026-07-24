@@ -133,28 +133,48 @@ pub fn cmd_precut(enabled: bool) -> Vec<u8> {
     vec![0x1B, 0x69, 0x4D, if enabled { 0x40 } else { 0x00 }]
 }
 
-/// Construct the legacy high-resolution select command (ESC i c).
+/// Construct the legacy print information command (ESC i c).
 ///
-/// Used by the PT-9500PC generation of 360 dpi printers. Byte values are
-/// those the Windows driver sends, as documented by the printer-driver-ptouch
-/// project (rastertoptch legacy hires):
-///   normal 360x360: ESC i c 0x84 0x00 <width_mm> 0x00 0x00
-///   hires  360x720: ESC i c 0x86 0x09 <width_mm> 0x00 0x01
-pub fn cmd_legacy_hires(media_width: u8, hires: bool) -> Vec<u8> {
-    if hires {
-        vec![0x1B, 0x69, 0x63, 0x86, 0x09, media_width, 0x00, 0x01]
-    } else {
-        vec![0x1B, 0x69, 0x63, 0x84, 0x00, media_width, 0x00, 0x00]
+/// Used by the PT-9500PC generation of 360 dpi printers.
+/// Byte values are verified with those the Windows driver sends.
+/// The byte format is almost the same as ESC i z command documented for the PT-P900 series:
+///
+/// ESC i c {n1} {n2} {n3} {n4} {n5}
+/// {n1}:   Valid flag: Specifies which values are valid
+///         #define PI_KIND 0x02 // Media type
+///         #define PI_WIDTH 0x04 // Media width
+///         #define PI_LENGTH 0x08 // Media length
+///         #define PI_QUALITY 0x40 // Priority given to print quality (Not used)
+///         #define PI_RECOVER 0x80 // Printer recovery always on
+/// {n2}:   Media type
+///         Laminated/Non-laminated tape: 00h
+///         High Grade tape: 09h (required for high-resolution and draft printing)
+/// {n3}:   Media width (mm)
+/// {n4}:   Media length (mm)
+/// {n5}:   Unknown / Undocumented, Windows driver sets it to 0x01 only for high-res printing
+pub fn cmd_legacy_info(media_width: u8, quality: PrintQuality) -> Vec<u8> {
+    match quality {
+        PrintQuality::Draft => vec![0x1B, 0x69, 0x63, 0x86, 0x09, media_width, 0x00, 0x00],
+        PrintQuality::Standard => vec![0x1B, 0x69, 0x63, 0x84, 0x00, media_width, 0x00, 0x00],
+        PrintQuality::HighRes => vec![0x1B, 0x69, 0x63, 0x86, 0x09, media_width, 0x00, 0x01],
     }
 }
 
-/// Construct the advanced mode command (ESC i K) with the draft bit.
+/// Construct the advanced mode command (ESC i K)
 ///
-/// Bit 0 selects draft (high speed) printing per the Brother PT-P900
-/// raster reference. Untested on the PT-9500PC generation, which has no
-/// public raster reference.
-pub fn cmd_advanced_mode_draft() -> Vec<u8> {
-    vec![0x1B, 0x69, 0x4B, 0x01]
+/// Bit 0 selects draft (high speed) printing per the Brother PT-P900 raster reference.
+/// Bit 2 enables half-cut for printers with that feature (default true when this command isn't sent)
+/// Bit 3 enables cut at the end of the print (default true when this command isn't sent)
+/// Bit 4 enables special tape mode (all cuts are disable)
+/// Bit 6 selects high-resolution mode
+pub fn cmd_advanced_mode(quality: PrintQuality, special_tape: bool, cut_at_end: bool, half_cut: bool) -> Vec<u8> {
+    let flags =
+          ((quality == PrintQuality::HighRes) as u8) << 6
+        | (special_tape as u8) << 4
+        | (cut_at_end as u8) << 3
+        | (half_cut as u8) << 2
+        | ((quality == PrintQuality::Draft) as u8);
+    vec![0x1B, 0x69, 0x4B, flags]
 }
 
 /// Construct the D460BT magic initialization command.
@@ -286,10 +306,9 @@ pub fn build_print_job(lines: &[Vec<u8>], flags: DeviceFlags, opts: &JobOptions)
     // The standard quality path stays byte identical to the verified
     // stream; quality commands are only sent when a non-default mode is
     // requested on a device that supports it.
-    match quality {
-        PrintQuality::Standard => {}
-        PrintQuality::HighRes => job.push(cmd_legacy_hires(opts.media_width, true)),
-        PrintQuality::Draft => job.push(cmd_advanced_mode_draft()),
+    if flags.contains(DeviceFlags::LEGACY_HIRES) && quality != PrintQuality::Standard {
+        job.push(cmd_legacy_info(opts.media_width, quality));
+        job.push(cmd_advanced_mode(quality, false, true, true));
     }
 
     if flags.contains(DeviceFlags::USE_INFO_CMD) {
@@ -613,6 +632,7 @@ mod tests {
         let expected: Vec<u8> = [
             vec![0x1B, 0x69, 0x61, 0x01],                       // raster mode
             vec![0x1B, 0x69, 0x63, 0x86, 0x09, 24, 0x00, 0x01], // ESC i c hires
+            vec![0x1B, 0x69, 0x4B, 0x4c],                       // ESC i K hires bit with default half-cut and cut-at-end bits
             vec![0x4D, 0x02],                                   // packbits
             vec![0x47, 0x02, 0x00, 0x00, 0xAA],                 // line 1
             vec![0x47, 0x02, 0x00, 0x00, 0xAA],                 // line 1 repeated
@@ -636,7 +656,8 @@ mod tests {
         let job = build_print_job(&lines, pt9700_flags(), &opts);
         let expected: Vec<u8> = [
             vec![0x1B, 0x69, 0x61, 0x01],       // raster mode
-            vec![0x1B, 0x69, 0x4B, 0x01],       // ESC i K draft bit
+            vec![0x1B, 0x69, 0x63, 0x86, 0x09, 12, 0x00, 0x00], // ESC i c to require HG tape as draft mode needs it
+            vec![0x1B, 0x69, 0x4B, 0x0d],       // ESC i K draft bit with default half-cut and cut-at-end bits
             vec![0x4D, 0x02],                   // packbits
             vec![0x47, 0x02, 0x00, 0x00, 0x01], // line 1
             vec![0x47, 0x02, 0x00, 0x00, 0x03], // line 3 (line 2 dropped)
