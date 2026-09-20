@@ -52,6 +52,14 @@ Binaries: `target/release/ptouch` (CLI), `target/release/ptouch-gui` (GUI).
 libusb is compiled in statically (`rusb` vendored), so the binaries carry no
 external libusb dependency.
 
+**Nix** (flake at the repository root):
+
+```sh
+nix build          # ptouch-gui; `nix run .#ptouch` runs the CLI
+nix develop        # dev shell
+nix flake check    # cargo fmt, clippy and the workspace tests
+```
+
 ## PT-P300BT Bluetooth (macOS)
 
 The macOS CLI can use the native RFCOMM backend for an already-paired PT-P300BT.

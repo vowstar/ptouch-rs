@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 Huang Rui <vowstar@gmail.com>
+name: Nix
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  flake-check:
+    name: Nix flake check (${{ matrix.system }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            system: x86_64-linux
+          - os: ubuntu-24.04-arm
+            system: aarch64-linux
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@v22
+
+    - name: Run flake checks
+      run: nix flake check --no-update-lock-file -L
