@@ -783,9 +783,14 @@ fn print_layout_batch(
 
     let (print_width, max_px, mut device) = resolve_layout_target(args, &doc)?;
 
+    // Buffered so we know which row is last: intermediate rows chain (no
+    // feed/cut) so a batch of different labels shares one leading margin,
+    // and only the final row cuts.
+    let records: Vec<csv::StringRecord> = rdr.records().collect::<Result<_, _>>()?;
+    let total_rows = records.len();
+
     let mut count = 0usize;
-    for record in rdr.records() {
-        let record = record?;
+    for record in records {
         let row: Vec<String> = record.iter().map(|s| s.to_string()).collect();
         let values = build_row_values(&base, &headers, &row);
 
@@ -794,12 +799,13 @@ fn print_layout_batch(
         let bitmap = render_layout(&row_doc, print_width)?;
 
         count += 1;
+        let is_last_row = count == total_rows;
         if let Some(output) = &args.output {
             let path = output.replace("{n}", &count.to_string());
             bitmap.save(Path::new(&path))?;
             println!("Saved row {} to '{}'", count, path);
         } else if let Some(dev) = device.as_mut() {
-            print_to_device(dev, &bitmap, max_px, args)?;
+            print_to_device(dev, &bitmap, max_px, args, is_last_row)?;
         } else {
             eprintln!("Error: no output destination (use --output or connect a printer)");
             process::exit(1);
@@ -918,7 +924,7 @@ fn emit_label(
             tape_mm
         );
     } else if let Some(dev) = device {
-        print_to_device(dev, bitmap, max_px, args)?;
+        print_to_device(dev, bitmap, max_px, args, true)?;
     } else {
         eprintln!("Error: no output destination (use --output or connect a printer)");
         process::exit(1);
@@ -1027,15 +1033,16 @@ fn print_to_device(
     bitmap: &LabelBitmap,
     max_px: u16,
     args: &PrintArgs,
+    is_last_row: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let raster_lines = raster::bitmap_to_raster_lines(bitmap, max_px);
 
     let total_copies = args.copies.max(1);
     for copy_idx in 0..total_copies {
-        let is_last = copy_idx == total_copies - 1;
-        // Chain intermediate copies (no cut between copies).
-        // Last copy: chain only if user requested --chain.
-        // Chain intermediate copies; last copy follows user's --chain flag
+        let is_last = is_last_row && copy_idx == total_copies - 1;
+        // Chain intermediate copies (no cut between copies), and intermediate
+        // CSV rows (no cut between labels in a batch).
+        // Very last copy of the very last row: chain only if user requested --chain.
         let chain_print = !dev.is_bluetooth() && (args.chain || !is_last);
 
         debug!(
