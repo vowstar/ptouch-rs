@@ -268,7 +268,6 @@ trait PrintDevice {
         precut: bool,
         quality: PrintQuality,
     ) -> Result<(), PtouchError>;
-    fn feed_and_cut(&mut self) -> Result<(), PtouchError>;
 }
 
 impl PrintDevice for CliDevice {
@@ -299,16 +298,6 @@ impl PrintDevice for CliDevice {
             Self::Usb(device) => device.print_raster(lines, chain_print, precut, quality),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.print_raster(lines),
-        }
-    }
-
-    fn feed_and_cut(&mut self) -> Result<(), PtouchError> {
-        match self {
-            Self::Usb(device) => device.feed_and_cut(),
-            #[cfg(target_os = "macos")]
-            Self::Bluetooth(_) => Err(PtouchError::UnsupportedOperation(
-                "PT-P300BT has a manual cutter",
-            )),
         }
     }
 }
@@ -843,37 +832,21 @@ fn emit_batch(
     let mut labels = labels.peekable();
     let chain_rows =
         args.output.is_none() && device.as_ref().is_some_and(|dev| !dev.is_bluetooth());
-    let mut pending_chain = false;
     let mut count = 0;
 
     while let Some(label) = labels.next() {
-        let bitmap = match label {
-            Ok(bitmap) => bitmap,
-            Err(error) => {
-                // This error comes from local CSV parsing or rendering. Finish
-                // earlier successful pages, without masking the original error.
-                if pending_chain
-                    && !args.chain
-                    && let Some(dev) = device.as_mut()
-                    && let Err(cleanup_error) = dev.feed_and_cut()
-                {
-                    eprintln!("WARN: could not finish the printed batch: {cleanup_error}");
-                }
-                return Err(error);
-            }
-        };
-        // Explicit --chain never finishes the strip, so it needs no lookahead.
-        let is_last_row = !chain_rows || args.chain || labels.peek().is_none();
+        let bitmap = label?;
+        // Finish the last valid row before reporting a later local error.
+        // Explicit --chain, exports and Bluetooth need no lookahead.
+        let is_last_row = !chain_rows || args.chain || !matches!(labels.peek(), Some(Ok(_)));
         count += 1;
         if let Some(output) = &args.output {
             let path = output.replace("{n}", &count.to_string());
             bitmap.save(Path::new(&path))?;
             println!("Saved row {} to '{}'", count, path);
         } else if let Some(dev) = device.as_mut() {
-            // A transport failure returns directly. Never retry or send a
-            // cleanup job after an uncertain print result.
+            // A transport failure returns directly; never retry a printed page.
             print_to_device(*dev, &bitmap, max_px, args, is_last_row)?;
-            pending_chain = chain_rows && (args.chain || !is_last_row);
         } else {
             return Err("no output destination (use --output or connect a printer)".into());
         }
@@ -1287,9 +1260,7 @@ mod tests {
         commands: std::rc::Rc<std::cell::RefCell<Vec<u8>>>,
         bluetooth: bool,
         print_calls: usize,
-        finish_calls: usize,
         fail_print_at: Option<usize>,
-        fail_finish: bool,
     }
 
     impl PrintDevice for RecordingPrinter {
@@ -1320,15 +1291,6 @@ mod tests {
             };
             let job = ptouch_core::protocol::build_print_job(lines, DeviceFlags::NONE, &opts);
             self.commands.borrow_mut().push(job.last().unwrap()[0]);
-            Ok(())
-        }
-
-        fn feed_and_cut(&mut self) -> Result<(), PtouchError> {
-            self.finish_calls += 1;
-            if self.fail_finish {
-                return Err(PtouchError::Timeout);
-            }
-            self.commands.borrow_mut().push(0x1a);
             Ok(())
         }
     }
@@ -1392,12 +1354,11 @@ mod tests {
                 rows
             );
             assert_eq!(*printer.commands.borrow(), expected);
-            assert_eq!(printer.finish_calls, 0);
         }
     }
 
     #[test]
-    fn csv_and_render_errors_finish_an_existing_usb_chain() {
+    fn csv_and_render_errors_finalize_the_last_valid_usb_row() {
         for input in [
             "name,extra\nAlice,x\n,x\n",
             "name,extra\nAlice,x\nBob,x\n,x\n",
@@ -1406,16 +1367,19 @@ mod tests {
             let args = batch_args(&["--copies", "2"]);
             let mut printer = RecordingPrinter::default();
             let error = emit_batch(csv_labels(input), &args, 128, Some(&mut printer)).unwrap_err();
-            assert!(!error.to_string().is_empty());
+            if input.ends_with("Bob\n") {
+                assert!(error.to_string().contains("CSV error"));
+            } else {
+                assert!(error.to_string().contains("layout produced no output"));
+            }
             let commands = printer.commands.borrow();
             assert_eq!(commands.last(), Some(&0x1a));
             assert!(commands[..commands.len() - 1].iter().all(|&c| c == 0x0c));
-            assert_eq!(printer.finish_calls, 1);
         }
     }
 
     #[test]
-    fn batch_error_cleanup_respects_explicit_chain_and_bluetooth() {
+    fn batch_errors_respect_explicit_chain_and_bluetooth() {
         for (chain, bluetooth, expected) in [(true, false, vec![0x0c]), (false, true, vec![0x1a])] {
             let mut args = batch_args(&[]);
             args.chain = chain;
@@ -1433,7 +1397,6 @@ mod tests {
                 .is_err()
             );
             assert_eq!(*printer.commands.borrow(), expected);
-            assert_eq!(printer.finish_calls, 0);
         }
     }
 
@@ -1450,13 +1413,12 @@ mod tests {
             .is_err()
         );
         assert_eq!(printer.print_calls, 0);
-        assert_eq!(printer.finish_calls, 0);
     }
 
     #[test]
-    fn cleanup_failure_preserves_the_original_render_error() {
+    fn print_failure_takes_precedence_over_the_next_rows_input_error() {
         let mut printer = RecordingPrinter {
-            fail_finish: true,
+            fail_print_at: Some(1),
             ..Default::default()
         };
         let error = emit_batch(
@@ -1466,8 +1428,11 @@ mod tests {
             Some(&mut printer),
         )
         .unwrap_err();
-        assert!(error.to_string().contains("layout produced no output"));
-        assert_eq!(printer.finish_calls, 1);
+        assert!(matches!(
+            error.downcast_ref::<PtouchError>(),
+            Some(PtouchError::Timeout)
+        ));
+        assert_eq!(printer.print_calls, 1);
     }
 
     #[test]
@@ -1488,7 +1453,6 @@ mod tests {
             Some(PtouchError::Timeout)
         ));
         assert_eq!(printer.print_calls, 2);
-        assert_eq!(printer.finish_calls, 0);
         assert_eq!(*printer.commands.borrow(), vec![0x0c]);
     }
 
