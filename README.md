@@ -173,6 +173,16 @@ ptouch list
 Text in a layout may contain `{{name}}` placeholders. Fill them per print, or
 drive a batch from a CSV file.
 
+By default, USB CSV batches print as one continuous strip, including all
+`--copies`, with final feed/cut only after the last row. `--chain` skips that final step. Printers
+with manual cutters, such as PT-1230PC, still need manual cutting after feeding.
+Bluetooth printing keeps its normal per-label behavior.
+
+CSV input is processed incrementally, with at most one label of lookahead for
+USB printing. If a later row cannot be parsed or rendered, the CLI finishes an
+already printed USB strip unless `--chain` was requested, then reports the error.
+Printer communication failures are not retried.
+
 ```sh
 # See which placeholders a layout declares
 ptouch print --layout badge.ptl --list-vars
