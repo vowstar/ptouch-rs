@@ -80,7 +80,8 @@ struct PrintArgs {
     set: Vec<String>,
 
     /// Print one label per row of a CSV file ('-' for stdin); the header row
-    /// names the placeholders. With --output, include '{n}' for the row number.
+    /// names the placeholders. USB rows form one strip with a final feed/cut.
+    /// With --output, include '{n}' for the row number.
     #[arg(long, value_name = "FILE")]
     csv: Option<String>,
 
@@ -231,14 +232,6 @@ impl CliDevice {
         }
     }
 
-    fn dpi(&self) -> u16 {
-        match self {
-            Self::Usb(device) => device.device_info().dpi,
-            #[cfg(target_os = "macos")]
-            Self::Bluetooth(device) => device.dpi(),
-        }
-    }
-
     fn tape_width_px(&self) -> Option<u16> {
         match self {
             Self::Usb(device) => device.tape_width_px(),
@@ -252,6 +245,38 @@ impl CliDevice {
             Self::Usb(device) => device.max_px(),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.raster_width_px(),
+        }
+    }
+
+    fn close(self) -> Result<(), PtouchError> {
+        match self {
+            Self::Usb(device) => device.close(),
+            #[cfg(target_os = "macos")]
+            Self::Bluetooth(device) => device.close(),
+        }
+    }
+}
+
+/// Operations used by label output, separate from discovery and connection setup.
+trait PrintDevice {
+    fn dpi(&self) -> u16;
+    fn is_bluetooth(&self) -> bool;
+    fn print_raster(
+        &mut self,
+        lines: &[Vec<u8>],
+        chain_print: bool,
+        precut: bool,
+        quality: PrintQuality,
+    ) -> Result<(), PtouchError>;
+    fn feed_and_cut(&mut self) -> Result<(), PtouchError>;
+}
+
+impl PrintDevice for CliDevice {
+    fn dpi(&self) -> u16 {
+        match self {
+            Self::Usb(device) => device.device_info().dpi,
+            #[cfg(target_os = "macos")]
+            Self::Bluetooth(device) => device.dpi(),
         }
     }
 
@@ -277,11 +302,13 @@ impl CliDevice {
         }
     }
 
-    fn close(self) -> Result<(), PtouchError> {
+    fn feed_and_cut(&mut self) -> Result<(), PtouchError> {
         match self {
-            Self::Usb(device) => device.close(),
+            Self::Usb(device) => device.feed_and_cut(),
             #[cfg(target_os = "macos")]
-            Self::Bluetooth(device) => device.close(),
+            Self::Bluetooth(_) => Err(PtouchError::UnsupportedOperation(
+                "PT-P300BT has a manual cutter",
+            )),
         }
     }
 }
@@ -783,34 +810,15 @@ fn print_layout_batch(
 
     let (print_width, max_px, mut device) = resolve_layout_target(args, &doc)?;
 
-    // Buffered so we know which row is last: intermediate rows chain (no
-    // feed/cut) so a batch of different labels shares one leading margin,
-    // and only the final row cuts.
-    let records: Vec<csv::StringRecord> = rdr.records().collect::<Result<_, _>>()?;
-    let total_rows = records.len();
-
-    let mut count = 0usize;
-    for record in records {
+    let labels = rdr.records().map(|record| {
+        let record = record?;
         let row: Vec<String> = record.iter().map(|s| s.to_string()).collect();
         let values = build_row_values(&base, &headers, &row);
-
         let mut row_doc = doc.clone();
         row_doc.apply_values(&values);
-        let bitmap = render_layout(&row_doc, print_width)?;
-
-        count += 1;
-        let is_last_row = count == total_rows;
-        if let Some(output) = &args.output {
-            let path = output.replace("{n}", &count.to_string());
-            bitmap.save(Path::new(&path))?;
-            println!("Saved row {} to '{}'", count, path);
-        } else if let Some(dev) = device.as_mut() {
-            print_to_device(dev, &bitmap, max_px, args, is_last_row)?;
-        } else {
-            eprintln!("Error: no output destination (use --output or connect a printer)");
-            process::exit(1);
-        }
-    }
+        render_layout(&row_doc, print_width)
+    });
+    let count = emit_batch(labels, args, max_px, device.as_mut())?;
 
     if let Some(dev) = device {
         dev.close()?;
@@ -822,6 +830,55 @@ fn print_layout_batch(
         println!("Processed {} row(s)", count);
     }
     Ok(())
+}
+
+/// Keep at most one rendered label ahead of the current one. Only USB
+/// printing needs lookahead; exports and Bluetooth can emit each row immediately.
+fn emit_batch(
+    labels: impl Iterator<Item = Result<LabelBitmap, Box<dyn std::error::Error>>>,
+    args: &PrintArgs,
+    max_px: u16,
+    mut device: Option<&mut impl PrintDevice>,
+) -> Result<usize, Box<dyn std::error::Error>> {
+    let mut labels = labels.peekable();
+    let chain_rows =
+        args.output.is_none() && device.as_ref().is_some_and(|dev| !dev.is_bluetooth());
+    let mut pending_chain = false;
+    let mut count = 0;
+
+    while let Some(label) = labels.next() {
+        let bitmap = match label {
+            Ok(bitmap) => bitmap,
+            Err(error) => {
+                // This error comes from local CSV parsing or rendering. Finish
+                // earlier successful pages, without masking the original error.
+                if pending_chain
+                    && !args.chain
+                    && let Some(dev) = device.as_mut()
+                    && let Err(cleanup_error) = dev.feed_and_cut()
+                {
+                    eprintln!("WARN: could not finish the printed batch: {cleanup_error}");
+                }
+                return Err(error);
+            }
+        };
+        // Explicit --chain never finishes the strip, so it needs no lookahead.
+        let is_last_row = !chain_rows || args.chain || labels.peek().is_none();
+        count += 1;
+        if let Some(output) = &args.output {
+            let path = output.replace("{n}", &count.to_string());
+            bitmap.save(Path::new(&path))?;
+            println!("Saved row {} to '{}'", count, path);
+        } else if let Some(dev) = device.as_mut() {
+            // A transport failure returns directly. Never retry or send a
+            // cleanup job after an uncertain print result.
+            print_to_device(*dev, &bitmap, max_px, args, is_last_row)?;
+            pending_chain = chain_rows && (args.chain || !is_last_row);
+        } else {
+            return Err("no output destination (use --output or connect a printer)".into());
+        }
+    }
+    Ok(count)
 }
 
 /// Merge `--set` constants with one CSV row's columns (row values win).
@@ -1029,7 +1086,7 @@ fn make_padding(print_width: u32, pad_px: u32) -> LabelBitmap {
 
 /// Send the label bitmap to the printer.
 fn print_to_device(
-    dev: &mut CliDevice,
+    dev: &mut impl PrintDevice,
     bitmap: &LabelBitmap,
     max_px: u16,
     args: &PrintArgs,
@@ -1224,5 +1281,248 @@ mod tests {
     #[test]
     fn test_output_n_token_replacement() {
         assert_eq!("label-{n}.png".replace("{n}", "3"), "label-3.png");
+    }
+    #[derive(Default)]
+    struct RecordingPrinter {
+        commands: std::rc::Rc<std::cell::RefCell<Vec<u8>>>,
+        bluetooth: bool,
+        print_calls: usize,
+        finish_calls: usize,
+        fail_print_at: Option<usize>,
+        fail_finish: bool,
+    }
+
+    impl PrintDevice for RecordingPrinter {
+        fn dpi(&self) -> u16 {
+            180
+        }
+
+        fn is_bluetooth(&self) -> bool {
+            self.bluetooth
+        }
+
+        fn print_raster(
+            &mut self,
+            lines: &[Vec<u8>],
+            chain_print: bool,
+            precut: bool,
+            quality: PrintQuality,
+        ) -> Result<(), PtouchError> {
+            self.print_calls += 1;
+            if self.fail_print_at == Some(self.print_calls) {
+                return Err(PtouchError::Timeout);
+            }
+            let opts = ptouch_core::protocol::JobOptions {
+                media_width: 12,
+                chain_print,
+                precut,
+                quality,
+            };
+            let job = ptouch_core::protocol::build_print_job(lines, DeviceFlags::NONE, &opts);
+            self.commands.borrow_mut().push(job.last().unwrap()[0]);
+            Ok(())
+        }
+
+        fn feed_and_cut(&mut self) -> Result<(), PtouchError> {
+            self.finish_calls += 1;
+            if self.fail_finish {
+                return Err(PtouchError::Timeout);
+            }
+            self.commands.borrow_mut().push(0x1a);
+            Ok(())
+        }
+    }
+
+    fn batch_args(flags: &[&str]) -> PrintArgs {
+        let mut argv = vec!["ptouch", "print"];
+        argv.extend_from_slice(flags);
+        let Commands::Print(args) = Cli::try_parse_from(argv).unwrap().command else {
+            unreachable!();
+        };
+        args
+    }
+
+    fn blank_labels(
+        count: usize,
+    ) -> impl Iterator<Item = Result<LabelBitmap, Box<dyn std::error::Error>>> {
+        (0..count).map(|_| Ok(LabelBitmap::new(2, 76)))
+    }
+
+    fn csv_labels(
+        text: &str,
+    ) -> impl Iterator<Item = Result<LabelBitmap, Box<dyn std::error::Error>>> + '_ {
+        csv::Reader::from_reader(text.as_bytes())
+            .into_records()
+            .map(|record| {
+                let record = record?;
+                let mut doc = LabelDocument::from_toml_str(
+                    r#"version = 1
+                        tape_width_mm = 12
+                        font_name = "DejaVu Sans"
+                        font_margin = 0
+                        [[elements]]
+                        type = "text"
+                        content = "{{name}}"
+                        align = "left"
+                        rotation = 0.0"#,
+                )?;
+                doc.apply_values(&BTreeMap::from([("name".into(), record[0].into())]));
+                render_layout(&doc, 76)
+            })
+    }
+
+    #[test]
+    fn csv_batch_finalizes_only_the_last_copy_of_the_last_row() {
+        for (rows, copies, chain, bluetooth, expected) in [
+            (0, "1", false, false, vec![]),
+            (1, "1", false, false, vec![0x1a]),
+            (2, "1", false, false, vec![0x0c, 0x1a]),
+            (2, "2", false, false, vec![0x0c, 0x0c, 0x0c, 0x1a]),
+            (2, "2", true, false, vec![0x0c; 4]),
+            (2, "2", false, true, vec![0x1a; 4]),
+        ] {
+            let mut args = batch_args(&["--copies", copies]);
+            args.chain = chain;
+            let mut printer = RecordingPrinter {
+                bluetooth,
+                ..Default::default()
+            };
+            assert_eq!(
+                emit_batch(blank_labels(rows), &args, 128, Some(&mut printer)).unwrap(),
+                rows
+            );
+            assert_eq!(*printer.commands.borrow(), expected);
+            assert_eq!(printer.finish_calls, 0);
+        }
+    }
+
+    #[test]
+    fn csv_and_render_errors_finish_an_existing_usb_chain() {
+        for input in [
+            "name,extra\nAlice,x\n,x\n",
+            "name,extra\nAlice,x\nBob,x\n,x\n",
+            "name,extra\nAlice,x\nBob\n",
+        ] {
+            let args = batch_args(&["--copies", "2"]);
+            let mut printer = RecordingPrinter::default();
+            let error = emit_batch(csv_labels(input), &args, 128, Some(&mut printer)).unwrap_err();
+            assert!(!error.to_string().is_empty());
+            let commands = printer.commands.borrow();
+            assert_eq!(commands.last(), Some(&0x1a));
+            assert!(commands[..commands.len() - 1].iter().all(|&c| c == 0x0c));
+            assert_eq!(printer.finish_calls, 1);
+        }
+    }
+
+    #[test]
+    fn batch_error_cleanup_respects_explicit_chain_and_bluetooth() {
+        for (chain, bluetooth, expected) in [(true, false, vec![0x0c]), (false, true, vec![0x1a])] {
+            let mut args = batch_args(&[]);
+            args.chain = chain;
+            let mut printer = RecordingPrinter {
+                bluetooth,
+                ..Default::default()
+            };
+            assert!(
+                emit_batch(
+                    csv_labels("name,extra\nAlice,x\n,x\n"),
+                    &args,
+                    128,
+                    Some(&mut printer),
+                )
+                .is_err()
+            );
+            assert_eq!(*printer.commands.borrow(), expected);
+            assert_eq!(printer.finish_calls, 0);
+        }
+    }
+
+    #[test]
+    fn first_row_error_does_not_feed() {
+        let mut printer = RecordingPrinter::default();
+        assert!(
+            emit_batch(
+                csv_labels("name,extra\n,x\n"),
+                &batch_args(&[]),
+                128,
+                Some(&mut printer),
+            )
+            .is_err()
+        );
+        assert_eq!(printer.print_calls, 0);
+        assert_eq!(printer.finish_calls, 0);
+    }
+
+    #[test]
+    fn cleanup_failure_preserves_the_original_render_error() {
+        let mut printer = RecordingPrinter {
+            fail_finish: true,
+            ..Default::default()
+        };
+        let error = emit_batch(
+            csv_labels("name,extra\nAlice,x\n,x\n"),
+            &batch_args(&[]),
+            128,
+            Some(&mut printer),
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("layout produced no output"));
+        assert_eq!(printer.finish_calls, 1);
+    }
+
+    #[test]
+    fn printer_failure_does_not_retry_or_send_cleanup() {
+        let mut printer = RecordingPrinter {
+            fail_print_at: Some(2),
+            ..Default::default()
+        };
+        let error = emit_batch(
+            blank_labels(2),
+            &batch_args(&["--copies", "2"]),
+            128,
+            Some(&mut printer),
+        )
+        .unwrap_err();
+        assert!(matches!(
+            error.downcast_ref::<PtouchError>(),
+            Some(PtouchError::Timeout)
+        ));
+        assert_eq!(printer.print_calls, 2);
+        assert_eq!(printer.finish_calls, 0);
+        assert_eq!(*printer.commands.borrow(), vec![0x0c]);
+    }
+
+    #[test]
+    fn usb_batch_only_looks_one_row_ahead() {
+        let mut printer = RecordingPrinter::default();
+        let commands = printer.commands.clone();
+        let labels = (0usize..4).map(|index| {
+            assert_eq!(commands.borrow().len(), index.saturating_sub(1));
+            Ok(LabelBitmap::new(2, 76))
+        });
+        assert_eq!(
+            emit_batch(labels, &batch_args(&[]), 128, Some(&mut printer)).unwrap(),
+            4
+        );
+    }
+
+    #[test]
+    fn exports_write_each_row_before_reading_the_next() {
+        let path =
+            std::env::temp_dir().join(format!("ptouch-csv-export-{}.png", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        let mut args = batch_args(&[]);
+        args.output = Some(path.to_str().unwrap().to_owned());
+        let labels = (0..2).map(|index| {
+            if index == 1 {
+                assert!(path.exists(), "export waited for another input row");
+            }
+            Ok(LabelBitmap::new(2, 76))
+        });
+        assert_eq!(
+            emit_batch(labels, &args, 128, None::<&mut RecordingPrinter>).unwrap(),
+            2
+        );
+        std::fs::remove_file(path).unwrap();
     }
 }
