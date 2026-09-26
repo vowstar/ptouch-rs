@@ -155,7 +155,7 @@ static DEVICE_TABLE: &[DeviceInfo] = &[
         name: "PT-1230PC",
         max_px: 128,
         dpi: 180,
-        flags: DeviceFlags::NONE,
+        flags: DeviceFlags::WAIT_FOR_RECEIVE_READY,
     },
     DeviceInfo {
         vid: 0x04f9,
@@ -408,7 +408,10 @@ mod tests {
 
     #[test]
     fn readiness_wait_is_limited_to_documented_models() {
-        let opted_in_pids = [0x205e, 0x205f, 0x2061, 0x20af];
+        // 0x202c (PT-1230PC): without the wait, a second chained page is
+        // written while the first still prints; the full input buffer stalls
+        // the USB write past TRANSFER_TIMEOUT on labels longer than ~5 s.
+        let opted_in_pids = [0x202c, 0x205e, 0x205f, 0x2061, 0x20af];
 
         for dev in supported_devices() {
             assert_eq!(
