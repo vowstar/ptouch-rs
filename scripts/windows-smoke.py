@@ -40,6 +40,30 @@ def check_pe(path, machine, require_icon=False):
     raise ValueError(f"{path}: no embedded group icon")
 
 
+def check_usbprint_worker(executable):
+    def frame(code, payload=b"", millis=1000):
+        return struct.pack("<III", code, millis, len(payload)) + payload
+
+    # Both application binaries must enter IPC mode before initializing their UI.
+    result = subprocess.run([str(executable), "--ptouch-usbprint-worker"],
+                            input=frame(5) + frame(4), capture_output=True, timeout=10)
+    result.check_returncode()
+    expected = frame(0, b"PTOUCH_USBPRINT_WORKER_V1", 0) + frame(0, millis=0)
+    if result.stdout != expected:
+        raise RuntimeError(f"Invalid USBPRINT worker handshake: {result.stdout!r}")
+    # Oversized requests must fail without allocating or accessing hardware.
+    result = subprocess.run([str(executable), "--ptouch-usbprint-worker"],
+                            input=struct.pack("<III", 1, 1000, 0xFFFFFFFF), capture_output=True, timeout=10)
+    if result.returncode == 0:
+        raise RuntimeError("USBPRINT worker accepted an oversized request")
+    # A filename is not a device selector, even in the private worker protocol.
+    result = subprocess.run([str(executable), "--ptouch-usbprint-worker"],
+                            input=frame(1, b"C:\\Windows\\win.ini"), capture_output=True, timeout=10)
+    result.check_returncode()
+    if len(result.stdout) < 12 or struct.unpack_from("<I", result.stdout)[0] != 2:
+        raise RuntimeError("USBPRINT worker accepted an arbitrary file path")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", required=True, choices=("x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc"))
@@ -56,6 +80,8 @@ if __name__ == "__main__":
         check_pe(probe, machine)
         for option in ("--help", "--list"):
             subprocess.run([str(probe), option], check=True, timeout=30)
+    for executable in (cli, gui):
+        check_usbprint_worker(executable)
     for option in ("--version", "--help"):
         subprocess.run([str(cli), option], check=True, timeout=30)
     report = json.loads(subprocess.check_output([str(cli), "doctor", "--json"], timeout=30, text=True))

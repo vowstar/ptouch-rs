@@ -15,6 +15,10 @@ pub use ptouch_render::document::LabelElement;
 pub enum PrinterTarget {
     Usb,
     UsbAt(ptouch_core::transport::UsbLocation),
+    #[cfg(windows)]
+    UsbPrint {
+        instance_id: String,
+    },
     #[cfg(any(target_os = "macos", test))]
     Bluetooth {
         name: String,
@@ -27,6 +31,8 @@ impl PrinterTarget {
         match self {
             Self::Usb => "USB (automatic)".to_string(),
             Self::UsbAt(location) => format!("USB {location}"),
+            #[cfg(windows)]
+            Self::UsbPrint { instance_id } => format!("PT-P710BT ({instance_id})"),
             #[cfg(any(target_os = "macos", test))]
             Self::Bluetooth { name, address } => format!("{name} ({address})"),
         }
@@ -42,6 +48,8 @@ impl PrinterTarget {
     pub fn is_bluetooth(&self) -> bool {
         match self {
             Self::Usb | Self::UsbAt(_) => false,
+            #[cfg(windows)]
+            Self::UsbPrint { .. } => false,
             #[cfg(any(target_os = "macos", test))]
             Self::Bluetooth { .. } => true,
         }

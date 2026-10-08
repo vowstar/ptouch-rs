@@ -74,6 +74,10 @@ struct PrintArgs {
     #[arg(long, value_name = "BUS:ADDRESS", conflicts_with = "bluetooth")]
     usb: Option<UsbLocation>,
 
+    /// Select a Windows PT-P710BT device ID from `ptouch doctor`
+    #[arg(long, value_name = "INSTANCE_ID", conflicts_with_all = ["bluetooth", "usb"])]
+    usbprint: Option<String>,
+
     /// Use an already-paired PT-P300BT at this Bluetooth address (macOS only)
     #[arg(long, value_name = "ADDRESS")]
     bluetooth: Option<String>,
@@ -187,6 +191,10 @@ struct InfoArgs {
     #[arg(long, value_name = "BUS:ADDRESS", conflicts_with = "bluetooth")]
     usb: Option<UsbLocation>,
 
+    /// Select a Windows PT-P710BT device ID from `ptouch doctor`
+    #[arg(long, value_name = "INSTANCE_ID", conflicts_with_all = ["bluetooth", "usb"])]
+    usbprint: Option<String>,
+
     /// Use an already-paired PT-P300BT at this Bluetooth address (macOS only)
     #[arg(long, value_name = "ADDRESS")]
     bluetooth: Option<String>,
@@ -208,7 +216,24 @@ enum CliDevice {
 }
 
 impl CliDevice {
-    fn open(bluetooth: Option<&str>, usb: Option<UsbLocation>) -> Result<Self, PtouchError> {
+    fn open(
+        bluetooth: Option<&str>,
+        usb: Option<UsbLocation>,
+        usbprint: Option<&str>,
+    ) -> Result<Self, PtouchError> {
+        if let Some(id) = usbprint {
+            #[cfg(windows)]
+            {
+                return PtouchDevice::open_usbprint(id).map(Self::Usb);
+            }
+            #[cfg(not(windows))]
+            {
+                let _ = id;
+                return Err(PtouchError::UnsupportedOperation(
+                    "--usbprint is available on Windows only",
+                ));
+            }
+        }
         if let Some(address) = bluetooth {
             #[cfg(target_os = "macos")]
             {
@@ -376,6 +401,21 @@ impl BinarizeArg {
 // ---------------------------------------------------------------------------
 
 fn main() {
+    #[cfg(windows)]
+    {
+        if let Some(code) = ptouch_core::usbprint::run_worker_from_args() {
+            process::exit(code);
+        }
+        if let Err(error) = std::env::current_exe()
+            .map_err(|e| e.to_string())
+            .and_then(|path| {
+                ptouch_core::usbprint::configure_worker(path).map_err(|e| e.to_string())
+            })
+        {
+            eprintln!("Cannot configure USBPRINT: {error}");
+            process::exit(1);
+        }
+    }
     let matches = Cli::command().get_matches();
     let cli = match Cli::from_arg_matches(&matches) {
         Ok(cli) => cli,
@@ -429,9 +469,14 @@ fn main() {
                         .is_some_and(|service| service.eq_ignore_ascii_case("usbprint"))
                     {
                         println!(
-                            "  The current libusb transport requires a compatible binding such as WinUSB. See README: Windows ARM64 installation failures."
+                            "  PT-P710BT can use the native USBPRINT backend. See the USBPRINT candidates below. Other models require a libusb-compatible driver."
                         );
                     }
+                }
+                for printer in &report.usbprint_devices {
+                    println!("USBPRINT PT-P710BT | {}", printer.instance_id);
+                    println!("  Open: {} {}", printer.open.status, printer.open.detail);
+                    println!("  Select with --usbprint {:?}", printer.instance_id);
                 }
                 for error in &report.errors {
                     println!("Discovery error: {error}");
@@ -662,7 +707,11 @@ fn execute_gui() {
 
 /// Open the printer and display status and tape information.
 fn execute_info(args: &InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
-    let mut dev = CliDevice::open(args.bluetooth.as_deref(), args.usb)?;
+    let mut dev = CliDevice::open(
+        args.bluetooth.as_deref(),
+        args.usb,
+        args.usbprint.as_deref(),
+    )?;
     dev.init()?;
 
     // init() already called get_status() internally; use that result.
@@ -768,7 +817,11 @@ fn execute_print(args: &PrintArgs, ignored: &[String]) -> Result<(), Box<dyn std
         } else {
             // Connect to the printer
             debug!("Connecting to printer...");
-            let mut dev = CliDevice::open(args.bluetooth.as_deref(), args.usb)?;
+            let mut dev = CliDevice::open(
+                args.bluetooth.as_deref(),
+                args.usb,
+                args.usbprint.as_deref(),
+            )?;
             #[allow(irrefutable_let_patterns)]
             if let CliDevice::Usb(usb) = &mut dev {
                 usb.set_job_timeout(std::time::Duration::from_secs(u64::from(args.timeout)))?;
@@ -992,7 +1045,11 @@ fn resolve_layout_target(
         })?;
         Ok((w, w as u16, None))
     } else {
-        let mut dev = CliDevice::open(args.bluetooth.as_deref(), args.usb)?;
+        let mut dev = CliDevice::open(
+            args.bluetooth.as_deref(),
+            args.usb,
+            args.usbprint.as_deref(),
+        )?;
         #[allow(irrefutable_let_patterns)]
         if let CliDevice::Usb(usb) = &mut dev {
             usb.set_job_timeout(std::time::Duration::from_secs(u64::from(args.timeout)))?;

@@ -75,12 +75,23 @@ pub fn printer_worker(
 }
 
 fn discover_usb(tx: &mpsc::Sender<PrinterEvent>, ctx: &egui::Context) {
-    let devices = ptouch_core::diagnostics::doctor(false)
+    let devices: Vec<_> = ptouch_core::diagnostics::doctor(false)
         .devices
         .into_iter()
         .filter(|device| device.model.is_some())
         .map(|device| PrinterTarget::UsbAt(device.location))
         .collect();
+    #[cfg(windows)]
+    let devices = {
+        let mut devices = devices;
+        match ptouch_core::usbprint::list() {
+            Ok(printers) => devices.extend(printers.into_iter().map(|p| PrinterTarget::UsbPrint {
+                instance_id: p.instance_id,
+            })),
+            Err(error) => error!("USBPRINT discovery failed: {error}"),
+        }
+        devices
+    };
     let _ = tx.send(PrinterEvent {
         target: None,
         response: PrinterResponse::UsbDevices(devices),
@@ -108,7 +119,9 @@ fn discover_bluetooth(resp_tx: &mpsc::Sender<PrinterEvent>, ctx: &egui::Context)
 
 fn do_poll(target: &PrinterTarget, tx: &mpsc::Sender<PrinterEvent>, ctx: &egui::Context) {
     let response = match target {
-        PrinterTarget::Usb | PrinterTarget::UsbAt(_) => poll_usb(target.usb_location()),
+        PrinterTarget::Usb | PrinterTarget::UsbAt(_) => poll_usb(target),
+        #[cfg(windows)]
+        PrinterTarget::UsbPrint { .. } => poll_usb(target),
         #[cfg(any(target_os = "macos", test))]
         PrinterTarget::Bluetooth { address, .. } => poll_bluetooth(address),
     }
@@ -123,12 +136,18 @@ fn do_poll(target: &PrinterTarget, tx: &mpsc::Sender<PrinterEvent>, ctx: &egui::
     ctx.request_repaint();
 }
 
-fn poll_usb(
-    location: Option<ptouch_core::transport::UsbLocation>,
-) -> Result<PrinterResponse, String> {
-    let mut dev = location
+fn open_usb(target: &PrinterTarget) -> ptouch_core::Result<PtouchDevice> {
+    #[cfg(windows)]
+    if let PrinterTarget::UsbPrint { instance_id } = target {
+        return PtouchDevice::open_usbprint(instance_id);
+    }
+    target
+        .usb_location()
         .map_or_else(PtouchDevice::open_first, PtouchDevice::open_at)
-        .map_err(|e| e.to_string())?;
+}
+
+fn poll_usb(target: &PrinterTarget) -> Result<PrinterResponse, String> {
+    let mut dev = open_usb(target).map_err(|e| e.to_string())?;
     let max_px = dev.max_px();
     let dpi = dev.device_info().dpi;
     let quality_modes = dev.flags().contains(DeviceFlags::LEGACY_HIRES);
@@ -211,7 +230,16 @@ fn do_print(
             chain_print,
             auto_cut,
             quality,
-            target.usb_location(),
+            target,
+            cancellation.clone(),
+        ),
+        #[cfg(windows)]
+        PrinterTarget::UsbPrint { .. } => print_usb(
+            raster_lines,
+            chain_print,
+            auto_cut,
+            quality,
+            target,
             cancellation.clone(),
         ),
         #[cfg(any(target_os = "macos", test))]
@@ -232,12 +260,10 @@ fn print_usb(
     chain_print: bool,
     auto_cut: bool,
     quality: PrintQuality,
-    location: Option<ptouch_core::transport::UsbLocation>,
+    target: &PrinterTarget,
     cancellation: ptouch_core::CancellationToken,
 ) -> Result<(), String> {
-    let mut dev = location
-        .map_or_else(PtouchDevice::open_first, PtouchDevice::open_at)
-        .map_err(|e| format!("Connect error: {e}"))?;
+    let mut dev = open_usb(target).map_err(|e| format!("Connect error: {e}"))?;
     dev.set_cancellation_token(cancellation);
     dev.init().map_err(|e| format!("Init error: {e}"))?;
     let result = dev
@@ -267,12 +293,11 @@ fn do_feed_and_cut(
     ctx: &egui::Context,
     cancellation: ptouch_core::CancellationToken,
 ) {
-    let result = match target {
-        PrinterTarget::Usb | PrinterTarget::UsbAt(_) => (|| {
-            let mut dev = target
-                .usb_location()
-                .map_or_else(PtouchDevice::open_first, PtouchDevice::open_at)
-                .map_err(|e| format!("Connect error: {e}"))?;
+    let result = if target.is_bluetooth() {
+        Err("PT-P300BT has a manual cutter".to_string())
+    } else {
+        (|| {
+            let mut dev = open_usb(target).map_err(|e| format!("Connect error: {e}"))?;
             dev.set_cancellation_token(cancellation);
             dev.init().map_err(|e| format!("Init error: {e}"))?;
             let result = dev
@@ -280,9 +305,7 @@ fn do_feed_and_cut(
                 .map_err(|e| format!("Feed & cut error: {e}"));
             let _ = dev.close();
             result
-        })(),
-        #[cfg(any(target_os = "macos", test))]
-        PrinterTarget::Bluetooth { .. } => Err("PT-P300BT has a manual cutter".to_string()),
+        })()
     };
     let response = result
         .map(|()| PrinterResponse::FeedAndCutDone)
