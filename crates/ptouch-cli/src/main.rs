@@ -476,7 +476,7 @@ fn main() {
                 for printer in &report.usbprint_devices {
                     println!("USBPRINT PT-P710BT | {}", printer.instance_id);
                     println!("  Open: {} {}", printer.open.status, printer.open.detail);
-                    println!("  Select with --usbprint {:?}", printer.instance_id);
+                    println!("  Select with --usbprint '{}'", printer.instance_id);
                 }
                 for error in &report.errors {
                     println!("Discovery error: {error}");

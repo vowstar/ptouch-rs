@@ -334,6 +334,34 @@ pub fn run_worker_from_args() -> Option<i32> {
     Some(if worker_loop().is_ok() { 0 } else { 1 })
 }
 
+fn transfer_once(
+    mut bytes: Vec<u8>,
+    writing: bool,
+    transfer: impl FnOnce(&mut [u8]) -> std::io::Result<usize>,
+) -> Result<Vec<u8>> {
+    let count = transfer(&mut bytes).map_err(|error| {
+        if error.kind() == std::io::ErrorKind::TimedOut {
+            PtouchError::Timeout
+        } else if writing {
+            failure("write", format!("{error}; sent data may still print"))
+        } else {
+            failure("read", error)
+        }
+    })?;
+    if count > bytes.len() || (writing && count != bytes.len()) {
+        return Err(failure(
+            if writing { "write" } else { "read" },
+            "short or invalid transfer; not retrying, sent data may still print",
+        ));
+    }
+    if writing {
+        Ok(Vec::new())
+    } else {
+        bytes.truncate(count);
+        Ok(bytes)
+    }
+}
+
 fn worker_loop() -> std::io::Result<()> {
     let mut input = std::io::stdin().lock();
     let mut output = std::io::stdout().lock();
@@ -378,26 +406,9 @@ fn worker_loop() -> std::io::Result<()> {
                         }
                         bytes = vec![0; len];
                     }
-                    let count =
-                        io::transfer(handle, &mut bytes, writing, frame.millis).map_err(|e| {
-                            if e.kind() == std::io::ErrorKind::TimedOut {
-                                PtouchError::Timeout
-                            } else {
-                                failure("I/O", e)
-                            }
-                        })?;
-                    if count > bytes.len() || (writing && count != bytes.len()) {
-                        return Err(failure(
-                            "write",
-                            "short or invalid transfer; not retrying, sent data may still print",
-                        ));
-                    }
-                    if writing {
-                        Ok(Vec::new())
-                    } else {
-                        bytes.truncate(count);
-                        Ok(bytes)
-                    }
+                    transfer_once(bytes, writing, |bytes| {
+                        io::transfer(handle, bytes, writing, frame.millis)
+                    })
                 }
                 wire::CLOSE if bytes.is_empty() => {
                     handle.take();
@@ -477,6 +488,52 @@ mod tests {
             ),
             Err(PtouchError::AmbiguousDevice)
         ));
+    }
+    #[test]
+    fn short_and_failed_writes_never_replay_data() {
+        for count in [0, 2, 4] {
+            let mut calls = 0;
+            assert!(
+                transfer_once(vec![1, 2, 3], true, |data| {
+                    calls += 1;
+                    assert_eq!(data, [1, 2, 3]);
+                    Ok(count)
+                })
+                .is_err()
+            );
+            assert_eq!(calls, 1);
+        }
+        assert!(
+            transfer_once(vec![1, 2, 3], true, |_| Ok(3))
+                .unwrap()
+                .is_empty()
+        );
+        let mut calls = 0;
+        assert!(matches!(
+            transfer_once(vec![1, 2, 3], true, |_| {
+                calls += 1;
+                Err(std::io::ErrorKind::TimedOut.into())
+            }),
+            Err(PtouchError::Timeout)
+        ));
+        assert_eq!(calls, 1);
+    }
+    #[test]
+    fn fragmented_and_empty_reads_preserve_actual_length() {
+        assert_eq!(
+            transfer_once(vec![0; 32], false, |data| {
+                data[..2].copy_from_slice(&[0x80, 0x20]);
+                Ok(2)
+            })
+            .unwrap(),
+            [0x80, 0x20]
+        );
+        assert!(
+            transfer_once(vec![0; 32], false, |_| Ok(0))
+                .unwrap()
+                .is_empty()
+        );
+        assert!(transfer_once(vec![0; 32], false, |_| Ok(33)).is_err());
     }
     fn sleeping_worker() -> Worker {
         let child = Command::new("powershell.exe")
