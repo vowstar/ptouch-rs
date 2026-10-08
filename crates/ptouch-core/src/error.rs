@@ -11,6 +11,10 @@ pub type Result<T> = std::result::Result<T, PtouchError>;
 /// Errors that can occur when communicating with a Brother P-Touch printer.
 #[derive(Debug, Error)]
 pub enum PtouchError {
+    /// Native Windows USB printer failure, preserving the operation and system error.
+    #[error("USBPRINT {0}")]
+    UsbPrint(String),
+
     /// USB communication error from rusb.
     #[error("USB error: {0}")]
     UsbError(#[from] rusb::Error),
@@ -36,7 +40,9 @@ pub enum PtouchError {
     InvalidUsbInterface,
 
     /// More than one printer matches the selection.
-    #[error("Multiple printers match; select one using --usb BUS:ADDRESS from `ptouch doctor`")]
+    #[error(
+        "Multiple printers match; select --usb BUS:ADDRESS or --usbprint INSTANCE_ID from `ptouch doctor`"
+    )]
     AmbiguousDevice,
 
     /// Native Bluetooth communication or setup error.

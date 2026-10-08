@@ -35,3 +35,7 @@ pub use protocol::PrintQuality;
 pub use status::PrinterStatus;
 pub use tape::TapeInfo;
 pub use transport::PtouchDevice;
+
+/// Windows USBPRINT transport for PT-P710BT.
+#[cfg(windows)]
+pub mod usbprint;

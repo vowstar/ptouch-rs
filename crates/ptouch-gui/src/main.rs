@@ -29,6 +29,21 @@ fn load_window_icon() -> Option<egui::IconData> {
 }
 
 fn main() -> eframe::Result<()> {
+    #[cfg(windows)]
+    {
+        if let Some(code) = ptouch_core::usbprint::run_worker_from_args() {
+            std::process::exit(code);
+        }
+        if let Err(error) = std::env::current_exe()
+            .map_err(|e| e.to_string())
+            .and_then(|path| {
+                ptouch_core::usbprint::configure_worker(path).map_err(|e| e.to_string())
+            })
+        {
+            eprintln!("Cannot configure USBPRINT: {error}");
+            std::process::exit(1);
+        }
+    }
     if let Some(exit_code) = printer_worker::run_bluetooth_helper_from_args() {
         std::process::exit(exit_code);
     }

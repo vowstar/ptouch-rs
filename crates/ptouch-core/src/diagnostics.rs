@@ -74,6 +74,17 @@ pub struct DriverBinding {
     pub description: Option<String>,
 }
 
+/// A supported printer available through the native Windows USBPRINT backend.
+#[derive(Debug, Serialize)]
+pub struct UsbPrintDiagnostic {
+    /// Explicit selector. Can contain a serial number.
+    pub instance_id: String,
+    /// Backend used by the normal application.
+    pub backend: &'static str,
+    /// Optional open/close check. Never sends a printer command.
+    pub open: Check,
+}
+
 /// Versioned diagnostic report. Missing hardware is a report, not a crash.
 #[derive(Debug, Serialize)]
 pub struct DoctorReport {
@@ -97,12 +108,12 @@ pub struct DoctorReport {
     pub devices: Vec<UsbDiagnostic>,
     /// Windows PnP devices, including those inaccessible to libusb.
     pub windows_bindings: Vec<DriverBinding>,
+    /// Native USBPRINT candidates, independent of libusb opening support.
+    pub usbprint_devices: Vec<UsbPrintDiagnostic>,
 }
 
-/// Inspect discovery and driver binding. `probe` also attempts open/claim/release.
-/// No path sends printer commands, changes drivers, or detaches a kernel driver.
-pub fn doctor(probe: bool) -> DoctorReport {
-    let mut report = DoctorReport {
+fn empty_report() -> DoctorReport {
+    DoctorReport {
         schema_version: 1,
         version: env!("CARGO_PKG_VERSION"),
         os: std::env::consts::OS,
@@ -114,13 +125,62 @@ pub fn doctor(probe: bool) -> DoctorReport {
             rusb::version().minor(),
             rusb::version().micro()
         ),
-        probe,
+        probe: false,
         errors: Vec::new(),
         devices: Vec::new(),
         windows_bindings: Vec::new(),
-    };
-    #[cfg(windows)]
+        usbprint_devices: Vec::new(),
+    }
+}
+
+#[cfg(windows)]
+pub(crate) fn native_bindings() -> crate::Result<Vec<DriverBinding>> {
+    let mut report = empty_report();
     windows::inspect(&mut report);
+    if !report.errors.is_empty() {
+        return Err(crate::PtouchError::UsbPrint(format!(
+            "PnP discovery: {}",
+            report.errors.join("; ")
+        )));
+    }
+    Ok(report.windows_bindings)
+}
+
+/// Inspect discovery and driver binding. `probe` also attempts open/claim/release.
+/// No path sends printer commands, changes drivers, or detaches a kernel driver.
+pub fn doctor(probe: bool) -> DoctorReport {
+    let mut report = empty_report();
+    report.probe = probe;
+    #[cfg(windows)]
+    {
+        windows::inspect(&mut report);
+        match crate::usbprint::list() {
+            Ok(printers) => {
+                for printer in printers {
+                    let open = if probe {
+                        match crate::usbprint::probe(&printer.instance_id) {
+                            Ok(()) => Check {
+                                status: "ok",
+                                detail: "USBPRINT open/close succeeded".into(),
+                            },
+                            Err(error) => Check {
+                                status: "error",
+                                detail: error.to_string(),
+                            },
+                        }
+                    } else {
+                        Check { status: "not_requested", detail: "Use --probe to check USBPRINT open/close; no printer commands are sent".into() }
+                    };
+                    report.usbprint_devices.push(UsbPrintDiagnostic {
+                        instance_id: printer.instance_id,
+                        backend: "usbprint",
+                        open,
+                    });
+                }
+            }
+            Err(error) => report.errors.push(error.to_string()),
+        }
+    }
     #[cfg(not(windows))]
     {
         report.native_arch = std::process::Command::new("uname")

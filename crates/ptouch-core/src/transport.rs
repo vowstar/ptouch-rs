@@ -71,11 +71,40 @@ impl Transport for UsbTransport {
     }
 }
 
+enum UsbBackend {
+    Libusb(UsbTransport),
+    #[cfg(windows)]
+    UsbPrint(crate::usbprint::UsbPrintTransport),
+}
+impl Transport for UsbBackend {
+    fn send(&self, data: &[u8], timeout: Duration) -> Result<()> {
+        match self {
+            Self::Libusb(t) => t.send(data, timeout),
+            #[cfg(windows)]
+            Self::UsbPrint(t) => t.send(data, timeout),
+        }
+    }
+    fn receive(&self, buf: &mut [u8], timeout: Duration) -> Result<usize> {
+        match self {
+            Self::Libusb(t) => t.receive(buf, timeout),
+            #[cfg(windows)]
+            Self::UsbPrint(t) => t.receive(buf, timeout),
+        }
+    }
+    fn close(self) -> Result<()> {
+        match self {
+            Self::Libusb(t) => t.close(),
+            #[cfg(windows)]
+            Self::UsbPrint(t) => t.close(),
+        }
+    }
+}
+
 /// A connection to a Brother P-Touch USB printer.
 ///
 /// This facade keeps the USB constructors and method signatures unchanged.
 pub struct PtouchDevice {
-    session: PrinterSession<UsbTransport>,
+    session: PrinterSession<UsbBackend>,
     dev_info: DeviceInfo,
 }
 
@@ -105,7 +134,22 @@ impl PtouchDevice {
 
     /// Open the only supported printer. Multiple matches require selection.
     pub fn open_first() -> Result<Self> {
+        #[cfg(windows)]
+        if let Some(instance_id) = crate::usbprint::automatic()? {
+            return Self::open_usbprint(&instance_id);
+        }
         Self::open_matching(None, None)
+    }
+
+    /// Open an explicitly selected PT-P710BT through the existing Windows driver.
+    #[cfg(windows)]
+    pub fn open_usbprint(instance_id: &str) -> Result<Self> {
+        let dev_info = device::find_device(0x04f9, 0x20af).unwrap().clone();
+        let transport = crate::usbprint::UsbPrintTransport::open(instance_id)?;
+        Ok(Self {
+            session: PrinterSession::new(UsbBackend::UsbPrint(transport), (&dev_info).into()),
+            dev_info,
+        })
     }
 
     fn open_matching(ids: Option<(u16, u16)>, location: Option<UsbLocation>) -> Result<Self> {
@@ -179,11 +223,11 @@ impl PtouchDevice {
         );
         Ok(Self {
             session: PrinterSession::new(
-                UsbTransport {
+                UsbBackend::Libusb(UsbTransport {
                     handle,
                     ep_out: endpoints.out,
                     ep_in: endpoints.input,
-                },
+                }),
                 (&dev_info).into(),
             ),
             dev_info,
@@ -193,6 +237,10 @@ impl PtouchDevice {
     /// Set a fresh cancellation token before initialization or a job.
     /// A blocked USB transfer returns within its transfer timeout (at most five seconds).
     pub fn set_cancellation_token(&mut self, token: crate::CancellationToken) {
+        #[cfg(windows)]
+        if let UsbBackend::UsbPrint(transport) = &mut self.session.transport {
+            transport.set_cancellation(token.clone());
+        }
         self.session.cancellation = token;
     }
 
