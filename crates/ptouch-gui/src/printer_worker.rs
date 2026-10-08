@@ -27,6 +27,9 @@ pub fn printer_worker(
 ) {
     info!("Printer worker started");
     let mut current_target = PrinterTarget::Usb;
+    // An interrupted job can still be printing. Resume status requests only
+    // after an explicit user operation, not the background polling timer.
+    let mut poll_enabled = true;
     discover_bluetooth(&resp_tx, &ctx);
     discover_usb(&resp_tx, &ctx);
 
@@ -36,6 +39,7 @@ pub fn printer_worker(
             Ok(PrinterCommand::Poll(target)) => {
                 discover_usb(&resp_tx, &ctx);
                 current_target = target;
+                poll_enabled = true;
                 do_poll(&current_target, &resp_tx, &ctx);
             }
             Ok(PrinterCommand::Print {
@@ -47,7 +51,7 @@ pub fn printer_worker(
                 cancellation,
             }) => {
                 current_target = target;
-                do_print(
+                poll_enabled = do_print(
                     &current_target,
                     (&resp_tx, &ctx),
                     &raster_lines,
@@ -62,10 +66,10 @@ pub fn printer_worker(
                 cancellation,
             }) => {
                 current_target = target;
-                do_feed_and_cut(&current_target, &resp_tx, &ctx, cancellation);
+                poll_enabled = do_feed_and_cut(&current_target, &resp_tx, &ctx, cancellation);
             }
             Err(mpsc::RecvTimeoutError::Timeout) => {
-                if !current_target.is_bluetooth() {
+                if poll_enabled && !current_target.is_bluetooth() {
                     do_poll(&current_target, &resp_tx, &ctx);
                 }
             }
@@ -222,7 +226,7 @@ fn do_print(
     auto_cut: bool,
     quality: PrintQuality,
     cancellation: &ptouch_core::CancellationToken,
-) {
+) -> bool {
     let (tx, ctx) = response;
     let result = match target {
         PrinterTarget::Usb | PrinterTarget::UsbAt(_) => print_usb(
@@ -245,6 +249,7 @@ fn do_print(
         #[cfg(any(target_os = "macos", test))]
         PrinterTarget::Bluetooth { address, .. } => print_bluetooth(address, raster_lines),
     };
+    let completed = result.is_ok();
     let response = result
         .map(|()| PrinterResponse::PrintDone)
         .unwrap_or_else(PrinterResponse::Error);
@@ -253,6 +258,7 @@ fn do_print(
         response,
     });
     ctx.request_repaint();
+    completed
 }
 
 fn print_usb(
@@ -292,7 +298,7 @@ fn do_feed_and_cut(
     tx: &mpsc::Sender<PrinterEvent>,
     ctx: &egui::Context,
     cancellation: ptouch_core::CancellationToken,
-) {
+) -> bool {
     let result = if target.is_bluetooth() {
         Err("PT-P300BT has a manual cutter".to_string())
     } else {
@@ -307,6 +313,7 @@ fn do_feed_and_cut(
             result
         })()
     };
+    let completed = result.is_ok();
     let response = result
         .map(|()| PrinterResponse::FeedAndCutDone)
         .unwrap_or_else(PrinterResponse::Error);
@@ -315,6 +322,7 @@ fn do_feed_and_cut(
         response,
     });
     ctx.request_repaint();
+    completed
 }
 
 #[cfg(target_os = "macos")]
