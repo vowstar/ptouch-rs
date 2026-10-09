@@ -132,7 +132,7 @@ DLL is not shipped. Native CI rendering does not validate a physical host's GPU 
 | Linux x64 | `x86_64-unknown-linux-gnu` | `ubuntu-latest` | Separate from CI |
 | Linux ARM64 | `aarch64-unknown-linux-gnu` | `ubuntu-24.04-arm` | PT-P710BT acceptance pending |
 | Windows x64 | `x86_64-pc-windows-msvc` | `windows-latest` | Separate from CI |
-| Windows ARM64 | `aarch64-pc-windows-msvc` | `windows-11-arm` | PT-P710BT acceptance pending |
+| Windows ARM64 | `aarch64-pc-windows-msvc` | `windows-11-arm` | PT-P710BT single-label printing confirmed |
 | macOS ARM64 | `aarch64-apple-darwin` | `macos-latest` | PT-P300BT Bluetooth verified; USB tested separately |
 
 CI builds and tests each target natively, validates binary architecture, and
@@ -445,7 +445,9 @@ Retain the existing Linux udev and macOS USB access procedures. PT-P300BT
 Bluetooth validation remains specific to macOS and does not establish Windows
 or Linux Bluetooth support.
 
-No ARM64 PT-P710BT hardware acceptance result is recorded by this change.
+A Windows 11 ARM64 user confirmed single-label printing on PT-P710BT with v0.8.6
+in [#20](https://github.com/vowstar/ptouch-rs/issues/20#issuecomment-6075544246).
+The remaining hardware cases above still require validation.
 Do not run untrusted pull-request code on a runner connected to a printer.
 The Windows USBPRINT probe remains experimental until separate hardware evidence
 establishes bidirectional communication and resource cleanup under failure.
@@ -526,6 +528,6 @@ printer before retrying an interrupted job.
 
 Windows CI exercises native I/O through named pipes, worker deadlines and
 cancellation, both application worker entry points, and malformed IPC requests.
-These checks do not replace physical printer acceptance. Issue #20 confirms
-PT-P710BT status communication through the existing Windows ARM64 driver;
-full printing and cancellation acceptance remain pending.
+CI also checks the GUI and console executable subsystems in debug and release
+builds. Hidden worker launches must preserve stdin/stdout communication.
+These checks do not replace physical printer acceptance.

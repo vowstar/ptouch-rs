@@ -6,6 +6,10 @@
 //! Provides a graphical interface for composing and printing labels
 //! using egui/eframe.
 
+// Use the GUI subsystem in both debug and release builds. Worker mode receives
+// explicit stdin/stdout pipes from its parent and does not need a console.
+#![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
+
 mod app;
 mod panels;
 mod printer_worker;
