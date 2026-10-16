@@ -17,6 +17,9 @@ mod usb_discovery_tests;
 #[cfg(test)]
 #[path = "transport/usb_io_test.rs"]
 mod usb_io_tests;
+#[cfg(test)]
+#[path = "transport/virtual_printer_test.rs"]
+mod virtual_printer_tests;
 
 use usb::UsbBackend;
 pub use usb::UsbLocation;

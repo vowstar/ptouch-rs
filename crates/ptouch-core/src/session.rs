@@ -321,9 +321,15 @@ impl<T: Transport> PrinterSession<T> {
             print_status_is_ready(status)?;
         }
 
-        if quality != protocol::PrintQuality::Standard
-            && !self.profile.flags.contains(DeviceFlags::LEGACY_HIRES)
-        {
+        let quality_supported = match quality {
+            protocol::PrintQuality::Standard => true,
+            protocol::PrintQuality::HighRes => self
+                .profile
+                .flags
+                .intersects(DeviceFlags::LEGACY_HIRES | DeviceFlags::ADVANCED_HIRES),
+            protocol::PrintQuality::Draft => self.profile.flags.contains(DeviceFlags::LEGACY_HIRES),
+        };
+        if !quality_supported {
             return Err(PtouchError::UnsupportedQuality(
                 self.profile.name.to_string(),
             ));
@@ -343,6 +349,7 @@ impl<T: Transport> PrinterSession<T> {
 
         let opts = protocol::JobOptions {
             media_width: self.status.as_ref().map_or(0, |s| s.media_width),
+            margin_dots: ((u32::from(self.profile.dpi) * 10 + 63) / 127) as u16,
             chain_print,
             precut,
             quality,
@@ -895,6 +902,26 @@ mod tests {
         session.cancellation.cancel();
         assert!(matches!(session.init(), Err(PtouchError::Cancelled)));
         assert!(session.transport.writes.borrow().is_empty());
+    }
+
+    #[test]
+    fn target_profiles_reject_unverified_draft_quality_before_writing() {
+        for pid in [0x2060, 0x2085] {
+            let info = crate::device::find_device(crate::device::BROTHER_VENDOR_ID, pid)
+                .expect("target model exists");
+            let mut session = PrinterSession::new(ScriptedTransport::new(), info.into());
+            session.initialized = true;
+            assert!(matches!(
+                session.print_raster(
+                    &[vec![0xFF; usize::from(info.max_px).div_ceil(8)]],
+                    false,
+                    false,
+                    protocol::PrintQuality::Draft,
+                ),
+                Err(PtouchError::UnsupportedQuality(_))
+            ));
+            assert!(session.transport.writes.borrow().is_empty());
+        }
     }
 
     #[test]

@@ -2124,6 +2124,7 @@ mod tests {
             }
             let opts = ptouch_core::protocol::JobOptions {
                 media_width: 12,
+                margin_dots: 0,
                 chain_print,
                 precut,
                 quality,

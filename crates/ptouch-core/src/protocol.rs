@@ -271,6 +271,8 @@ pub fn rasterline_blank(max_px: u16) -> Vec<u8> {
 pub struct JobOptions {
     /// Media width in mm from the printer status (used by the info command).
     pub media_width: u8,
+    /// Base-resolution margin in dots, doubled when high-resolution printing is enabled.
+    pub margin_dots: u16,
     /// Chain print: skip the final feed and cut.
     pub chain_print: bool,
     /// Request the precut command (only sent if the device supports it).
@@ -300,7 +302,7 @@ pub fn build_print_job(lines: &[Vec<u8>], flags: DeviceFlags, opts: &JobOptions)
     // Quality modes change the feed resolution along the tape. Keep the
     // physical length by duplicating lines (high resolution) or dropping
     // every other line (draft).
-    let quality = if flags.contains(DeviceFlags::LEGACY_HIRES) {
+    let quality = if flags.intersects(DeviceFlags::LEGACY_HIRES | DeviceFlags::ADVANCED_HIRES) {
         opts.quality
     } else {
         PrintQuality::Standard
@@ -327,6 +329,11 @@ pub fn build_print_job(lines: &[Vec<u8>], flags: DeviceFlags, opts: &JobOptions)
 
     if flags.contains(DeviceFlags::USE_INFO_CMD) {
         job.push(cmd_info(opts.media_width, line_count, flags));
+    }
+
+    if flags.contains(DeviceFlags::ADVANCED_HIRES) && quality == PrintQuality::HighRes {
+        job.push(cmd_advanced_mode(quality, false, true, true));
+        job.push(cmd_page_flags(opts.margin_dots.saturating_mul(2)));
     }
 
     if is_d460bt {
@@ -511,6 +518,7 @@ mod tests {
         let lines = vec![vec![0xFF, 0x00], vec![0x00, 0x00]];
         let opts = JobOptions {
             media_width: 12,
+            margin_dots: 0,
             chain_print: false,
             precut: false,
             quality: PrintQuality::Standard,
@@ -535,6 +543,7 @@ mod tests {
             .union(DeviceFlags::HAS_PRECUT);
         let opts = JobOptions {
             media_width: 24,
+            margin_dots: 0,
             chain_print: false,
             precut: true,
             quality: PrintQuality::Standard,
@@ -561,6 +570,7 @@ mod tests {
         let flags = DeviceFlags::RASTER_PACKBITS.union(DeviceFlags::HAS_PRECUT);
         let opts = JobOptions {
             media_width: 12,
+            margin_dots: 0,
             chain_print: false,
             precut: true,
             quality: PrintQuality::Standard,
@@ -575,6 +585,7 @@ mod tests {
         let lines = vec![vec![0x01]];
         let opts = JobOptions {
             media_width: 12,
+            margin_dots: 0,
             chain_print: true,
             precut: false,
             quality: PrintQuality::Standard,
@@ -588,6 +599,7 @@ mod tests {
         let lines = vec![vec![0x01]];
         let opts = JobOptions {
             media_width: 12,
+            margin_dots: 0,
             chain_print: false,
             precut: true,
             quality: PrintQuality::Standard,
@@ -604,6 +616,7 @@ mod tests {
             .union(DeviceFlags::D460BT_MAGIC);
         let opts = JobOptions {
             media_width: 12,
+            margin_dots: 0,
             chain_print: true,
             precut: false,
             quality: PrintQuality::Standard,
@@ -706,5 +719,52 @@ mod tests {
         assert!(!bytes.windows(3).any(|w| w == [0x1B, 0x69, 0x63]));
         // Lines are not duplicated either.
         assert_eq!(bytes.iter().filter(|&&b| b == 0x47).count(), 1);
+    }
+
+    #[test]
+    fn target_high_resolution_duplicates_lines_and_doubles_margin() {
+        for (flags, width, margin_dots, raster) in [
+            (
+                DeviceFlags::RASTER_PACKBITS
+                    .union(DeviceFlags::P700_INIT)
+                    .union(DeviceFlags::USE_INFO_CMD)
+                    .union(DeviceFlags::ADVANCED_HIRES),
+                24,
+                14,
+                vec![vec![0xAA; 16], vec![0x55; 16]],
+            ),
+            (
+                DeviceFlags::P700_INIT
+                    .union(DeviceFlags::USE_INFO_CMD)
+                    .union(DeviceFlags::ADVANCED_HIRES),
+                24,
+                28,
+                vec![vec![0xAA; 70], vec![0x55; 70]],
+            ),
+        ] {
+            let options = JobOptions {
+                media_width: width,
+                margin_dots,
+                quality: PrintQuality::HighRes,
+                ..JobOptions::default()
+            };
+            let bytes = flat(&build_print_job(&raster, flags, &options));
+            let mut expected = vec![0x1B, 0x69, 0x61, 0x01];
+            expected.extend(cmd_info(width, 4, flags));
+            expected.extend([0x1B, 0x69, 0x4B, 0x4C]);
+            expected.extend(cmd_page_flags(margin_dots * 2));
+            if flags.contains(DeviceFlags::RASTER_PACKBITS) {
+                expected.extend([0x4D, 0x02]);
+                for line in [&raster[0], &raster[0], &raster[1], &raster[1]] {
+                    expected.extend(cmd_send_raster_packbits(line));
+                }
+            } else {
+                for line in [&raster[0], &raster[0], &raster[1], &raster[1]] {
+                    expected.extend(cmd_send_raster(line));
+                }
+            }
+            expected.push(0x1A);
+            assert_eq!(bytes, expected);
+        }
     }
 }

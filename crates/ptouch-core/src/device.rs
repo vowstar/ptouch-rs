@@ -42,6 +42,8 @@ bitflags! {
         const WAIT_FOR_RECEIVE_READY = 1 << 8;
         /// Device supports ESC i ! for configuring automatic status notification.
         const AUTO_STATUS_NOTIFICATION = 1 << 9;
+        /// Device selects high-resolution printing through ESC i K.
+        const ADVANCED_HIRES = 1 << 10;
     }
 }
 
@@ -215,7 +217,8 @@ static DEVICE_TABLE: &[DeviceInfo] = &[
         dpi: 180,
         flags: DeviceFlags::RASTER_PACKBITS
             .union(DeviceFlags::P700_INIT)
-            .union(DeviceFlags::USE_INFO_CMD),
+            .union(DeviceFlags::USE_INFO_CMD)
+            .union(DeviceFlags::ADVANCED_HIRES),
     },
     DeviceInfo {
         vid: 0x04f9,
@@ -258,7 +261,9 @@ static DEVICE_TABLE: &[DeviceInfo] = &[
         name: "PT-P900W",
         max_px: 560,
         dpi: 360,
-        flags: DeviceFlags::P700_INIT.union(DeviceFlags::USE_INFO_CMD),
+        flags: DeviceFlags::P700_INIT
+            .union(DeviceFlags::USE_INFO_CMD)
+            .union(DeviceFlags::ADVANCED_HIRES),
     },
     DeviceInfo {
         vid: 0x04f9,
