@@ -23,6 +23,7 @@ use ptouch_core::PrinterStatus;
 use ptouch_core::device::{self, DeviceFlags, DeviceInfo};
 use ptouch_core::error::PtouchError;
 use ptouch_core::protocol::PrintQuality;
+use ptouch_core::settings::query_command_mode;
 use ptouch_core::tape;
 use ptouch_core::transport::{PtouchDevice, UsbLocation};
 
@@ -52,6 +53,8 @@ enum Commands {
     Print(PrintArgs),
     /// Show printer and tape information
     Info(InfoArgs),
+    /// Read supported printer settings
+    Config(ConfigArgs),
     /// List supported printer models
     List,
     /// Diagnose USB discovery, architecture, and Windows driver bindings
@@ -255,6 +258,35 @@ struct InfoArgs {
     /// Printer timeout in seconds
     #[arg(long, default_value = "1")]
     timeout: u32,
+}
+
+#[derive(clap::Args)]
+struct ConfigArgs {
+    #[command(subcommand)]
+    command: ConfigCommand,
+}
+
+#[derive(Subcommand)]
+enum ConfigCommand {
+    /// Read a setting without changing the printer
+    Get(ConfigGetArgs),
+}
+
+#[derive(clap::Args)]
+struct ConfigGetArgs {
+    #[arg(value_enum)]
+    setting: ConfigSetting,
+
+    #[arg(long, value_name = "IP:PORT")]
+    tcp: SocketAddr,
+
+    #[arg(long, value_name = "HEX_PID", value_parser = parse_product_id)]
+    pid: u16,
+}
+
+#[derive(ValueEnum, Clone, Copy)]
+enum ConfigSetting {
+    CommandMode,
 }
 
 /// The printer selected by the CLI. USB remains the default target.
@@ -576,6 +608,12 @@ fn main() {
             }
         }
         Commands::Gui => execute_gui(),
+        Commands::Config(args) => {
+            if let Err(error) = execute_config_get(args.command) {
+                eprintln!("Error: {error}");
+                process::exit(1);
+            }
+        }
         Commands::Info(args) => {
             init_logging(args.debug);
             if let Err(e) = execute_info(&args) {
@@ -840,6 +878,22 @@ fn execute_info(args: &InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
 
     dev.close()?;
     Ok(())
+}
+
+fn execute_config_get(command: ConfigCommand) -> Result<(), Box<dyn std::error::Error>> {
+    match command {
+        ConfigCommand::Get(args) => match args.setting {
+            ConfigSetting::CommandMode => {
+                let device = PtouchDevice::open_tcp(args.tcp, args.pid)?;
+                let result = query_command_mode(&device);
+                let close_result = device.close();
+                let mode = result?;
+                close_result?;
+                println!("Command mode: {mode}");
+                Ok(())
+            }
+        },
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2117,6 +2171,71 @@ mod tests {
         expected.extend([0xAA; 16]);
         expected.push(0x1A);
         assert_eq!(server.join().unwrap(), expected);
+    }
+
+    #[test]
+    fn config_get_command_mode_requires_an_explicit_tcp_target() {
+        let cli = Cli::try_parse_from([
+            "ptouch",
+            "config",
+            "get",
+            "command-mode",
+            "--tcp",
+            "127.0.0.1:9100",
+            "--pid",
+            "0x2085",
+        ])
+        .unwrap();
+        assert!(matches!(
+            cli.command,
+            Commands::Config(ConfigArgs {
+                command: ConfigCommand::Get(ConfigGetArgs {
+                    setting: ConfigSetting::CommandMode,
+                    pid: 0x2085,
+                    ..
+                })
+            })
+        ));
+        assert!(Cli::try_parse_from(["ptouch", "config", "get", "command-mode"]).is_err());
+    }
+
+    #[test]
+    fn config_get_command_mode_sends_only_the_read_command() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+        use std::thread;
+        use std::time::Duration;
+
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut request = [0; 5];
+            stream.read_exact(&mut request).unwrap();
+            let mut reply = [0; 32];
+            reply[0] = 0x80;
+            reply[1] = 0x20;
+            reply[2] = 0x42;
+            reply[3] = 0x30;
+            reply[4] = 0x6F;
+            reply[30] = 0x01;
+            stream.write_all(&reply).unwrap();
+            let mut close_probe = [0; 1];
+            let _ = stream.read(&mut close_probe);
+            request
+        });
+        let args = ConfigGetArgs {
+            setting: ConfigSetting::CommandMode,
+            tcp: address,
+            pid: 0x2085,
+        };
+
+        execute_config_get(ConfigCommand::Get(args)).unwrap();
+
+        assert_eq!(server.join().unwrap(), [0x1B, 0x69, 0x55, 0x61, 0x01]);
     }
 
     fn print_matches(argv: &[&str]) -> ArgMatches {
