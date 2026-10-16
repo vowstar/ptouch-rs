@@ -16,7 +16,7 @@ Optional native macOS Bluetooth support is available in `ptouch-core` for the PT
   embedded), then print them from the GUI or CLI
 - Template layouts with `{{name}}` placeholders and batch-print from a CSV
 - Chain print and multi-copy support
-- Print quality modes on 360 dpi models (high resolution 360x720, draft 360x180)
+- Print quality modes on selected legacy 360 dpi models (high resolution 360x720, draft 360x180)
 - GUI with live preview, zoom, and drag-and-drop element reordering
 - Export to image (PNG, JPEG, BMP, GIF, TIFF, WebP) without a printer connected
 - Feed and cut tape without printing
@@ -25,8 +25,13 @@ Optional native macOS Bluetooth support is available in `ptouch-core` for the PT
 
 PT-9200DX, PT-2300, PT-2420PC, PT-9500PC, PT-9700PC, PT-2450PC, PT-18R,
 PT-1950, PT-2700, PT-1230PC, PT-2430PC, PT-2730, PT-H500, PT-E500, PT-E550W,
-PT-P700, PT-P750W, PT-D410, PT-D450, PT-D460BT, PT-D600, PT-D610BT,
+PT-P700, PT-P750W, PT-P900W, PT-D410, PT-D450, PT-D460BT, PT-D600, PT-D610BT,
 PT-P710BT, PT-E310BT, PT-E560BT and more.
+
+`ptouch-core` also provides explicit raw TCP connections with
+`PtouchDevice::open_tcp(address, product_id)`. Brother network printers commonly
+listen on port 9100. The CLI and GUI continue to use USB selection; the core TCP
+transport is currently verified with a loopback printer fixture.
 
 Tape widths: 3.5mm, 6mm, 9mm, 12mm, 18mm, 24mm, 36mm.
 
