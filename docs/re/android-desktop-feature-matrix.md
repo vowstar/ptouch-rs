@@ -25,6 +25,11 @@ Status: Cycle 2 static inventory. Android evidence includes manifest declaration
 - The PT-E550W retains PackBits compression, which is required for cutting; PT-P900W remains uncompressed by default. USB-session and loopback TCP tests pin standard-job bytes; target high-resolution bytes are pinned in unit and TCP virtual-printer tests. Raster bitmaps round-trip at both target head widths, and virtual-printer error, cancellation, and teardown paths are covered. No physical printer was used.
 - Draft quality remains available only on legacy-hires profiles. CLI and GUI now accept an explicit TCP address and model selection; both routes are exercised against loopback printer fixtures.
 
+## Cycle 5 branch updates
+
+- CLI and GUI can select a raw TCP endpoint and supported model for status and printing; network routes are verified with loopback fixtures.
+- `ptouch config get command-mode` provides a read-only PT-P900W query over explicit TCP. Its GET bytes and reply-byte mapping come from the preserved `ptset` evidence; no physical TCP query or SET operation was performed.
+
 ## Evidence locations
 
 - Design&Print 2 manifest and activities: `reference/artifacts/android-designandprint2-2.8.1/jadx/resources/AndroidManifest.xml`, especially `SharedFileReceiveActivity` and `SetPrintConfigActivity`.

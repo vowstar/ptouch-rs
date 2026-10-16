@@ -110,3 +110,12 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | CLI `info` and `print` accept `--tcp IP:PORT --pid HEX_PID` and route to the selected supported model | implemented and tested | `crates/ptouch-cli/src/main.rs`; `tcp_selection_requires_a_hex_product_id_for_info_and_print`; `tcp_cli_device_prints_to_the_selected_model` |
 | The CLI TCP path sends a complete PT-E550W print job and receives printer completion through a loopback endpoint | tested in a loopback fixture | `tcp_cli_device_prints_to_the_selected_model`; no physical printer was used |
 | GUI TCP model/address selection reaches the asynchronous printer worker and completes a target print | implemented and tested through a loopback endpoint | `crates/ptouch-gui/src/panels/sidebar.rs`, `printer_worker.rs`; `tcp_target_polls_and_prints_without_blocking_the_ui_worker_contract` |
+
+## Cycle 5 read-only Command Mode query
+
+| Claim | Status | Evidence |
+|---|---|---|
+| `ptouch config get command-mode` sends the recovered PT-P900W GET bytes `1B 69 55 61 01` over an explicitly selected TCP connection | implemented and loopback-tested | `crates/ptouch-core/src/settings.rs`; `crates/ptouch-cli/src/main.rs`; no physical TCP query was performed |
+| The 32-byte GET reply's byte 30 is decoded using the preserved values ESC/P (0x00), Raster (0x01), and P-touch Template (0x03); unknown values remain visible as raw hex | implemented from preserved reverse-engineering evidence | `reference/ptset-original/src/settings.rs`; `CommandMode` preserves unknown values |
+| The query rejects models other than PT-P900W before sending a setting request | tested | `settings::tests::command_mode_query_rejects_non_p900w_models_before_sending` |
+| Printer SET commands are implemented or transmitted by this query | no | This operation is read-only; recovered SET bytes remain unverified and are not used |
