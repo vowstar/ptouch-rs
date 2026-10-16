@@ -102,3 +102,11 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Standard target print jobs match exact USB-session and TCP wire-byte goldens | tested | `session::tests::target_standard_jobs_match_usb_session_golden_bytes`; `target_standard_jobs_match_golden_bytes_through_virtual_printer` |
 | Raster packing preserves source pixels at both target head widths | tested | `ptouch-render::raster::tests::bitmap_raster_round_trip_preserves_pixels_at_target_head_widths` |
 | Printer-reported print errors, pre-write cancellation, and connection teardown are covered without hardware | tested in virtual sessions | `printer_error_after_print_is_returned_and_transport_tears_down`; `cancellation_before_job_write_closes_without_sending_raster_bytes` |
+
+## Cycle 5 CLI TCP printing
+
+| Claim | Status | Evidence |
+|---|---|---|
+| CLI `info` and `print` accept `--tcp IP:PORT --pid HEX_PID` and route to the selected supported model | implemented and tested | `crates/ptouch-cli/src/main.rs`; `tcp_selection_requires_a_hex_product_id_for_info_and_print`; `tcp_cli_device_prints_to_the_selected_model` |
+| The CLI TCP path sends a complete PT-E550W print job and receives printer completion through a loopback endpoint | tested in a loopback fixture | `tcp_cli_device_prints_to_the_selected_model`; no physical printer was used |
+| GUI TCP model/address selection reaches the asynchronous printer worker and completes a target print | implemented and tested through a loopback endpoint | `crates/ptouch-gui/src/panels/sidebar.rs`, `printer_worker.rs`; `tcp_target_polls_and_prints_without_blocking_the_ui_worker_contract` |

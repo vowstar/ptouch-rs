@@ -23,7 +23,7 @@ Status: Cycle 2 static inventory. Android evidence includes manifest declaration
 
 - `PrintQuality::HighRes` is supported for PT-E550W and PT-P900W via ESC `i K` bit 6. The print job duplicates each input raster line, reports the doubled raster line count, and doubles the 2 mm default margin at the model's base resolution: 28 dots at 180 dpi for E550W and 56 dots at 360 dpi for P900W.
 - The PT-E550W retains PackBits compression, which is required for cutting; PT-P900W remains uncompressed by default. USB-session and loopback TCP tests pin standard-job bytes; target high-resolution bytes are pinned in unit and TCP virtual-printer tests. Raster bitmaps round-trip at both target head widths, and virtual-printer error, cancellation, and teardown paths are covered. No physical printer was used.
-- Draft quality remains available only on legacy-hires profiles. CLI and GUI TCP selection remain unwired.
+- Draft quality remains available only on legacy-hires profiles. CLI and GUI now accept an explicit TCP address and model selection; both routes are exercised against loopback printer fixtures.
 
 ## Evidence locations
 
