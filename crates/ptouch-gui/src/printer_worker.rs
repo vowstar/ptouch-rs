@@ -123,9 +123,11 @@ fn discover_bluetooth(resp_tx: &mpsc::Sender<PrinterEvent>, ctx: &egui::Context)
 
 fn do_poll(target: &PrinterTarget, tx: &mpsc::Sender<PrinterEvent>, ctx: &egui::Context) {
     let response = match target {
-        PrinterTarget::Usb | PrinterTarget::UsbAt(_) => poll_usb(target),
+        PrinterTarget::Usb | PrinterTarget::UsbAt(_) | PrinterTarget::Tcp { .. } => {
+            poll_printer(target)
+        }
         #[cfg(windows)]
-        PrinterTarget::UsbPrint { .. } => poll_usb(target),
+        PrinterTarget::UsbPrint { .. } => poll_printer(target),
         #[cfg(any(target_os = "macos", test))]
         PrinterTarget::Bluetooth { address, .. } => poll_bluetooth(address),
     }
@@ -140,7 +142,10 @@ fn do_poll(target: &PrinterTarget, tx: &mpsc::Sender<PrinterEvent>, ctx: &egui::
     ctx.request_repaint();
 }
 
-fn open_usb(target: &PrinterTarget) -> ptouch_core::Result<PtouchDevice> {
+fn open_printer(target: &PrinterTarget) -> ptouch_core::Result<PtouchDevice> {
+    if let PrinterTarget::Tcp { address, pid } = target {
+        return PtouchDevice::open_tcp(*address, *pid);
+    }
     #[cfg(windows)]
     if let PrinterTarget::UsbPrint { instance_id } = target {
         return PtouchDevice::open_usbprint(instance_id);
@@ -150,11 +155,13 @@ fn open_usb(target: &PrinterTarget) -> ptouch_core::Result<PtouchDevice> {
         .map_or_else(PtouchDevice::open_first, PtouchDevice::open_at)
 }
 
-fn poll_usb(target: &PrinterTarget) -> Result<PrinterResponse, String> {
-    let mut dev = open_usb(target).map_err(|e| e.to_string())?;
+fn poll_printer(target: &PrinterTarget) -> Result<PrinterResponse, String> {
+    let mut dev = open_printer(target).map_err(|e| e.to_string())?;
     let max_px = dev.max_px();
     let dpi = dev.device_info().dpi;
-    let quality_modes = dev.flags().contains(DeviceFlags::LEGACY_HIRES);
+    let flags = dev.flags();
+    let quality_modes = flags.intersects(DeviceFlags::LEGACY_HIRES | DeviceFlags::ADVANCED_HIRES);
+    let draft_quality_modes = flags.contains(DeviceFlags::LEGACY_HIRES);
     let model_name = dev.device_info().name.to_string();
     let status = dev.query_status().map_err(|e| e.to_string())?;
     let media_width = status.media_width;
@@ -167,6 +174,7 @@ fn poll_usb(target: &PrinterTarget) -> Result<PrinterResponse, String> {
         max_px,
         dpi,
         quality_modes,
+        draft_quality_modes,
         tape_width_px,
     };
     let _ = dev.close();
@@ -214,6 +222,7 @@ fn parse_bluetooth_status(output: &str) -> Result<PrinterResponse, String> {
         max_px: fields[3].parse().map_err(|_| "Invalid raster width")?,
         dpi: fields[4].parse().map_err(|_| "Invalid resolution")?,
         quality_modes: false,
+        draft_quality_modes: false,
         tape_width_px: fields[5].parse().map_err(|_| "Invalid tape width")?,
     })
 }
@@ -229,7 +238,7 @@ fn do_print(
 ) -> bool {
     let (tx, ctx) = response;
     let result = match target {
-        PrinterTarget::Usb | PrinterTarget::UsbAt(_) => print_usb(
+        PrinterTarget::Usb | PrinterTarget::UsbAt(_) | PrinterTarget::Tcp { .. } => print_printer(
             raster_lines,
             chain_print,
             auto_cut,
@@ -238,7 +247,7 @@ fn do_print(
             cancellation.clone(),
         ),
         #[cfg(windows)]
-        PrinterTarget::UsbPrint { .. } => print_usb(
+        PrinterTarget::UsbPrint { .. } => print_printer(
             raster_lines,
             chain_print,
             auto_cut,
@@ -261,7 +270,7 @@ fn do_print(
     completed
 }
 
-fn print_usb(
+fn print_printer(
     raster_lines: &[Vec<u8>],
     chain_print: bool,
     auto_cut: bool,
@@ -269,7 +278,7 @@ fn print_usb(
     target: &PrinterTarget,
     cancellation: ptouch_core::CancellationToken,
 ) -> Result<(), String> {
-    let mut dev = open_usb(target).map_err(|e| format!("Connect error: {e}"))?;
+    let mut dev = open_printer(target).map_err(|e| format!("Connect error: {e}"))?;
     dev.set_cancellation_token(cancellation);
     dev.init().map_err(|e| format!("Init error: {e}"))?;
     let result = dev
@@ -303,7 +312,7 @@ fn do_feed_and_cut(
         Err("PT-P300BT has a manual cutter".to_string())
     } else {
         (|| {
-            let mut dev = open_usb(target).map_err(|e| format!("Connect error: {e}"))?;
+            let mut dev = open_printer(target).map_err(|e| format!("Connect error: {e}"))?;
             dev.set_cancellation_token(cancellation);
             dev.init().map_err(|e| format!("Init error: {e}"))?;
             let result = dev
@@ -438,6 +447,10 @@ fn run_native_helper(args: &[String]) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::thread;
+    use std::time::Duration;
 
     #[test]
     fn parses_bluetooth_device_list() {
@@ -470,5 +483,105 @@ mod tests {
     #[test]
     fn rejects_malformed_bluetooth_status() {
         assert!(parse_bluetooth_status("PT-P300BT\t12").is_err());
+    }
+
+    #[test]
+    fn tcp_target_polls_and_prints_without_blocking_the_ui_worker_contract() {
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut init = [0; 102];
+            stream.read_exact(&mut init).unwrap();
+            let mut request = [0; 3];
+            stream.read_exact(&mut request).unwrap();
+            let mut ready = status_packet(0);
+            ready[10] = 12;
+            stream.write_all(&ready).unwrap();
+
+            let mut job = Vec::new();
+            loop {
+                let mut byte = [0];
+                stream.read_exact(&mut byte).unwrap();
+                job.push(byte[0]);
+                if byte[0] == 0x1A {
+                    break;
+                }
+            }
+            stream.write_all(&status_packet(1)).unwrap();
+            let mut close_probe = [0; 1];
+            let _ = stream.read(&mut close_probe);
+            (request, job)
+        });
+
+        let target = PrinterTarget::Tcp {
+            address,
+            pid: 0x2085,
+        };
+        let (tx, rx) = mpsc::channel();
+        assert!(do_print(
+            &target,
+            (&tx, &egui::Context::default()),
+            &[vec![0xAA; 70]],
+            false,
+            false,
+            PrintQuality::Standard,
+            &ptouch_core::CancellationToken::default(),
+        ));
+        assert!(matches!(
+            rx.recv().unwrap().response,
+            PrinterResponse::PrintDone
+        ));
+        let (request, job) = server.join().unwrap();
+        assert_eq!(request, [0x1B, 0x69, 0x53]);
+        assert!(job.starts_with(&[0x1B, 0x69, 0x61, 0x01]));
+        assert_eq!(job.last(), Some(&0x1A));
+    }
+
+    #[test]
+    fn tcp_poll_reports_target_quality_capabilities() {
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut request = [0; 3];
+            stream.read_exact(&mut request).unwrap();
+            let mut ready = status_packet(0);
+            ready[10] = 24;
+            stream.write_all(&ready).unwrap();
+            let mut close_probe = [0; 1];
+            let _ = stream.read(&mut close_probe);
+            request
+        });
+
+        let response = poll_printer(&PrinterTarget::Tcp {
+            address,
+            pid: 0x2085,
+        })
+        .unwrap();
+        assert!(matches!(
+            response,
+            PrinterResponse::Connected {
+                model_name,
+                quality_modes: true,
+                draft_quality_modes: false,
+                ..
+            } if model_name == "PT-P900W"
+        ));
+        assert_eq!(server.join().unwrap(), [0x1B, 0x69, 0x53]);
+    }
+
+    fn status_packet(status_type: u8) -> [u8; 32] {
+        let mut packet = [0; 32];
+        packet[0] = 0x80;
+        packet[1] = 0x20;
+        packet[18] = status_type;
+        packet
     }
 }

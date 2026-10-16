@@ -3,7 +3,7 @@
 
 //! Application state for the P-Touch GUI.
 
-use std::sync::mpsc;
+use std::{net::SocketAddr, sync::mpsc};
 
 use ptouch_core::protocol::PrintQuality;
 use ptouch_render::bitmap::LabelBitmap;
@@ -35,6 +35,10 @@ pub struct CanvasTarget {
 pub enum PrinterTarget {
     Usb,
     UsbAt(ptouch_core::transport::UsbLocation),
+    Tcp {
+        address: SocketAddr,
+        pid: u16,
+    },
     #[cfg(windows)]
     UsbPrint {
         instance_id: String,
@@ -51,6 +55,7 @@ impl PrinterTarget {
         match self {
             Self::Usb => "USB (automatic)".to_string(),
             Self::UsbAt(location) => format!("USB {location}"),
+            Self::Tcp { address, pid } => format!("TCP {address} (PID 0x{pid:04x})"),
             #[cfg(windows)]
             Self::UsbPrint { instance_id } => format!("PT-P710BT ({instance_id})"),
             #[cfg(any(target_os = "macos", test))]
@@ -67,7 +72,7 @@ impl PrinterTarget {
 
     pub fn is_bluetooth(&self) -> bool {
         match self {
-            Self::Usb | Self::UsbAt(_) => false,
+            Self::Usb | Self::UsbAt(_) | Self::Tcp { .. } => false,
             #[cfg(windows)]
             Self::UsbPrint { .. } => false,
             #[cfg(any(target_os = "macos", test))]
@@ -118,6 +123,7 @@ pub enum PrinterResponse {
         max_px: u16,
         dpi: u16,
         quality_modes: bool,
+        draft_quality_modes: bool,
         tape_width_px: u16,
     },
     /// No printer found or previously connected printer lost.
@@ -215,8 +221,12 @@ pub struct AppState {
     pub printer_dpi: u16,
     /// Whether the last connected printer supports print quality modes.
     pub printer_quality_modes: bool,
+    /// Whether the last connected printer supports draft quality.
+    pub printer_draft_quality_modes: bool,
     /// Selected print quality for the next print job.
     pub print_quality: PrintQuality,
+    pub tcp_address: String,
+    pub tcp_pid: u16,
     /// Channel sender for commands to the printer worker thread.
     pub printer_cmd_tx: Option<mpsc::Sender<PrinterCommand>>,
 }
@@ -271,7 +281,10 @@ impl Default for AppState {
             printer_max_px: 0,
             printer_dpi: 180,
             printer_quality_modes: false,
+            printer_draft_quality_modes: false,
             print_quality: PrintQuality::Standard,
+            tcp_address: String::new(),
+            tcp_pid: 0x2085,
             printer_cmd_tx: None,
         }
     }

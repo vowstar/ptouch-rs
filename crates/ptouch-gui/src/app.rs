@@ -155,6 +155,7 @@ impl PtouchApp {
                     max_px,
                     dpi,
                     quality_modes,
+                    draft_quality_modes,
                     tape_width_px,
                 } => {
                     let old_dpi = self.state.target_dpi();
@@ -164,9 +165,12 @@ impl PtouchApp {
                     self.state.printer_max_px = max_px;
                     self.state.printer_dpi = dpi;
                     self.state.printer_quality_modes = quality_modes;
-                    // A stale non-standard quality from a previous printer
-                    // would make every print fail with the selector hidden.
-                    if !quality_modes {
+                    self.state.printer_draft_quality_modes = draft_quality_modes;
+                    if !quality_modes
+                        || (!draft_quality_modes
+                            && self.state.print_quality
+                                == ptouch_core::protocol::PrintQuality::Draft)
+                    {
                         self.state.print_quality = ptouch_core::protocol::PrintQuality::Standard;
                     }
                     self.state.printer_model =
@@ -371,9 +375,46 @@ mod tests {
                 max_px: 128,
                 dpi: 180,
                 quality_modes: false,
+                draft_quality_modes: false,
                 tape_width_px: 128,
             },
         }
+    }
+
+    #[test]
+    fn tcp_model_capabilities_keep_high_resolution_and_reject_stale_draft() {
+        let target = PrinterTarget::Tcp {
+            address: "127.0.0.1:9100".parse().unwrap(),
+            pid: 0x2085,
+        };
+        let (mut app, tx) = app(AppState {
+            printer_target: target.clone(),
+            print_quality: ptouch_core::protocol::PrintQuality::Draft,
+            ..AppState::default()
+        });
+        tx.send(PrinterEvent {
+            target: Some(target),
+            response: PrinterResponse::Connected {
+                model_name: "PT-P900W".into(),
+                media_width: 24,
+                media_type: "Laminated tape".into(),
+                max_px: 560,
+                dpi: 360,
+                quality_modes: true,
+                draft_quality_modes: false,
+                tape_width_px: 340,
+            },
+        })
+        .unwrap();
+
+        app.drain_printer_responses();
+
+        assert!(app.state.printer_quality_modes);
+        assert!(!app.state.printer_draft_quality_modes);
+        assert_eq!(
+            app.state.print_quality,
+            ptouch_core::protocol::PrintQuality::Standard
+        );
     }
 
     #[test]
@@ -576,6 +617,7 @@ mod tests {
                 max_px: 128,
                 dpi: 180,
                 quality_modes: false,
+                draft_quality_modes: false,
                 tape_width_px: 64,
             },
         })

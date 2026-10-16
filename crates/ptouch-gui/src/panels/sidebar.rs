@@ -5,10 +5,11 @@
 
 use log::info;
 
+use ptouch_core::device::DeviceFlags;
 use ptouch_core::protocol::PrintQuality;
 use ptouch_core::tape;
 
-use crate::state::{AppState, CanvasEditTarget, CanvasTarget, PrinterCommand};
+use crate::state::{AppState, CanvasEditTarget, CanvasTarget, PrinterCommand, PrinterTarget};
 
 /// Render the left sidebar.
 pub fn show_sidebar(ui: &mut egui::Ui, state: &mut AppState) {
@@ -57,6 +58,58 @@ fn show_printer_section(ui: &mut egui::Ui, state: &mut AppState) {
         state.auto_cut = !state.printer_target.is_bluetooth();
         if let Some(ref tx) = state.printer_cmd_tx {
             let _ = tx.send(PrinterCommand::Poll(state.printer_target.clone()));
+        }
+    }
+
+    let mut connect_tcp = false;
+    ui.add_enabled_ui(!state.is_printer_busy(), |ui| {
+        ui.horizontal(|ui| {
+            ui.label("TCP address");
+            ui.text_edit_singleline(&mut state.tcp_address)
+                .on_hover_text("Raw printer socket, usually port 9100");
+        });
+        egui::ComboBox::from_label("TCP model")
+            .selected_text(format!("PID 0x{:04x}", state.tcp_pid))
+            .show_ui(ui, |ui| {
+                for device in ptouch_core::device::supported_devices()
+                    .iter()
+                    .filter(|device| {
+                        !device
+                            .flags
+                            .intersects(DeviceFlags::PLITE | DeviceFlags::UNSUP_RASTER)
+                    })
+                {
+                    ui.selectable_value(
+                        &mut state.tcp_pid,
+                        device.pid,
+                        format!("{} (0x{:04x})", device.name, device.pid),
+                    );
+                }
+            });
+        connect_tcp = ui.button("Connect TCP").clicked();
+    });
+    if connect_tcp {
+        match state.tcp_address.parse::<std::net::SocketAddr>() {
+            Ok(address) => {
+                let target = PrinterTarget::Tcp {
+                    address,
+                    pid: state.tcp_pid,
+                };
+                state.printer_target = target.clone();
+                state.printer_connected = false;
+                state.preview_uses_printer = false;
+                state.update_tape_pixels();
+                state.mark_dirty();
+                state.printer_model = None;
+                state.printer_status = Some("Connecting...".to_string());
+                state.connecting = true;
+                if let Some(tx) = &state.printer_cmd_tx {
+                    let _ = tx.send(PrinterCommand::Poll(target));
+                }
+            }
+            Err(error) => {
+                state.printer_status = Some(format!("Invalid TCP address: {error}"));
+            }
         }
     }
 
@@ -173,11 +226,16 @@ fn show_print_options(ui: &mut egui::Ui, state: &mut AppState) {
         egui::ComboBox::from_label("Quality")
             .selected_text(quality_label(state.print_quality))
             .show_ui(ui, |ui| {
-                for q in [
-                    PrintQuality::Standard,
-                    PrintQuality::HighRes,
-                    PrintQuality::Draft,
-                ] {
+                let qualities = if state.printer_draft_quality_modes {
+                    vec![
+                        PrintQuality::Standard,
+                        PrintQuality::HighRes,
+                        PrintQuality::Draft,
+                    ]
+                } else {
+                    vec![PrintQuality::Standard, PrintQuality::HighRes]
+                };
+                for q in qualities {
                     if ui
                         .selectable_value(&mut state.print_quality, q, quality_label(q))
                         .changed()
