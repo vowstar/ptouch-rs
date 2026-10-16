@@ -213,7 +213,9 @@ static DEVICE_TABLE: &[DeviceInfo] = &[
         name: "PT-E550W",
         max_px: 128,
         dpi: 180,
-        flags: DeviceFlags::UNSUP_RASTER,
+        flags: DeviceFlags::RASTER_PACKBITS
+            .union(DeviceFlags::P700_INIT)
+            .union(DeviceFlags::USE_INFO_CMD),
     },
     DeviceInfo {
         vid: 0x04f9,
@@ -249,6 +251,14 @@ static DEVICE_TABLE: &[DeviceInfo] = &[
         max_px: 128,
         dpi: 180,
         flags: DeviceFlags::PLITE,
+    },
+    DeviceInfo {
+        vid: 0x04f9,
+        pid: 0x2085,
+        name: "PT-P900W",
+        max_px: 560,
+        dpi: 360,
+        flags: DeviceFlags::P700_INIT.union(DeviceFlags::USE_INFO_CMD),
     },
     DeviceInfo {
         vid: 0x04f9,
@@ -370,13 +380,34 @@ mod tests {
     }
 
     #[test]
+    fn target_models_match_reference_raster_profiles() {
+        let e550w = find_device(0x04f9, 0x2060).unwrap();
+        assert_eq!(e550w.name, "PT-E550W");
+        assert_eq!(e550w.max_px, 128);
+        assert_eq!(e550w.dpi, 180);
+        assert!(e550w.flags.contains(DeviceFlags::P700_INIT));
+        assert!(e550w.flags.contains(DeviceFlags::USE_INFO_CMD));
+        assert!(e550w.flags.contains(DeviceFlags::RASTER_PACKBITS));
+        assert!(!e550w.flags.contains(DeviceFlags::UNSUP_RASTER));
+
+        let p900w = find_device(0x04f9, 0x2085).unwrap();
+        assert_eq!(p900w.name, "PT-P900W");
+        assert_eq!(p900w.max_px, 560);
+        assert_eq!(p900w.dpi, 360);
+        assert!(p900w.flags.contains(DeviceFlags::P700_INIT));
+        assert!(p900w.flags.contains(DeviceFlags::USE_INFO_CMD));
+        assert!(!p900w.flags.contains(DeviceFlags::RASTER_PACKBITS));
+        assert!(!p900w.flags.contains(DeviceFlags::UNSUP_RASTER));
+    }
+
+    #[test]
     fn test_find_unknown_device() {
         assert!(find_device(0x04f9, 0xFFFF).is_none());
     }
 
     #[test]
     fn test_device_count() {
-        assert_eq!(supported_devices().len(), 31);
+        assert_eq!(supported_devices().len(), 32);
     }
 
     #[test]
