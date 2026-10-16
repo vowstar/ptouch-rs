@@ -21,6 +21,7 @@ pub mod device;
 pub mod diagnostics;
 pub mod error;
 pub mod protocol;
+pub mod settings;
 pub mod status;
 pub mod tape;
 pub mod transport;
