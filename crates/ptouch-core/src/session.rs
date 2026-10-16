@@ -905,6 +905,47 @@ mod tests {
     }
 
     #[test]
+    fn target_standard_jobs_match_usb_session_golden_bytes() {
+        for (pid, raster_width, packbits) in [(0x2060, 16, true), (0x2085, 70, false)] {
+            let info = crate::device::find_device(crate::device::BROTHER_VENDOR_ID, pid)
+                .expect("target model exists");
+            let mut session = PrinterSession::new(ScriptedTransport::new(), info.into());
+            session.init().unwrap();
+            session.transport.writes.borrow_mut().clear();
+            session
+                .transport
+                .reads
+                .borrow_mut()
+                .push_back(status_packet(1, 1).to_vec());
+
+            session
+                .print_raster(
+                    &[vec![0xAA; raster_width]],
+                    false,
+                    false,
+                    protocol::PrintQuality::Standard,
+                )
+                .unwrap();
+
+            let mut raster = if packbits {
+                vec![0x47, 0x11, 0x00, 0x0F]
+            } else {
+                vec![0x47, 0x46, 0x00]
+            };
+            raster.extend(vec![0xAA; raster_width]);
+            let mut expected = vec![
+                vec![0x1B, 0x69, 0x61, 0x01],
+                vec![0x1B, 0x69, 0x7A, 0x00, 0x00, 12, 0x00, 1, 0, 0, 0, 0, 0],
+            ];
+            if packbits {
+                expected.push(vec![0x4D, 0x02]);
+            }
+            expected.extend([raster, vec![0x1A]]);
+            assert_eq!(*session.transport.writes.borrow(), expected);
+        }
+    }
+
+    #[test]
     fn target_profiles_reject_unverified_draft_quality_before_writing() {
         for pid in [0x2060, 0x2085] {
             let info = crate::device::find_device(crate::device::BROTHER_VENDOR_ID, pid)

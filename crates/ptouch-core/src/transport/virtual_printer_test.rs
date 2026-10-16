@@ -19,6 +19,10 @@ struct ObservedSession {
 
 impl VirtualPrinter {
     fn start() -> Self {
+        Self::start_with_completion(0x01, 0)
+    }
+
+    fn start_with_completion(completion_type: u8, error_bits: u8) -> Self {
         let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
         let address = listener.local_addr().unwrap();
         let worker = thread::spawn(move || {
@@ -32,15 +36,27 @@ impl VirtualPrinter {
             stream.read_exact(&mut status_request).unwrap();
             stream.write_all(&status_packet(0x00)).unwrap();
             let mut print_job = Vec::new();
+            let mut completed = false;
             loop {
                 let mut byte = [0];
-                stream.read_exact(&mut byte).unwrap();
-                print_job.push(byte[0]);
-                if byte[0] == 0x1A {
-                    break;
+                match stream.read(&mut byte) {
+                    Ok(0) => break,
+                    Ok(1) => {
+                        print_job.push(byte[0]);
+                        if byte[0] == 0x1A {
+                            completed = true;
+                            break;
+                        }
+                    }
+                    Ok(_) => unreachable!(),
+                    Err(error) => panic!("virtual printer read failed: {error}"),
                 }
             }
-            stream.write_all(&status_packet(0x01)).unwrap();
+            if completed {
+                let mut completion = status_packet(completion_type);
+                completion[9] = error_bits;
+                stream.write_all(&completion).unwrap();
+            }
             let mut close_probe = [0; 1];
             let _ = stream.read(&mut close_probe);
             ObservedSession {
@@ -183,4 +199,45 @@ fn target_high_resolution_jobs_match_golden_bytes_through_virtual_printer() {
             high_resolution_job(width, packbits, margin_dots)
         );
     }
+}
+
+#[test]
+fn printer_error_after_print_is_returned_and_transport_tears_down() {
+    let printer = VirtualPrinter::start_with_completion(0x02, 0x04);
+    let mut device = PtouchDevice::open_tcp(printer.address(), 0x2085).unwrap();
+    device.init().unwrap();
+    assert!(matches!(
+        device.print_raster(
+            &[vec![0xAA; 70]],
+            false,
+            false,
+            protocol::PrintQuality::Standard,
+        ),
+        Err(PtouchError::StatusError(_))
+    ));
+    assert!(!device.is_initialized());
+    device.close().unwrap();
+    assert_eq!(printer.finish().print_job.last(), Some(&0x1A));
+}
+
+#[test]
+fn cancellation_before_job_write_closes_without_sending_raster_bytes() {
+    let printer = VirtualPrinter::start();
+    let mut device = PtouchDevice::open_tcp(printer.address(), 0x2085).unwrap();
+    device.init().unwrap();
+    let cancellation = CancellationToken::default();
+    device.set_cancellation_token(cancellation.clone());
+    cancellation.cancel();
+
+    assert!(matches!(
+        device.print_raster(
+            &[vec![0xAA; 70]],
+            false,
+            false,
+            protocol::PrintQuality::Standard,
+        ),
+        Err(PtouchError::Cancelled)
+    ));
+    device.close().unwrap();
+    assert!(printer.finish().print_job.is_empty());
 }
