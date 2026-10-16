@@ -17,7 +17,13 @@ Status: Cycle 2 static inventory. Android evidence includes manifest declaration
 
 - `ptouch-core` registers PT-E550W at USB PID `0x2060` with a 128-pixel, 180 dpi raster profile and PackBits, raster-mode-A, and info-command flags; it registers PT-P900W at PID `0x2085` with a 560-pixel, 360 dpi profile, raster-mode-A, and info-command flags. Both are covered by `device::tests::target_models_match_reference_raster_profiles`.
 - `PtouchDevice::open_tcp(SocketAddr, product_id)` connects explicitly to a supported model. The loopback fixture exercises both target IDs, raw byte send/receive, partial reads, cancellation, timeout handling, and rejection of an unknown product ID.
-- The TCP transport is core-library functionality. CLI and GUI network selection are not wired yet. The modern 720 dpi P900W / 360 dpi E550W quality path is not yet implemented; `PrinterSession::print_raster` still limits nonstandard quality to the legacy-hires flag. Cycle 4 must add exact-byte quality/protocol goldens before claiming that behavior.
+- The TCP transport is core-library functionality. CLI and GUI network selection are not wired yet.
+
+## Cycle 4 branch updates
+
+- `PrintQuality::HighRes` is supported for PT-E550W and PT-P900W via ESC `i K` bit 6. The print job duplicates each input raster line, reports the doubled raster line count, and doubles the 2 mm default margin at the model's base resolution: 28 dots at 180 dpi for E550W and 56 dots at 360 dpi for P900W.
+- The PT-E550W retains PackBits compression, which is required for cutting; PT-P900W remains uncompressed by default. Unit tests pin command bytes for both profiles, and a loopback virtual-printer test checks the complete TCP print streams and completion handshake. No physical printer was used.
+- Draft quality remains available only on legacy-hires profiles. CLI and GUI TCP selection remain unwired.
 
 ## Evidence locations
 
