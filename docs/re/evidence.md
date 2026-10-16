@@ -50,7 +50,30 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 |---|---|---|
 | iPrint&Label 5.3.17 (versionCode 161, com.brother.ptouch.iprintandlabel) bundle downloaded from APKMirror official listing; base.apk signed by genuine `CN=Brother Industries, Ltd` cert (sha256 3b53f53b91b5d0535aa3d6a65bc1426986522ac9de28d871572dd5117f7d4d14) | observed | APK v2 signing block parse + info.json |
 | Design&Print 2 2.8.1(624) (com.brother.ptouch.designandprint2) base.apk signature sha256 c5cf91978f4323eeec223536027272caffd5c63db8e846021d0b98179083f56b matches APKMirror's verified signature record for this app (generic `CN=Android` subject is the app's actual release key, not tampering) | observed | APK v2 block parse vs release-page record |
-| Mobile feature/network/LBX behavior | unknown | jadx decompile in progress |
+| Full Android runtime behavior, complete editor feature inventory, exact per-transport print execution, and parity with desktop | unknown | Static decompiles establish model maps and print branches below, but no Android runtime probe or complete feature audit has been performed |
+
+### Android static code-path findings
+
+| Claim | Status | Evidence |
+|---|---|---|
+| iPrint&Label 5.3.17 has explicit `PrinterModel` to `LBXPrinter` mappings for PT-E550W and PT-P900W | observed | `android-iprintandlabel-5.3.17/jadx/sources/com/brother/ptouch/iprintandlabel/utils/PrinterUtility.java:107-140`; `EditLabelActivity.java:1454-1458, 1678-1692` |
+| iPrint&Label's per-model connectivity table assigns both targets infrastructure Wi-Fi, Wireless Direct, and USB; Bluetooth and wired flags are false | observed | `printerconnect/PrinterConnectSupportInfo.java:8,16,28-40`; corroborated by `device/BrotherDevicePresets.java:10-16` |
+| iPrint&Label resolves stored LBX printer IDs into SDK models, changes the LBX printer for selected/connected models, and routes LBX, image, PDF, numbering, and database-assigned raster jobs to print helpers | observed | `edit/EditLabelActivity.java:1454-1458, 1650-1712, 2231-2253`; `print/PrintTask.java:61-92, 125-139, 143-200`; `print/PrinterControl.java:111-128, 169-181` |
+| iPrint&Label chooses concrete print helper classes from the selected connection item: Wi-Fi, Wireless Direct, Bluetooth, or USB | observed | `print/PrinterControl.java:111-128`; each helper delegates the shared bitmap/file/PDF operations to `PrintHelperBase` driver methods |
+| iPrint&Label's LBX compatibility table assigns E550W/P900W model IDs and PT7/PT9 paper maps; it explicitly reports 180 dpi for E550W and 360 dpi for P900W in this LBX tag-writing path | observed | `compatible/LBXTagWriter.java:256-303`; this does not establish all device print modes or raster geometry |
+| iPrint&Label has model-specific printer settings code paths for E550W and P900W; exact exposed and writable settings remain to be enumerated | observed / unknown | `printersetting/PrinterSettingUtility.java:68-163` includes model switch cases; full setting semantics still under review |
+| iPrint&Label creates LBX objects for text, symbol, image, barcode, date/time, frame, rectangle, and polygon; barcode protocol/data and image bytes/trim fields are applied in editor code | observed | `edit/EditLabelActivity.java:1156-1168, 1236-1287`; `edit/LabelView.java:718-745` |
+| Design&Print 2's `PrinterModel` DEX enum contains exactly PT-N25BT, PT-P300BT, PT-P300BTz, PT-P320BT, PT-P710BT, PT-P715E, and PT-P910BT; neither target model is in this enum | observed | APK `base.apk` SHA-256 `cd22e32e2b594931a4365fe1fbb8a5581a93a386c007e83b2dd648b44196f0ee`; class in `classes2.dex`; JADX 1.5.6 single-class fallback output. Enum member declaration recovered despite normal-mode enum restoration warning. |
+
+### Managed desktop inventories
+
+| Claim | Status | Evidence |
+|---|---|---|
+| P-touch Editor's `LbxFile.dll` is x86 managed CIL, .NET 8, assembly version 1.12.1.0; complete metadata includes 9 types and 29 methods | observed | REA `inspect_managed_artifact` Evidence `ev_98456da9293460b08ecdfa60ff46cb4e2639555ebefa27de25f7ee1f5536bc5b`; file SHA-256 `17bc62bf563c28ff9d9bed115194cfac18a8deea196912e7f76faa4478d82e6a` |
+| P-touch Editor package also contains `LbxViewBase.Wpf.dll`, an x86 managed PE module; LBX view/file integration is present, but exact import/export feature behavior is not established by assembly identity alone | observed / unknown | REA `inspect_managed_artifact` Evidence `ev_eb21b5dad62779a101c564073415d3298a8da8a0d37ffc0caadc16448a75d883`; file SHA-256 `480bb7a0ac35d4ea5f22995d723de3498db03f0f49eb4e12e7ed9936367fc4ff` |
+| Printer Setting Tool `DeviceSettingsTool.Command.dll` is x86 managed CIL, .NET Standard 2.0, with complete metadata of 219 types and 931 methods | observed | REA `inspect_managed_artifact` Evidence `ev_907e0d44aa9bb31fa7285edfb6eb1f97f4a1ffe78353003694bcd35c2d622e9f`; file SHA-256 `f9e0749b4c75dfd4ad4c29d910eca695f748b69188118d75c5cf21fe24c175f4` |
+| P-touch Editor installation contains ten packaged CIV `.lbx` starter templates for cable, heat-shrink, patch-panel, faceplate, terminal-block and related identification labels | observed | `reference/artifacts/ptouch-editor-6.12.10/6/Resources/Templates/CIV/`; exact files and hashes in `docs/re/artifact-manifest.sha256` |
+| P-touch Editor import/export workflows, barcode authoring, and model-specific print call paths were not established by the bounded managed-assembly/resource inventory | unknown | Assembly identity, references, member counts, and packaged templates are recorded above; no method-level capability evidence is asserted for these behaviors |
 
 ## Preservation verification (2026-10-16)
 
