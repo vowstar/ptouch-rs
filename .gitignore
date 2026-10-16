@@ -26,3 +26,6 @@ target
 
 # Python packaging checks
 __pycache__/
+
+# Local reverse-engineering artifacts, not for redistribution
+/reference/artifacts/
