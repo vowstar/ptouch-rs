@@ -89,4 +89,13 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Integrated device table now maps PT-E550W (`04f9:2060`) to 128 pixels at 180 dpi, with PackBits and ESC-i-a raster/info flags; PT-P900W (`04f9:2085`) maps to 560 pixels at 360 dpi, with ESC-i-a raster/info flags and no PackBits default | observed in reconstruction | `crates/ptouch-core/src/device.rs`; `device::tests::target_models_match_reference_raster_profiles`; source facts cross-checked against the `nbuchwitz/ptouch` reference above |
 | `PtouchDevice::open_tcp(SocketAddr, pid)` uses an explicit model ID, a five-second connect deadline, TCP_NODELAY, bounded per-operation socket timeouts, and the shared `PrinterSession` | observed in reconstruction | `crates/ptouch-core/src/transport.rs`, `transport_tcp.rs`; loopback tests in `transport/tcp` |
 | TCP loopback fixtures select PT-E550W/P900W by model ID and exercise raw request/reply bytes, fragmented reads, operation timeout, cancellation, and unknown-model rejection | observed in reconstruction | `cargo test --workspace`, `ptouch-core` TCP transport tests; no physical printer was used |
-| High-resolution P900W/E550W quality commands and CLI/GUI TCP selection are not implemented in this cycle | known gap | `session::PrinterSession::print_raster` accepts nonstandard quality only with `DeviceFlags::LEGACY_HIRES`; TCP is currently exposed by the core API, not wired into CLI/GUI |
+| TCP transport is core-library functionality; CLI/GUI TCP selection is not wired | known gap | `crates/ptouch-core/src/transport.rs`; CLI and GUI have no network-printer selection path |
+
+## Cycle 4 high-resolution print mode
+
+| Claim | Status | Evidence |
+|---|---|---|
+| P900W and E550W enable high-resolution mode through ESC `i K` bit 6, duplicate each input raster line, and double the raster count and feed margin | implemented and tested | `crates/ptouch-core/src/protocol.rs`; exact-byte unit goldens cover PackBits E550W and uncompressed P900W jobs |
+| The default 2 mm margin is represented as 14 dots at 180 dpi and 28 dots at 360 dpi, then doubled in high-resolution mode | derived from the reference conversion and tested | `crates/ptouch-core/src/session.rs` derives base dots from the model DPI; `transport/virtual_printer_test.rs` verifies E550W's 28-dot and P900W's 56-dot wire values |
+| Both target high-resolution streams complete through the TCP session handshake | observed in the loopback fixture | `target_high_resolution_jobs_match_golden_bytes_through_virtual_printer`; this is a virtual-printer test, not physical-device validation |
+| Draft quality is supported on the modern P900W/E550W profiles | not implemented | `PrinterSession::print_raster` continues to reject Draft on these profiles; current reference evidence confirms high-resolution mode but does not establish target draft behavior |
