@@ -9,6 +9,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::{self, Read};
+use std::net::SocketAddr;
 use std::path::Path;
 use std::process;
 
@@ -71,16 +72,36 @@ enum Commands {
 #[derive(clap::Args, Clone)]
 struct PrintArgs {
     /// Select a USB bus/address from `ptouch doctor` (changes on reconnect)
-    #[arg(long, value_name = "BUS:ADDRESS", conflicts_with = "bluetooth")]
+    #[arg(
+        long,
+        value_name = "BUS:ADDRESS",
+        conflicts_with_all = ["bluetooth", "usbprint", "tcp", "pid"]
+    )]
     usb: Option<UsbLocation>,
 
     /// Select a Windows PT-P710BT device ID from `ptouch doctor`
-    #[arg(long, value_name = "INSTANCE_ID", conflicts_with_all = ["bluetooth", "usb"])]
+    #[arg(
+        long,
+        value_name = "INSTANCE_ID",
+        conflicts_with_all = ["bluetooth", "usb", "tcp", "pid"]
+    )]
     usbprint: Option<String>,
 
     /// Use an already-paired PT-P300BT at this Bluetooth address (macOS only)
-    #[arg(long, value_name = "ADDRESS")]
+    #[arg(
+        long,
+        value_name = "ADDRESS",
+        conflicts_with_all = ["usb", "usbprint", "tcp", "pid"]
+    )]
     bluetooth: Option<String>,
+
+    /// Connect to a Brother raw-printing TCP endpoint (use --pid to select its model)
+    #[arg(long, value_name = "IP:PORT", requires = "pid", conflicts_with_all = ["usb", "usbprint", "bluetooth"])]
+    tcp: Option<SocketAddr>,
+
+    /// Printer product ID in hexadecimal, for example 0x2085 (required with --tcp)
+    #[arg(long, value_name = "HEX_PID", value_parser = parse_product_id, requires = "tcp", conflicts_with_all = ["usb", "usbprint", "bluetooth"])]
+    pid: Option<u16>,
 
     /// Text lines to print (each argument = one line, max 4)
     #[arg(value_name = "TEXT")]
@@ -184,7 +205,7 @@ struct PrintArgs {
     #[arg(long, default_value = "1")]
     copies: u32,
 
-    /// Maximum seconds for sending and waiting for one USB label
+    /// Maximum seconds for sending and waiting for one printer label
     #[arg(long = "job-timeout", alias = "timeout", default_value = "600", value_parser = clap::value_parser!(u32).range(1..))]
     timeout: u32,
 
@@ -196,16 +217,36 @@ struct PrintArgs {
 #[derive(clap::Args)]
 struct InfoArgs {
     /// Select a USB bus/address from `ptouch doctor` (changes on reconnect)
-    #[arg(long, value_name = "BUS:ADDRESS", conflicts_with = "bluetooth")]
+    #[arg(
+        long,
+        value_name = "BUS:ADDRESS",
+        conflicts_with_all = ["bluetooth", "usbprint", "tcp", "pid"]
+    )]
     usb: Option<UsbLocation>,
 
     /// Select a Windows PT-P710BT device ID from `ptouch doctor`
-    #[arg(long, value_name = "INSTANCE_ID", conflicts_with_all = ["bluetooth", "usb"])]
+    #[arg(
+        long,
+        value_name = "INSTANCE_ID",
+        conflicts_with_all = ["bluetooth", "usb", "tcp", "pid"]
+    )]
     usbprint: Option<String>,
 
     /// Use an already-paired PT-P300BT at this Bluetooth address (macOS only)
-    #[arg(long, value_name = "ADDRESS")]
+    #[arg(
+        long,
+        value_name = "ADDRESS",
+        conflicts_with_all = ["usb", "usbprint", "tcp", "pid"]
+    )]
     bluetooth: Option<String>,
+
+    /// Connect to a Brother raw-printing TCP endpoint (use --pid to select its model)
+    #[arg(long, value_name = "IP:PORT", requires = "pid", conflicts_with_all = ["usb", "usbprint", "bluetooth"])]
+    tcp: Option<SocketAddr>,
+
+    /// Printer product ID in hexadecimal, for example 0x2085 (required with --tcp)
+    #[arg(long, value_name = "HEX_PID", value_parser = parse_product_id, requires = "tcp", conflicts_with_all = ["usb", "usbprint", "bluetooth"])]
+    pid: Option<u16>,
 
     /// Enable debug output
     #[arg(long)]
@@ -218,7 +259,7 @@ struct InfoArgs {
 
 /// The printer selected by the CLI. USB remains the default target.
 enum CliDevice {
-    Usb(PtouchDevice),
+    Printer(PtouchDevice),
     #[cfg(target_os = "macos")]
     Bluetooth(BluetoothDevice),
 }
@@ -228,11 +269,25 @@ impl CliDevice {
         bluetooth: Option<&str>,
         usb: Option<UsbLocation>,
         usbprint: Option<&str>,
+        tcp: Option<SocketAddr>,
+        pid: Option<u16>,
     ) -> Result<Self, PtouchError> {
+        match (tcp, pid) {
+            (Some(address), Some(product_id)) => {
+                return PtouchDevice::open_tcp(address, product_id).map(Self::Printer);
+            }
+            (Some(_), None) => {
+                return Err(PtouchError::UnsupportedOperation("--tcp requires --pid"));
+            }
+            (None, Some(_)) => {
+                return Err(PtouchError::UnsupportedOperation("--pid requires --tcp"));
+            }
+            (None, None) => {}
+        }
         if let Some(id) = usbprint {
             #[cfg(windows)]
             {
-                return PtouchDevice::open_usbprint(id).map(Self::Usb);
+                return PtouchDevice::open_usbprint(id).map(Self::Printer);
             }
             #[cfg(not(windows))]
             {
@@ -256,12 +311,12 @@ impl CliDevice {
             }
         }
         usb.map_or_else(PtouchDevice::open_first, PtouchDevice::open_at)
-            .map(Self::Usb)
+            .map(Self::Printer)
     }
 
     fn init(&mut self) -> Result<(), PtouchError> {
         match self {
-            Self::Usb(device) => device.init(),
+            Self::Printer(device) => device.init(),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.init(),
         }
@@ -269,7 +324,7 @@ impl CliDevice {
 
     fn query_status(&mut self) -> Result<&PrinterStatus, PtouchError> {
         match self {
-            Self::Usb(device) => device.query_status(),
+            Self::Printer(device) => device.query_status(),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.query_status(),
         }
@@ -277,7 +332,7 @@ impl CliDevice {
 
     fn status(&self) -> Option<&PrinterStatus> {
         match self {
-            Self::Usb(device) => device.status(),
+            Self::Printer(device) => device.status(),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.status(),
         }
@@ -285,7 +340,7 @@ impl CliDevice {
 
     fn model_name(&self) -> &'static str {
         match self {
-            Self::Usb(device) => device.device_info().name,
+            Self::Printer(device) => device.device_info().name,
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.model_name(),
         }
@@ -293,7 +348,7 @@ impl CliDevice {
 
     fn tape_width_px(&self) -> Option<u16> {
         match self {
-            Self::Usb(device) => device.tape_width_px(),
+            Self::Printer(device) => device.tape_width_px(),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.tape_width_px(),
         }
@@ -301,7 +356,7 @@ impl CliDevice {
 
     fn raster_width_px(&self) -> u16 {
         match self {
-            Self::Usb(device) => device.max_px(),
+            Self::Printer(device) => device.max_px(),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.raster_width_px(),
         }
@@ -309,11 +364,20 @@ impl CliDevice {
 
     fn close(self) -> Result<(), PtouchError> {
         match self {
-            Self::Usb(device) => device.close(),
+            Self::Printer(device) => device.close(),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.close(),
         }
     }
+}
+
+fn parse_product_id(value: &str) -> Result<u16, String> {
+    let digits = value
+        .strip_prefix("0x")
+        .or_else(|| value.strip_prefix("0X"))
+        .unwrap_or(value);
+    u16::from_str_radix(digits, 16)
+        .map_err(|_| format!("invalid 16-bit hexadecimal product ID: {value}"))
 }
 
 /// Operations used by label output, separate from discovery and connection setup.
@@ -332,7 +396,7 @@ trait PrintDevice {
 impl PrintDevice for CliDevice {
     fn dpi(&self) -> u16 {
         match self {
-            Self::Usb(device) => device.device_info().dpi,
+            Self::Printer(device) => device.device_info().dpi,
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.dpi(),
         }
@@ -340,7 +404,7 @@ impl PrintDevice for CliDevice {
 
     fn is_bluetooth(&self) -> bool {
         match self {
-            Self::Usb(_) => false,
+            Self::Printer(_) => false,
             #[cfg(target_os = "macos")]
             Self::Bluetooth(_) => true,
         }
@@ -354,7 +418,7 @@ impl PrintDevice for CliDevice {
         quality: PrintQuality,
     ) -> Result<(), PtouchError> {
         match self {
-            Self::Usb(device) => device.print_raster(lines, chain_print, precut, quality),
+            Self::Printer(device) => device.print_raster(lines, chain_print, precut, quality),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.print_raster(lines),
         }
@@ -727,6 +791,8 @@ fn execute_info(args: &InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
         args.bluetooth.as_deref(),
         args.usb,
         args.usbprint.as_deref(),
+        args.tcp,
+        args.pid,
     )?;
     // A read-only query preserves device errors for display without resetting
     // the printer or requiring it to be ready for a new print job.
@@ -839,10 +905,12 @@ fn execute_print(args: &PrintArgs, ignored: &[String]) -> Result<(), Box<dyn std
                 args.bluetooth.as_deref(),
                 args.usb,
                 args.usbprint.as_deref(),
+                args.tcp,
+                args.pid,
             )?;
             #[allow(irrefutable_let_patterns)]
-            if let CliDevice::Usb(usb) = &mut dev {
-                usb.set_job_timeout(std::time::Duration::from_secs(u64::from(args.timeout)))?;
+            if let CliDevice::Printer(printer) = &mut dev {
+                printer.set_job_timeout(std::time::Duration::from_secs(u64::from(args.timeout)))?;
             }
             dev.init()?;
             // init() already called get_status() internally
@@ -1090,10 +1158,12 @@ fn resolve_layout_target(
             args.bluetooth.as_deref(),
             args.usb,
             args.usbprint.as_deref(),
+            args.tcp,
+            args.pid,
         )?;
         #[allow(irrefutable_let_patterns)]
-        if let CliDevice::Usb(usb) = &mut dev {
-            usb.set_job_timeout(std::time::Duration::from_secs(u64::from(args.timeout)))?;
+        if let CliDevice::Printer(printer) = &mut dev {
+            printer.set_job_timeout(std::time::Duration::from_secs(u64::from(args.timeout)))?;
         }
         dev.init()?;
         let printer_px = u32::from(dev.tape_width_px().ok_or_else(|| {
@@ -1943,6 +2013,110 @@ mod tests {
             ])
             .is_ok()
         );
+    }
+
+    #[test]
+    fn tcp_selection_requires_a_hex_product_id_for_info_and_print() {
+        let info = Cli::try_parse_from([
+            "ptouch",
+            "info",
+            "--tcp",
+            "127.0.0.1:9100",
+            "--pid",
+            "0x2085",
+        ])
+        .unwrap();
+        let Commands::Info(info) = info.command else {
+            panic!("expected info command");
+        };
+        assert_eq!(info.tcp.unwrap().to_string(), "127.0.0.1:9100");
+        assert_eq!(info.pid, Some(0x2085));
+
+        let print = Cli::try_parse_from([
+            "ptouch",
+            "print",
+            "--tcp",
+            "127.0.0.1:9100",
+            "--pid",
+            "2060",
+            "Label",
+        ])
+        .unwrap();
+        let Commands::Print(print) = print.command else {
+            panic!("expected print command");
+        };
+        assert_eq!(print.pid, Some(0x2060));
+        assert!(Cli::try_parse_from(["ptouch", "info", "--tcp", "127.0.0.1:9100"]).is_err());
+        assert!(Cli::try_parse_from(["ptouch", "print", "--pid", "2085", "Label"]).is_err());
+        assert!(
+            Cli::try_parse_from([
+                "ptouch",
+                "info",
+                "--tcp",
+                "127.0.0.1:9100",
+                "--pid",
+                "invalid"
+            ])
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn tcp_cli_device_prints_to_the_selected_model() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+        use std::thread;
+        use std::time::Duration;
+
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut init = [0; 102];
+            stream.read_exact(&mut init).unwrap();
+            let mut request = [0; 3];
+            stream.read_exact(&mut request).unwrap();
+            let mut ready = [0; 32];
+            ready[0] = 0x80;
+            ready[1] = 0x20;
+            ready[10] = 12;
+            stream.write_all(&ready).unwrap();
+
+            let mut print_job = Vec::new();
+            loop {
+                let mut byte = [0];
+                stream.read_exact(&mut byte).unwrap();
+                print_job.push(byte[0]);
+                if byte[0] == 0x1A {
+                    break;
+                }
+            }
+            let mut done = ready;
+            done[18] = 0x01;
+            stream.write_all(&done).unwrap();
+            let mut close_probe = [0; 1];
+            let _ = stream.read(&mut close_probe);
+            print_job
+        });
+
+        let mut printer = CliDevice::open(None, None, None, Some(address), Some(0x2060)).unwrap();
+        assert_eq!(printer.model_name(), "PT-E550W");
+        printer.init().unwrap();
+        printer
+            .print_raster(&[vec![0xAA; 16]], false, false, PrintQuality::Standard)
+            .unwrap();
+        printer.close().unwrap();
+
+        let mut expected = vec![
+            0x1B, 0x69, 0x61, 0x01, 0x1B, 0x69, 0x7A, 0x00, 0x00, 12, 0x00, 0x01, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x4D, 0x02, 0x47, 0x11, 0x00, 0x0F,
+        ];
+        expected.extend([0xAA; 16]);
+        expected.push(0x1A);
+        assert_eq!(server.join().unwrap(), expected);
     }
 
     fn print_matches(argv: &[&str]) -> ArgMatches {
