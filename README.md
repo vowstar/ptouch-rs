@@ -18,6 +18,7 @@ Optional native macOS Bluetooth support is available in `ptouch-core` for the PT
 - Chain print and multi-copy support
 - Print quality modes on selected legacy and modern target models (draft remains legacy-only)
 - Explicit raw TCP printer selection in the CLI
+- Read the PT-P900W Command Mode setting over raw TCP
 - GUI with live preview, zoom, and drag-and-drop element reordering
 - Export to image (PNG, JPEG, BMP, GIF, TIFF, WebP) without a printer connected
 - Feed and cut tape without printing
@@ -213,6 +214,9 @@ ptouch info --tcp 192.168.1.50:9100 --pid 0x2085
 
 # Print to a PT-E550W over the network
 ptouch print --tcp 192.168.1.50:9100 --pid 0x2060 "Hello"
+
+# Read the PT-P900W Command Mode setting without changing it
+ptouch config get command-mode --tcp 192.168.1.50:9100 --pid 0x2085
 
 # List supported models
 ptouch list
