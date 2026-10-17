@@ -74,7 +74,7 @@ setting. Code 39 import skips other bar-width ratios and readable-text
 alignments because the native model does not preserve them. Windows P-touch
 Editor in-memory QR rasters match Rust matrices for tested version 3 URL and
 version 1 mixed-segment and numeric payloads. Automatic QR encoding preserves
-the requested ECC level instead of boosting it when the payload fits. Rust still differs from Brother on mask selection for repetitive version 4 byte payloads, and its whole-byte segmenter misses Brother's byte-prefix/numeric-suffix split for mixed lowercase/digit data. GUI canvas
+the requested ECC level instead of boosting it when the payload fits. Rust still differs from Brother on mask selection for repetitive version 4 byte payloads, and its whole-string segmenter misses Brother's mixed numeric, alphanumeric, and byte-mode splits. GUI canvas
 and physical barcode rendering remain unverified. Symbol rendering
 requires an installed Brother font containing the requested glyph.
 

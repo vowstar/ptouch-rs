@@ -453,3 +453,12 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Rust's current default QR segmenter reproduces Brother Mixed-mode segmentation for lower-case text followed by digits | disproven | The diverse fixture's default one-byte-segment matrix differs from the Brother BMP even though version, ECC, and mask agree; the byte-prefix/numeric-suffix candidate matches exactly |
 | The mask difference proves a particular alternate penalty formula | unknown | Runtime captures establish selected masks, but the exact Brother mask scoring/tie-break implementation has not been recovered |
 | These in-memory comparisons establish GUI or printed behavior | unknown | No GUI canvas or physical print was tested |
+
+
+## Cycle 38 Brother Mixed-mode segment boundaries
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother selects numeric and alphanumeric segments around byte-only runs for the tested short mixed payloads | observed | Five P900W version 1/ECC M rasters match candidate segment layouts pixel-for-pixel: byte+numeric for `hello 1234567890`, numeric+byte for `1234567890hello`, alphanumeric+numeric for `HELLO WORLD 1234567890`, byte+alphanumeric for `abc123DEF456`, and alphanumeric+byte for `ABC123abc789`. Decoder masks are 0, 3, 3, 3, and 0 respectively |
+| Rust's current whole-string segmentation reproduces these mixed-mode matrices | disproven | For the first three payloads, Rust automatic encoding selects version 2 while Brother selects version 1. For the last two, Rust also selects version 1 but produces different matrices at the same ECC and Brother-reported mask. Candidate mixed-mode segment matrices match all 28,224 Brother pixels per P900W raster |
+| The observations fully specify Brother's segment optimizer for arbitrary text | unknown | The captures establish five ASCII segmentation cases; Unicode/MBCS, tie-breaking among equal-cost segmentations, long segment count limits, and full GUI editing remain untested |

@@ -25,6 +25,23 @@ fn main() {
             QrSegment::make_bytes(&data.as_bytes()[..split]),
             QrSegment::make_numeric(&data[split..]),
         ]
+    } else if let Some(specification) = args.get(1).and_then(|mode| mode.strip_prefix("manual:")) {
+        specification
+            .split(',')
+            .map(|part| {
+                let (mode, range) = part.split_once(':').expect("mode:start-end required");
+                let (start, end) = range.split_once('-').expect("start-end required");
+                let start: usize = start.parse().expect("invalid segment start");
+                let end: usize = end.parse().expect("invalid segment end");
+                let text = &data[start..end];
+                match mode {
+                    "byte" => QrSegment::make_bytes(text.as_bytes()),
+                    "numeric" => QrSegment::make_numeric(text),
+                    "alphanumeric" => QrSegment::make_alphanumeric(text),
+                    _ => panic!("unsupported segment mode: {mode}"),
+                }
+            })
+            .collect()
     } else {
         QrSegment::make_segments(data)
     };
@@ -43,7 +60,15 @@ fn main() {
         )
         .unwrap()
     } else {
-        QrCode::encode_segments(&segments, QrCodeEcc::Medium).unwrap()
+        QrCode::encode_segments_advanced(
+            &segments,
+            QrCodeEcc::Medium,
+            Version::MIN,
+            Version::MAX,
+            None,
+            false,
+        )
+        .unwrap()
     };
     println!(
         "version={} ecc={:?} mask={} size={}",
