@@ -573,3 +573,12 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Capping N3 to one 40-point penalty per row or column changes candidate scores | observed | `docs/re/windows-lbx-runtime/analyze-qr-n3-line-cap.py` reports changed score vectors for all 19 captured controls and all 24 deterministic generated Version 4/ECC M payloads. |
 | The line-cap variant changes the selected mask on tested controls or generated payloads | disproven in this sample | It changes no winning mask across the 19 controls or 24 generated payloads. Both baseline and capped models match 17/19 captured Brother choices, and the variant yields no payload that separates their selected masks. |
 | The line-cap sweep identifies Brother's complete mask rule | unknown | The score domain was tested on existing captures and one deterministic batch of lowercase byte-only candidates. Other payload classes, scoring rules, and tie behavior remain open. No runtime probe was needed because no candidate separated the models. |
+
+
+## Cycle 50 two-sided N3 finder penalties
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Counting each qualifying light-run side separately improves mask agreement | disproven | `analyze-qr-n3-two-sided.py` scores the alternate at 5/19 captured Brother masks, compared with 17/19 for the production baseline. |
+| Brother uses the two-sided N3 rule for the three generated discriminators | disproven for these controls | P900W in-memory captures report Version 4/ECC M masks 6, 3, and 5, matching baseline predictions and rejecting alternate predictions 2, 2, and 0. `compare-qr-n3-two-sided-probes.py` reports zero module-pixel mismatches for all three Rust grids at Brother's masks. |
+| The two-sided probes establish a universal scoring rule or printed parity | unknown | The sample covers three generated lowercase byte-only payloads and `GetPrintingImage()` output. Other payload classes, GUI canvas behavior, and physical printing remain unverified. |

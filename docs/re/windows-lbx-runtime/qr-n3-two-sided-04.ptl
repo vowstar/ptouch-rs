@@ -1,0 +1,20 @@
+version = 7
+tape_width_mm = 24
+dpi = 180
+font_name = "Arial"
+font_margin = 0
+
+[[elements]]
+type = "object"
+rotation = 0.0
+[elements.frame]
+width_mm = 22.0
+height_mm = 22.0
+position = "absolute"
+x_mm = 2.0
+y_mm = 1.0
+vertical_align = "center"
+[elements.content]
+type = "qr_code"
+data = "pszarjrijpisaxmbrfoahyzzfyfqabxyydmkyzjgjmekarmito"
+error_correction = "medium"

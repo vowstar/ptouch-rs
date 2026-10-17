@@ -908,3 +908,8 @@ cancellation, both application worker entry points, and malformed IPC requests.
 CI also checks the GUI and console executable subsystems in debug and release
 builds. Hidden worker launches must preserve stdin/stdout communication.
 These checks do not replace physical printer acceptance.
+
+Cycle 50 tested scoring both qualifying light-run sides for each N3 finder
+pattern. The variant matched 5/19 captured Brother choices versus 17/19 for the
+baseline. Brother rendered three generated discriminator payloads and selected
+the baseline mask in each; all three full module grids match Rust exactly.

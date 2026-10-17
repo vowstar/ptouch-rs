@@ -322,3 +322,15 @@ M payloads, but the selected mask did not change in any case. The variant
 therefore produced no discriminator for an in-memory Brother probe, and the
 production scorer remains unchanged. No Windows runtime call or printer
 operation was needed for this cycle.
+
+
+Cycle 50 counted each qualifying light-run side as a separate 40-point N3
+penalty. Replay candidate search with
+`python docs/re/windows-lbx-runtime/analyze-qr-n3-two-sided.py` and the runtime
+grid checks with `python docs/re/windows-lbx-runtime/compare-qr-n3-two-sided-probes.py`.
+The alternative matched 5/19 captured masks versus 17/19 for the current
+scorer. Three generated Version 4/ECC M payloads separated the models; Brother
+selected the baseline predictions 6, 3, and 5, rejecting two-sided predictions
+2, 2, and 0. All three in-memory BMPs match Rust at Brother's selected mask
+with zero mismatches across 69,696 module pixels each. No printer was opened,
+settings were not changed, and nothing was printed.
