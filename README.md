@@ -71,9 +71,12 @@ error correction, fixed or automatic version, and physical symbol size. QR
 objects created in the GUI preserve the same fields. Supported Code 39 objects
 preserve data, Mod 43 option, narrow bar width, and centered readable-text
 setting. Code 39 import skips other bar-width ratios and readable-text
-alignments because the native model does not preserve them. Exact Brother
-barcode rendering is unverified. Symbol rendering requires an installed Brother
-font containing the requested glyph.
+alignments because the native model does not preserve them. Windows P-touch
+Editor in-memory QR rasters match Rust matrices for tested version 3 URL and
+version 1 mixed-segment payloads. A 60-character byte payload shows a mask
+selection difference, while exact numeric-matrix alignment remains unresolved.
+GUI canvas and physical barcode rendering remain unverified. Symbol rendering
+requires an installed Brother font containing the requested glyph.
 
 The importer rejects files containing only unsupported objects. LBX conversion
 fidelity and P-touch Editor behavior remain under investigation. iPrint&Label

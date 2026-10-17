@@ -422,3 +422,13 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | The full P900W in-memory QR raster matches the Rust version 3 ECC M mask 7 matrix pixel-for-pixel | observed | BMP 292x320, pitch 8, origin (30,20), all 29 rows visible, zero mismatches across 53,824 symbol pixels in `compare-qr-matrix.py`; BMP SHA-256 `7c201ed7b3b0e85703e75ba75c929424ac8c0412103bc64f652cd976b3f4f0ed` |
 | The P900W QR bitmap decodes without normalization | observed | zbar and ZXing-C++ both decode `https://example.test/ptouch-cycle17`; ZXing reports version 3, ECC M, data mask 7 |
 | In-memory QR matrix parity establishes P900W GUI canvas or physical print parity | unknown | No GUI canvas or physical print was tested |
+
+
+## Cycle 35 QR payload and segmentation comparison
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother and Rust choose equivalent encoding for a 20-digit payload | unresolved | Both P900W and E550W runtime metadata report version 1; the P900W raster decodes to the expected payload. The current Rust version 1/mask 4 candidate does not align pixel-for-pixel at the assumed object origin, so exact matrix parity remains unverified |
+| Brother splits a mixed uppercase/numeric payload into segments that fit version 1 | observed | For `HELLO WORLD 1234567890`, both models report version 1. Rust's default segmenter produces version 2/mask 6; an alphanumeric prefix plus numeric suffix encoded as version 1/mask 3 matches all P900W and E550W raster pixels at the measured pitch and origins |
+| Brother's 60-character lowercase payload matches Rust's automatic mask choice | disproven | Both models return version 4. Rust auto selects mask 2, while ZXing-C++ reads mask 1 from the P900W BMP. Forced Rust version 4/mask 1 matches all compared E550W pixels; the full P900W comparison against this forced matrix remains to be run |
+| These in-memory comparisons establish GUI or printed behavior | unknown | No GUI canvas or physical print was tested |

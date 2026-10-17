@@ -203,3 +203,6 @@ mask 7. Its BMP SHA-256 is
 `7c201ed7b3b0e85703e75ba75c929424ac8c0412103bc64f652cd976b3f4f0ed`. This
 establishes in-memory matrix parity for the tested E550W/P900W QR exports; GUI
 canvas and physical print behavior remain unverified.
+
+
+Cycle 35 compares three payload families on both target runtimes. The mixed uppercase/numeric payload `HELLO WORLD 1234567890` is version 1 in Brother, while Rust's default segmentation chooses version 2. An explicit alphanumeric-prefix/numeric-suffix version 1 mask 3 matrix matches every pixel in both models' captured rasters. A 60-character lowercase payload is version 4 in both; the P900W decoder reports mask 1 while Rust auto selects mask 2, and forcing Rust mask 1 matches all visible E550W pixels. The numeric payload is version 1 on both and decodes on P900W, but its exact module-grid alignment is unresolved. Fixture LBX files, extracted BMPs, and candidate matrices are in this directory. No printer was opened and nothing was printed.
