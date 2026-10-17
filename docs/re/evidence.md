@@ -386,3 +386,11 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Brother cell-size output width is 33 px times the enum values XS=2 through XL=6 | observed | Captured widths: 66, 99, 132, 165, 198 px; each bitmap height is 128 px |
 | CellSize likely acts as pixels per QR module, with four cell units of horizontal margin | inferred | Version 3 has a 29-module side; observed width equals `(29 + 4) * cellSizeEnum`. The proprietary image API exposes no module coordinates, so this mapping is not independently verified |
 | CellSize L and XL exceed the 128 px raster height | inferred from observed bounds | Expected 29-module sides at enum values 5/6 are 145/174 px; captured black bounds reach the 128 px bitmap edge. The L/XL images do not decode under tested normalization; no physical print was performed |
+
+
+## Cycle 31 QR cell-size decoder sweep
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Only the CellSize M Brother capture decoded with the tested local decoders and raster normalizations | observed | ZXing-C++ tested rotations 0/90/180/270, nearest-neighbor scales 1x/2x/4x, and white borders 0/4/8/16/32/64 px (scaled with the image); only M decoded. zbar decoded none of XS/S/M/L/XL under the same transform families |
+| XS/S/L/XL captures are malformed QR symbols | unknown | Decoder failure after bounded transforms does not establish invalid codewords; source matrix extraction and alternate decoder analysis remain open |

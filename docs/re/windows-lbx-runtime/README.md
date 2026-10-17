@@ -169,3 +169,11 @@ inferred 145 px and 174 px symbol sides exceed the fixed 128 px bitmap height;
 the black bounds reach the bitmap edge, consistent with clipping. XS and S also
 failed decoding despite fitting within 128 px, so their failure cause remains
 unknown. No physical print result is inferred.
+
+
+Cycle 31 repeated decode attempts for all five CellSize captures. ZXing-C++ was
+tested with all right-angle rotations, nearest-neighbor scaling at 1x/2x/4x, and
+white borders of 0/4/8/16/32/64 px (scaled with the image). Only M decoded.
+zbar also decoded none of the five captured BMPs in the corresponding transforms.
+This rules out those basic orientation, size, and border fixes for XS/S/L/XL,
+but does not establish whether those rasters contain a valid QR matrix.
