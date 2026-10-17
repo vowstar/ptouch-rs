@@ -85,7 +85,7 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 
 | Gap | Current evidence | Scope limit |
 |---|---|---|
-| Rust reads/writes its versioned TOML `.ptl` layout and imports a bounded subset of LBX ordinary text objects; it has no LBX export | `crates/ptouch-render/src/document.rs`, `crates/ptouch-render/src/lbx.rs`, CLI and GUI path loading; compared with `LBXTagWriter.java` above | Specialized objects and full Brother LBX conversion fidelity remain unsupported or unknown |
+| Rust reads/writes its versioned TOML `.ptl` layout and imports a bounded subset of LBX ordinary text and untrimmed embedded image objects; it has no LBX export | `crates/ptouch-render/src/document.rs`, `crates/ptouch-render/src/lbx.rs`, CLI and GUI path loading; compared with `LBXTagWriter.java` above | Specialized objects and full Brother LBX conversion fidelity remain unsupported or unknown |
 | Rust's `ObjectContent` supports text, image, cut mark, and padding; it has no barcode/QR object | `crates/ptouch-render/src/document.rs`; compared with iPrint&Label `Barcode.java` and editor creation paths above | Barcode generation rules and exact Brother raster appearance are not established by the decompile |
 | Rust implements placeholder CSV batches but does not match iPrint&Label LBX numbering or database-assigned bitmap job paths | `crates/ptouch-cli/src/main.rs`; iPrint&Label `PrintTask.java` and `PrinterOptionDialogFragment.java` above | iPrint&Label CSV/schema runtime behavior is only partly established |
 | Current Rust TCP media handling covers standard width codes and does not model SL, FL, or HS media types | `crates/ptouch-core/src/tape.rs`, `session.rs`, `ptouch-gui/src/panels/sidebar.rs`; compare the target media configuration row above | App UI lists do not prove physical media compatibility or wire protocol behavior |
@@ -99,7 +99,18 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Ordinary direct text objects import geometry, rotation, alignment, and nominal font size using points converted to millimeters | implemented, unit tested | `crates/ptouch-render/src/lbx.rs`; synthetic archive fixtures |
 | Unsupported direct object kinds generate warnings; unsupported-only labels fail instead of opening blank | implemented, unit tested | `crates/ptouch-render/src/lbx.rs`; warning and rejection tests |
 | CLI and GUI use the shared path-based `.ptl` / `.lbx` loader | implemented | `crates/ptouch-render/src/document.rs`, `crates/ptouch-cli/src/main.rs`, `crates/ptouch-gui/src/panels/toolbar.rs`, `crates/ptouch-gui/src/widgets.rs` |
-| LBX paper orientation, margins, specialized nested objects, embedded image resources, XML export, and visual parity | unknown or unsupported | No implementation or physical application comparison in this cycle |
+| LBX paper orientation, margins, trimmed/transparency/effect image behavior, specialized nested objects, XML export, and visual parity | unknown or unsupported | No implementation or physical application comparison in this cycle |
+
+## Cycle 8 embedded image import
+
+| Claim | Status | Evidence |
+|---|---|---|
+| iPrint&Label LBX image objects use an `image:imageStyle` filename resource and include trimming and source-position metadata | observed in source | `compatible/LBXTagWriter.java:111-114, 447-480, 513-517, 756-793`; image object creation in `edit/EditLabelActivity.java:1236-1247` |
+| Rust imports the named embedded resource for an untrimmed, default-effect image as a decoded physical image object | implemented, unit tested | `crates/ptouch-render/src/lbx.rs`; tests build an LBX archive with an embedded PNG, load it through `LabelDocument::from_path`, and verify rendered ink |
+| Trimmed images, non-default effects, and explicit transparency are reported as skipped; missing assets are reported in the unsupported-only error | implemented | `crates/ptouch-render/src/lbx.rs`; geometry and image rendering stay within the existing `LabelObject` model |
+| Image resource reads are capped at 32 MiB | implemented | `crates/ptouch-render/src/lbx.rs` |
+| Preserved self-laminating CIV template is refused with the unsupported `cable` object named in the error | verified offline through CLI | `ptouch print --layout reference/.../CIV/1_NewSelfLaminating.lbx`; no printer connection was made |
+| Image crop fidelity, transparency, symbols and shape objects, nested templates, and LBX export | open gaps | Image schema evidence above; no preserved non-specialized image LBX fixture or Brother renderer comparison is available |
 
 ## Preservation verification (2026-10-16)
 

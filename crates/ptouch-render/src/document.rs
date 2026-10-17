@@ -66,7 +66,7 @@ pub struct LabelDocument {
 }
 
 impl LabelDocument {
-    /// Load a native `.ptl` document or import an ordinary-text `.lbx` file.
+    /// Load a native `.ptl` document or import supported content from an `.lbx` file.
     pub fn from_path(path: &std::path::Path) -> Result<(Self, Vec<String>)> {
         if path
             .extension()

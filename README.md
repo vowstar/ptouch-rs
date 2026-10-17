@@ -13,7 +13,8 @@ Optional native macOS Bluetooth support is available in `ptouch-core` for the PT
 - Position fixed text boxes in millimeters, with absolute coordinates or gaps
   after the previous box; preview with a millimeter ruler
 - Save and reload designs as self-contained `.ptl` layout files (images
-  embedded), then print them from the GUI or CLI
+  embedded), then print them from the GUI or CLI. Open supported text and
+  untrimmed images from Brother `.lbx` archives
 - Template layouts with `{{name}}` placeholders and batch-print from a CSV
 - Chain print and multi-copy support
 - Print quality modes on selected legacy and modern target models (draft remains legacy-only)
@@ -51,14 +52,14 @@ For `--tape-width-mm`, use Brother's width code; code `4` denotes 3.5mm tape.
 
 ## Current parity limits
 
-The Rust layout format is TOML `.ptl`. The CLI and GUI can import ordinary-text
-objects from `.lbx` archives, but cannot export LBX. This bounded importer skips
-specialized cable, table, barcode, drawing, and image objects with warnings, and
-rejects files containing only unsupported objects. LBX conversion fidelity and
-P-touch Editor behavior remain under investigation. The editor has no barcode
-or QR object yet. iPrint&Label evidence confirms LBX editing and print paths for
-both target models, including text, symbol, image, barcode, date/time, frame,
-rectangle, and polygon objects.
+The Rust layout format is TOML `.ptl`. The CLI and GUI can import ordinary text
+and untrimmed embedded images from `.lbx` archives, but cannot export LBX. This
+bounded importer skips specialized cable, table, barcode, drawing, trimmed image,
+and image-effect objects with warnings, and rejects files containing only
+unsupported objects. LBX conversion fidelity and P-touch Editor behavior remain
+under investigation. The editor has no barcode or QR object yet. iPrint&Label
+evidence confirms LBX editing and print paths for both target models, including
+text, symbol, image, barcode, date/time, frame, rectangle, and polygon objects.
 P-touch Editor ships LBX libraries and CIV LBX templates, but its exact
 import/export and print behavior remains unverified.
 
@@ -198,7 +199,8 @@ Bluetooth devices. The preview uses the layout's saved design DPI.
 - Free-angle text rotation with auto font sizing
 - Mirror the whole label or a single element (horizontal/vertical)
 - Tape width selection
-- Save/Open layout (`.ptl`) with images embedded for portability
+- Save/Open `.ptl` layouts with images embedded for portability; open supported
+  text and untrimmed image content from `.lbx` files
 - Print to connected printer or export to image file
 - Connect to network printers over raw TCP with an explicit model selection
 - Feed and cut tape without printing
@@ -470,7 +472,7 @@ cat people.csv | ptouch print --layout badge.ptl --csv - --set dept=Eng
 | Flag | Long | Description |
 |------|------|-------------|
 | | `TEXT...` | Text lines (max 4) |
-| `-l` | `--layout` | Print a saved layout file (.ptl); overrides content flags |
+| `-l` | `--layout` | Print a saved .ptl layout or import supported .lbx content; overrides content flags |
 | | `--set` | Set a layout placeholder, `KEY=VALUE` (repeatable) |
 | | `--csv` | Batch-print one label per CSV row (`-` for stdin) |
 | | `--list-vars` | List the placeholders a layout declares, then exit |

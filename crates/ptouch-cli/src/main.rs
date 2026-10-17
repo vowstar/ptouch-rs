@@ -110,7 +110,7 @@ struct PrintArgs {
     #[arg(value_name = "TEXT")]
     text: Vec<String>,
 
-    /// Print a saved layout file (.ptl). The layout is authoritative; ad-hoc
+    /// Print a saved .ptl layout or import a supported .lbx file. The layout is authoritative; ad-hoc
     /// content flags (text, --image, --font, --size, --align, --margin, --cut,
     /// --pad) are ignored with a warning.
     #[arg(short = 'l', long, value_name = "FILE")]
