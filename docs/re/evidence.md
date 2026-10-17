@@ -86,7 +86,7 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Gap | Current evidence | Scope limit |
 |---|---|---|
 | Rust reads/writes versioned TOML `.ptl`, imports a bounded LBX subset, and exports supported absolute text, raster-image, and native QR objects to target-specific LBX archives through the CLI | `crates/ptouch-render/src/document.rs`, `crates/ptouch-render/src/lbx.rs`, `crates/ptouch-cli/src/main.rs`; target maps from `LBXTagWriter.java` above | Export rejects unsupported layouts; generated-file acceptance and full Brother LBX conversion fidelity remain unknown |
-| Rust does not yet support CODE39, CODE128, EAN13, or EAN128 objects; imported LBX QR codes are flattened to images | `crates/ptouch-render/src/document.rs` and `lbx.rs`; compare iPrint&Label `Barcode.java` and editor creation paths above | QR generation is implemented for native `.ptl` objects, but exact Brother raster appearance and target-model acceptance are not established |
+| Rust does not yet support CODE39, CODE128, EAN13, or EAN128 objects | `crates/ptouch-render/src/document.rs` and `lbx.rs`; compare iPrint&Label `Barcode.java` and editor creation paths above | Native QR creation and supported LBX QR import are implemented, but exact Brother raster appearance and target-model acceptance are not established |
 | Rust implements placeholder CSV batches but does not match iPrint&Label LBX numbering or database-assigned bitmap job paths | `crates/ptouch-cli/src/main.rs`; iPrint&Label `PrintTask.java` and `PrinterOptionDialogFragment.java` above | iPrint&Label CSV/schema runtime behavior is only partly established |
 | Current Rust TCP media handling covers standard width codes and does not model SL, FL, or HS media types | `crates/ptouch-core/src/tape.rs`, `session.rs`, `ptouch-gui/src/panels/sidebar.rs`; compare the target media configuration row above | App UI lists do not prove physical media compatibility or wire protocol behavior |
 
@@ -271,3 +271,11 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | CLI LBX export retains QR payload as a native `barcode:barcode` object using generic P-touch Editor schema fields | implemented, tested | `crates/ptouch-render/src/lbx.rs::export`; `lbx::tests::exports_editable_qr_as_native_lbx_barcode`; schema evidence is the external P-touch Editor 5.0.201 QL-700 sample cited in Cycle 11 |
 | P-touch Editor 6.12.10 loads generated QR archives and preserves QR content for both target model IDs | not verified | `LbxProbe.exe` loaded `pt-e550w-qr-export.lbx` and `pt-p900w-qr-export.lbx`, but returned Editor default MW-170, stored printer ID 0, and media ID 138 for both. The same fallback appeared for the previous text exports, so this does not establish target support or QR preservation |
 | GUI rendering and physical print output match Brother QR rendering on PT-E550W/PT-P900W | unknown | No comparison or physical print was performed; Cycle 11 generic XML evidence came from QL-700 |
+
+## Cycle 18 native QR LBX import
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Supported ASCII Model 2 QR objects import as native editable `.ptl` QR objects rather than SVG-backed images | implemented, tested | `crates/ptouch-render/src/lbx.rs::import_barcode`; `lbx::tests::imports_model_2_qr_from_editor_barcode_tags` asserts native payload, correction, geometry, no flattening warning, and visible rendered pixels |
+| LBX QR error correction, automatic or fixed version, and physical symbol size survive import into `.ptl` and export back to LBX | implemented, tested | `lbx::tests::imports_fixed_qr_version_and_correction_as_native_fields`; `document::tests::fixed_qr_version_requires_layout_version_8`; tests assert ECC, v5, content-box size, `.ptl` v8, and exported `version="5"` / `cellSize="1.250pt"` |
+| Imported LBX QR templates render equivalently to the source Brother application on PT-E550W/PT-P900W | unknown | No target-app QR fixture or visual/physical print comparison is available; existing QR schema evidence is an external P-touch Editor 5.0.201 QL-700 sample |

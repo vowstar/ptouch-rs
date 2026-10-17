@@ -64,10 +64,11 @@ LBX subset containing supported text, raster images, and native QR barcode
 objects. The importer flattens nested wrappers with warnings, converts symbols
 to styled text glyphs and vector outlines to embedded SVG-backed image objects,
 and skips unsupported shapes, non-QR barcodes, trimmed images, and image effects
-with warnings. Imported QR codes remain SVG-backed images, while QR objects
-created in the GUI preserve editable payload and error-correction data. Exact
-Brother QR rendering is unverified. Symbol rendering requires an installed
-Brother font containing the requested glyph.
+with warnings. Supported imported QR codes now preserve their editable payload,
+error correction, fixed or automatic version, and physical symbol size. QR
+objects created in the GUI preserve the same fields. Exact Brother QR rendering
+is unverified. Symbol rendering requires an installed Brother font containing
+the requested glyph.
 
 The importer rejects files containing only unsupported objects. LBX conversion
 fidelity and P-touch Editor behavior remain under investigation. iPrint&Label

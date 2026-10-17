@@ -860,8 +860,9 @@ fn render_object(
         ObjectContent::QrCode {
             data,
             error_correction,
+            version,
         } => {
-            let source = crate::barcode::render_qr(data, *error_correction)?;
+            let source = crate::barcode::render_qr(data, *error_correction, *version)?;
             let (bitmap, geometry) = render_contained(
                 &source,
                 rotation,

@@ -39,12 +39,33 @@ impl QrErrorCorrection {
 }
 
 /// Render a QR symbol with a four-module quiet zone at a stable 8 px/module.
-pub fn render_qr(data: &str, correction: QrErrorCorrection) -> Result<LabelBitmap> {
+pub fn render_qr(
+    data: &str,
+    correction: QrErrorCorrection,
+    version: Option<u8>,
+) -> Result<LabelBitmap> {
     if data.is_empty() {
         return Err(RenderError::Layout("QR code data cannot be empty".into()));
     }
-    let qr = qrcodegen::QrCode::encode_text(data, correction.level())
-        .map_err(|_| RenderError::Layout("QR code data exceeds the supported capacity".into()))?;
+    let segments = qrcodegen::QrSegment::make_segments(data);
+    let qr = if let Some(version) = version {
+        if !(1..=40).contains(&version) {
+            return Err(RenderError::Layout(
+                "QR code version must be between 1 and 40".into(),
+            ));
+        }
+        qrcodegen::QrCode::encode_segments_advanced(
+            &segments,
+            correction.level(),
+            qrcodegen::Version::new(version),
+            qrcodegen::Version::new(version),
+            None,
+            false,
+        )
+    } else {
+        qrcodegen::QrCode::encode_segments(&segments, correction.level())
+    }
+    .map_err(|_| RenderError::Layout("QR code data exceeds the supported capacity".into()))?;
     let modules = u32::try_from(qr.size())
         .map_err(|_| RenderError::Layout("QR symbol dimensions are invalid".into()))?;
     let side = (modules + 8) * 8;
@@ -74,7 +95,7 @@ mod tests {
 
     #[test]
     fn qr_output_keeps_quiet_zone_and_encodes_modules() {
-        let bitmap = render_qr("PARITY", QrErrorCorrection::Medium).unwrap();
+        let bitmap = render_qr("PARITY", QrErrorCorrection::Medium, None).unwrap();
         assert_eq!(bitmap.width(), bitmap.height());
         assert!(bitmap.width() >= 232);
         for coordinate in 0..bitmap.width() {
@@ -88,7 +109,14 @@ mod tests {
 
     #[test]
     fn rejects_empty_or_oversized_payloads() {
-        assert!(render_qr("", QrErrorCorrection::Medium).is_err());
-        assert!(render_qr(&"x".repeat(4000), QrErrorCorrection::High).is_err());
+        assert!(render_qr("", QrErrorCorrection::Medium, None).is_err());
+        assert!(render_qr(&"x".repeat(4000), QrErrorCorrection::High, None).is_err());
+    }
+
+    #[test]
+    fn fixed_version_is_preserved_and_rejects_payloads_that_do_not_fit() {
+        let bitmap = render_qr("FIXED VERSION", QrErrorCorrection::Quartile, Some(5)).unwrap();
+        assert_eq!(bitmap.width(), 45 * 8);
+        assert!(render_qr(&"x".repeat(100), QrErrorCorrection::High, Some(1)).is_err());
     }
 }

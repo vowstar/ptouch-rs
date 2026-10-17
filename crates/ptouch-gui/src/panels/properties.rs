@@ -715,6 +715,7 @@ fn show_object_properties(
         ObjectContent::QrCode {
             data,
             error_correction,
+            version,
         } => {
             ui.label("QR code");
             changed |= ui.text_edit_multiline(data).changed();
@@ -746,6 +747,28 @@ fn show_object_properties(
                             .changed();
                     }
                 });
+            let mut selected_version = version.unwrap_or(0);
+            egui::ComboBox::from_id_salt(("qr-version", state.selected_element))
+                .selected_text(if selected_version == 0 {
+                    "Auto".to_string()
+                } else {
+                    format!("Version {selected_version}")
+                })
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut selected_version, 0, "Auto");
+                    for candidate in 1..=40 {
+                        ui.selectable_value(
+                            &mut selected_version,
+                            candidate,
+                            format!("Version {candidate}"),
+                        );
+                    }
+                });
+            let next_version = (selected_version != 0).then_some(selected_version);
+            if *version != next_version {
+                *version = next_version;
+                changed = true;
+            }
             ui.small("The QR payload stays editable in this layout and LBX export.");
         }
         ObjectContent::CutMark => {

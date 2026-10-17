@@ -28,8 +28,8 @@ pub use crate::layout::{
 };
 
 /// Newest supported on-disk layout format version.
-pub const DOCUMENT_VERSION: u32 = 7;
-/// New layouts use v4; custom spacing needs v5, inline styles v6, and QR objects v7.
+pub const DOCUMENT_VERSION: u32 = 8;
+/// New layouts use v4; custom spacing needs v5, styles v6, QR objects v7, and fixed QR versions v8.
 pub const DEFAULT_DOCUMENT_VERSION: u32 = 4;
 
 /// Default design resolution for layouts saved before the dpi field existed.
@@ -469,6 +469,8 @@ pub enum ObjectContent {
         data: String,
         #[serde(default)]
         error_correction: crate::barcode::QrErrorCorrection,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        version: Option<u8>,
     },
     CutMark,
     /// An empty physical frame which still occupies its full width.
@@ -523,6 +525,7 @@ impl LabelObject {
             content: ObjectContent::QrCode {
                 data: data.into(),
                 error_correction: crate::barcode::QrErrorCorrection::default(),
+                version: None,
             },
         }
     }
@@ -533,6 +536,12 @@ impl LabelElement {
     pub fn minimum_version(&self) -> u32 {
         match self {
             Self::Object(object) => {
+                if let ObjectContent::QrCode {
+                    version: Some(_), ..
+                } = object.content
+                {
+                    return 8;
+                }
                 if matches!(object.content, ObjectContent::QrCode { .. }) {
                     return 7;
                 }
@@ -1013,6 +1022,7 @@ mod tests {
         let ObjectContent::QrCode {
             data,
             error_correction,
+            ..
         } = &restored.elements[0].as_object().unwrap().content
         else {
             panic!("expected an editable QR object");
@@ -1023,6 +1033,34 @@ mod tests {
         assert!(matches!(
             &restored.elements[0].as_object().unwrap().content,
             ObjectContent::QrCode { data, .. } if data == "A001"
+        ));
+    }
+
+    #[test]
+    fn fixed_qr_version_requires_layout_version_8() {
+        let mut object = LabelObject::qr_code("FIXED", TextBox::default());
+        if let ObjectContent::QrCode { version, .. } = &mut object.content {
+            *version = Some(5);
+        }
+        let doc = LabelDocument {
+            version: 7,
+            tape_width_mm: 24,
+            dpi: 180,
+            font_name: String::new(),
+            font_margin: 0,
+            flip_h: false,
+            flip_v: false,
+            elements: vec![LabelElement::Object(object)],
+        };
+        let serialized = doc.to_toml_string().unwrap();
+        assert!(serialized.contains("version = 8"));
+        let restored = LabelDocument::from_toml_str(&serialized).unwrap();
+        assert!(matches!(
+            &restored.elements[0].as_object().unwrap().content,
+            ObjectContent::QrCode {
+                version: Some(5),
+                ..
+            }
         ));
     }
 
