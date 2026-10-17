@@ -5,10 +5,14 @@
 
 use log::info;
 
+use ptouch_core::device::DeviceFlags;
 use ptouch_core::protocol::PrintQuality;
 use ptouch_core::tape;
 
-use crate::state::{AppState, CanvasEditTarget, CanvasTarget, PrinterCommand};
+use crate::state::{
+    AppState, CanvasEditTarget, CanvasTarget, NetworkPrinterCandidate, PrinterCommand,
+    PrinterTarget,
+};
 
 /// Render the left sidebar.
 pub fn show_sidebar(ui: &mut egui::Ui, state: &mut AppState) {
@@ -19,10 +23,43 @@ pub fn show_sidebar(ui: &mut egui::Ui, state: &mut AppState) {
         ui.separator();
         show_print_options(ui, state);
         ui.separator();
+        show_template_values(ui, state);
+        ui.separator();
         show_mirror_section(ui, state);
         ui.separator();
         show_elements_section(ui, state);
     });
+}
+
+fn show_template_values(ui: &mut egui::Ui, state: &mut AppState) {
+    let placeholders =
+        ptouch_render::document::LabelDocument::placeholders_in_elements(&state.elements);
+    if placeholders.is_empty() {
+        return;
+    }
+    ui.heading("Template values");
+    ui.small("Values apply to preview and printing. Saved layout tokens stay unchanged.");
+    for name in placeholders {
+        let mut value = state
+            .template_values
+            .get(&name)
+            .cloned()
+            .unwrap_or_default();
+        let response = ui.horizontal(|ui| {
+            ui.label(&name);
+            ui.text_edit_singleline(&mut value)
+        });
+        if response.inner.changed() {
+            state.template_values.insert(name, value);
+            state.mark_dirty();
+        }
+    }
+    if state.has_unfilled_template_values() {
+        ui.colored_label(
+            egui::Color32::YELLOW,
+            "Fill each value to print the template",
+        );
+    }
 }
 
 /// Printer connection section.
@@ -52,11 +89,102 @@ fn show_printer_section(ui: &mut egui::Ui, state: &mut AppState) {
         state.update_tape_pixels();
         state.mark_dirty();
         state.printer_model = None;
+        state.manual_tcp_tape_width_mm = None;
         state.printer_status = Some("Connecting...".to_string());
         state.connecting = true;
         state.auto_cut = !state.printer_target.is_bluetooth();
         if let Some(ref tx) = state.printer_cmd_tx {
             let _ = tx.send(PrinterCommand::Poll(state.printer_target.clone()));
+        }
+    }
+
+    let mut connect_tcp = false;
+    let mut selected_network = None;
+    ui.add_enabled_ui(!state.is_printer_busy(), |ui| {
+        if !state.network_targets.is_empty() {
+            let selected_name = state
+                .network_targets
+                .iter()
+                .find(|candidate| candidate.address.to_string() == state.tcp_address)
+                .map(NetworkPrinterCandidate::label)
+                .unwrap_or_else(|| "Select discovered printer".to_string());
+            egui::ComboBox::from_label("Discovered printers")
+                .selected_text(&selected_name)
+                .show_ui(ui, |ui| {
+                    for candidate in &state.network_targets {
+                        if ui
+                            .selectable_label(
+                                state.tcp_address == candidate.address.to_string(),
+                                candidate.label(),
+                            )
+                            .clicked()
+                        {
+                            selected_network = Some(candidate.clone());
+                        }
+                    }
+                });
+        } else {
+            ui.small("No raw TCP printers discovered yet");
+        }
+        ui.horizontal(|ui| {
+            ui.label("TCP address");
+            ui.text_edit_singleline(&mut state.tcp_address)
+                .on_hover_text("Raw printer socket, usually port 9100");
+        });
+        egui::ComboBox::from_label("TCP model")
+            .selected_text(format!("PID 0x{:04x}", state.tcp_pid))
+            .show_ui(ui, |ui| {
+                for device in ptouch_core::device::supported_devices()
+                    .iter()
+                    .filter(|device| {
+                        !device
+                            .flags
+                            .intersects(DeviceFlags::PLITE | DeviceFlags::UNSUP_RASTER)
+                    })
+                {
+                    ui.selectable_value(
+                        &mut state.tcp_pid,
+                        device.pid,
+                        format!("{} (0x{:04x})", device.name, device.pid),
+                    );
+                }
+            });
+        connect_tcp = ui.button("Connect TCP").clicked();
+    });
+    if let Some(candidate) = selected_network {
+        state.tcp_address = candidate.address.to_string();
+        if let Some(pid) = candidate.pid {
+            state.tcp_pid = pid;
+            connect_tcp = true;
+        } else {
+            state.printer_status = Some("Select the printer model, then connect".to_string());
+        }
+    }
+    if connect_tcp {
+        match state.tcp_address.parse::<std::net::SocketAddr>() {
+            Ok(address) => {
+                let target = PrinterTarget::Tcp {
+                    address,
+                    pid: state.tcp_pid,
+                };
+                state.printer_target = target.clone();
+                state.printer_connected = false;
+                state.printer_media_detected = false;
+                state.printer_media_width_mm = None;
+                state.manual_tcp_tape_width_mm = None;
+                state.preview_uses_printer = false;
+                state.update_tape_pixels();
+                state.mark_dirty();
+                state.printer_model = None;
+                state.printer_status = Some("Connecting...".to_string());
+                state.connecting = true;
+                if let Some(tx) = &state.printer_cmd_tx {
+                    let _ = tx.send(PrinterCommand::Poll(target));
+                }
+            }
+            Err(error) => {
+                state.printer_status = Some(format!("Invalid TCP address: {error}"));
+            }
         }
     }
 
@@ -78,6 +206,7 @@ fn show_printer_section(ui: &mut egui::Ui, state: &mut AppState) {
         state.connecting = true;
         let _ = tx.send(PrinterCommand::Poll(state.printer_target.clone()));
         let _ = tx.send(PrinterCommand::DiscoverBluetooth);
+        let _ = tx.send(PrinterCommand::DiscoverNetwork);
         info!("Manual printer refresh requested");
     }
 }
@@ -88,20 +217,55 @@ fn show_tape_section(ui: &mut egui::Ui, state: &mut AppState) {
     ui.add_space(4.0);
 
     let tapes = tape::supported_tapes(state.target_dpi());
-    let current_label = format!("{} mm ({} px)", state.tape_width_mm, state.tape_width_px);
+    let narrow_tcp_head = match state.printer_target {
+        crate::state::PrinterTarget::Tcp { pid, .. } => {
+            ptouch_core::device::find_device(ptouch_core::device::BROTHER_VENDOR_ID, pid)
+                .is_some_and(|device| device.max_px <= 128)
+        }
+        _ => false,
+    };
+    let tcp_status_available = matches!(
+        state.printer_target,
+        crate::state::PrinterTarget::Tcp { .. }
+    ) && state.printer_media_status_available;
+    let detected_tcp_media = tcp_status_available && state.printer_media_width_mm.is_some();
+    let manual_tcp_media = matches!(
+        state.printer_target,
+        crate::state::PrinterTarget::Tcp { .. }
+    ) && state.printer_connected
+        && !state.printer_media_status_available;
+    let current_label = if manual_tcp_media && state.manual_tcp_tape_width_mm.is_none() {
+        "Select loaded tape width".to_string()
+    } else {
+        format!("{} mm ({} px)", state.tape_width_mm, state.tape_width_px)
+    };
 
     ui.add_enabled_ui(
-        !state.printer_target.is_bluetooth() || !state.printer_connected,
+        (!state.printer_target.is_bluetooth() || !state.printer_connected) && !tcp_status_available,
         |ui| {
             egui::ComboBox::from_label("Width")
                 .selected_text(&current_label)
                 .show_ui(ui, |ui| {
-                    for t in tapes {
+                    for t in tapes
+                        .iter()
+                        .filter(|t| !narrow_tcp_head || (t.width_mm != 21 && t.width_mm <= 24))
+                    {
                         let label = format!("{} mm ({} px)", t.width_mm, t.pixels);
-                        if ui
-                            .selectable_value(&mut state.tape_width_mm, t.width_mm, &label)
+                        let changed = if manual_tcp_media {
+                            ui.selectable_label(
+                                state.manual_tcp_tape_width_mm == Some(t.width_mm),
+                                &label,
+                            )
                             .clicked()
-                        {
+                        } else {
+                            ui.selectable_value(&mut state.tape_width_mm, t.width_mm, &label)
+                                .changed()
+                        };
+                        if changed {
+                            if manual_tcp_media {
+                                state.manual_tcp_tape_width_mm = Some(t.width_mm);
+                                state.tape_width_mm = t.width_mm;
+                            }
                             state.update_tape_pixels();
                             state.mark_dirty();
                             info!("Tape changed: {} mm", t.width_mm);
@@ -110,6 +274,17 @@ fn show_tape_section(ui: &mut egui::Ui, state: &mut AppState) {
                 });
         },
     );
+    if detected_tcp_media {
+        ui.small("Tape width follows the detected cassette.");
+    } else if tcp_status_available {
+        ui.small("No tape detected. Load media and refresh.");
+    } else if matches!(
+        state.printer_target,
+        crate::state::PrinterTarget::Tcp { .. }
+    ) && state.printer_connected
+    {
+        ui.small("Tape status unavailable. Select the loaded width manually.");
+    }
 
     egui::ComboBox::from_label("Design DPI")
         .selected_text(state.design_dpi.to_string())
@@ -173,11 +348,16 @@ fn show_print_options(ui: &mut egui::Ui, state: &mut AppState) {
         egui::ComboBox::from_label("Quality")
             .selected_text(quality_label(state.print_quality))
             .show_ui(ui, |ui| {
-                for q in [
-                    PrintQuality::Standard,
-                    PrintQuality::HighRes,
-                    PrintQuality::Draft,
-                ] {
+                let qualities = if state.printer_draft_quality_modes {
+                    vec![
+                        PrintQuality::Standard,
+                        PrintQuality::HighRes,
+                        PrintQuality::Draft,
+                    ]
+                } else {
+                    vec![PrintQuality::Standard, PrintQuality::HighRes]
+                };
+                for q in qualities {
                     if ui
                         .selectable_value(&mut state.print_quality, q, quality_label(q))
                         .changed()

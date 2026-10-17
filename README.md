@@ -13,10 +13,17 @@ Optional native macOS Bluetooth support is available in `ptouch-core` for the PT
 - Position fixed text boxes in millimeters, with absolute coordinates or gaps
   after the previous box; preview with a millimeter ruler
 - Save and reload designs as self-contained `.ptl` layout files (images
-  embedded), then print them from the GUI or CLI
+  embedded), then print them from the GUI or CLI. Open supported text, PT
+  Dingbats symbols, QR codes, untrimmed images, and selected vector outlines
+  from `.lbx` files
 - Template layouts with `{{name}}` placeholders and batch-print from a CSV
+- Numbered layout batches by placeholder, with configurable start, increment,
+  and label count
 - Chain print and multi-copy support
-- Print quality modes on 360 dpi models (high resolution 360x720, draft 360x180)
+- Print quality modes on selected legacy and modern target models (draft remains legacy-only)
+- Explicit raw TCP printer selection in the CLI
+- Discover raw network printers in the GUI with DNS-SD
+- Read the PT-P900W Command Mode setting over raw TCP
 - GUI with live preview, zoom, and drag-and-drop element reordering
 - Export to image (PNG, JPEG, BMP, GIF, TIFF, WebP) without a printer connected
 - Feed and cut tape without printing
@@ -25,10 +32,61 @@ Optional native macOS Bluetooth support is available in `ptouch-core` for the PT
 
 PT-9200DX, PT-2300, PT-2420PC, PT-9500PC, PT-9700PC, PT-2450PC, PT-18R,
 PT-1950, PT-2700, PT-1230PC, PT-2430PC, PT-2730, PT-H500, PT-E500, PT-E550W,
-PT-P700, PT-P750W, PT-D410, PT-D450, PT-D460BT, PT-D600, PT-D610BT,
+PT-P700, PT-P750W, PT-P900W, PT-D410, PT-D450, PT-D460BT, PT-D600, PT-D610BT,
 PT-P710BT, PT-E310BT, PT-E560BT and more.
 
+The CLI supports explicit raw TCP selection with `--tcp IP:PORT --pid HEX_PID`.
+For example, `ptouch info --tcp 192.168.1.50:9100 --pid 0x2085` queries a
+PT-P900W, and `ptouch print --tcp 192.168.1.50:9100 --pid 0x2060
+--tape-width-mm 12 "Hello"` prints to a PT-E550W. The tape width code is
+required for TCP models without status reporting. Brother network printers
+commonly listen on port 9100.
+The GUI supports USB, paired Bluetooth, and discovered raw TCP printers; it also
+allows entering an address and model manually. Raw TCP does not use the USB
+status command. PT-E550W tape width must be selected manually in the GUI or with
+`--tape-width-mm` in the CLI. PT-P900W status
+uses Brother SNMP on UDP port 161, with community `public` by default; set
+`PTOUCH_SNMP_COMMUNITY` to override it. The GUI enables advanced high-resolution
+printing only when that status reports laminated tape and black text. Network
+routes and SNMP parsing are tested with loopback fixtures, not physical printers.
+
 Tape widths: 3.5mm, 6mm, 9mm, 12mm, 18mm, 24mm, 36mm.
+For `--tape-width-mm`, use Brother's width code; code `4` denotes 3.5mm tape.
+
+## Current parity limits
+
+The Rust layout format is TOML `.ptl`. The CLI and GUI can import ordinary
+text, untrimmed embedded images, PT Dingbats symbols, and selected unfilled
+vector outlines from `.lbx` archives, but cannot export LBX. This bounded
+importer flattens nested wrappers with warnings, converts symbols to styled
+text glyphs and vector
+outlines to embedded SVG-backed image objects, and skips unsupported shapes,
+barcodes other than Model 2 QR, trimmed images, and image effects with warnings.
+QR codes import as SVG-backed images, so native barcode editing and exact Brother
+rendering are not retained; other barcode protocols remain unsupported. The GUI
+does not yet create or edit native barcode objects. Symbol rendering requires
+an installed Brother font containing the requested glyph.
+The importer rejects files containing only unsupported objects. LBX conversion
+fidelity and P-touch Editor behavior remain under investigation. The editor has
+no barcode or QR object yet. iPrint&Label evidence confirms LBX editing and
+print paths for both target models, including text, symbol, image, barcode,
+date/time, frame, rectangle, and polygon objects. P-touch Editor ships LBX
+libraries and CIV LBX templates. A Windows probe using the Editor's bundled
+`LibLbx.DotNet` runtime loads simple text exports for both target models and
+reports their target IDs and media ID. Visual parity in the Editor and print
+behavior remain unverified. An external P-touch Editor 5.0.201 sample
+establishes the generic QR XML fields, while target-model rendering parity
+remains unknown. The CLI exports a bounded subset of layouts as target-specific
+LBX archives.
+
+The CLI and GUI support placeholder substitution and CSV batches. The CLI can
+also generate a numeric sequence through a named layout placeholder. This does
+not reproduce iPrint&Label's selected-character numbering inside native LBX
+text objects or its database-assigned print workflow.
+Network media selection currently covers standard tape-width codes. iPrint&Label
+also lists SL and heat-shrink media for PT-E550W and a broader shared media list
+for PT-P900W; media-specific print semantics and acceptance for each listed
+family remain unverified.
 
 ## Building
 
@@ -159,8 +217,11 @@ Bluetooth devices. The preview uses the layout's saved design DPI.
 - Free-angle text rotation with auto font sizing
 - Mirror the whole label or a single element (horizontal/vertical)
 - Tape width selection
-- Save/Open layout (`.ptl`) with images embedded for portability
+- Save/Open `.ptl` layouts with images embedded for portability; open supported
+  text, PT Dingbats symbols, untrimmed images, and selected vector outlines
+  from `.lbx` files
 - Print to connected printer or export to image file
+- Connect to network printers over raw TCP with an explicit model selection
 - Feed and cut tape without printing
 
 ## CLI Usage
@@ -196,6 +257,15 @@ ptouch print --layout label.ptl -o label.png
 
 # Show printer info
 ptouch info
+
+# Query a PT-P900W over the network
+ptouch info --tcp 192.168.1.50:9100 --pid 0x2085
+
+# Print to a PT-E550W over the network
+ptouch print --tcp 192.168.1.50:9100 --pid 0x2060 --tape-width-mm 12 "Hello"
+
+# Read the PT-P900W Command Mode setting without changing it
+ptouch config get command-mode --tcp 192.168.1.50:9100 --pid 0x2085
 
 # List supported models
 ptouch list
@@ -402,9 +472,32 @@ exports, copies and CSV rows use the same correction at their output DPI.
 
 Text in a layout may contain `{{name}}` placeholders. Fill them through the CLI
 per print, or drive a batch from a CSV file. The GUI edits and saves placeholders
-but does not have a variable-value form; its preview shows the literal tokens.
-CLI substitution retains fixed allocations and content transforms.
-Content-sized v7 allocations remeasure the replacement text and reflow their sequence.
+and provides a **Template values** section for preview and printing. Values are
+transient and do not replace the saved tokens.
+CLI substitution changes only text content, preserving slots, independent
+object dimensions, offsets, and rotation.
+The current GUI preview shows literal tokens. CLI substitution retains fixed
+allocations and content transforms. Content-sized v7 allocations remeasure the
+replacement text and reflow their sequence.
+
+For sequential labels, `--number-var` fills one declared placeholder for each
+label. Start, increment, and count default to 1. Copies repeat each resulting
+label through the standard batch path. This numeric placeholder workflow is
+separate from iPrint&Label's numbering of selected characters inside an LBX
+text object.
+
+Convert a `.ptl` layout or supported LBX import to a target-specific LBX file:
+
+```sh
+ptouch convert design.ptl --output design.lbx --printer pt-e550w
+```
+
+LBX export currently accepts absolute text and PNG, JPEG, BMP, GIF, or TIFF
+objects on standard media widths supported by the selected target. It rejects
+relative positioning, inline text styles, mirroring, vector-only image sources,
+cut marks, and padding instead of dropping them. Generated archives use
+recovered Brother namespace, model-ID, and media-map values; opening or printing
+them in Brother software or on a physical printer remains unverified.
 
 By default, USB CSV batches print as one continuous strip, including all
 `--copies`, with final feed/cut only after the last row. `--chain` skips that final step. Printers
@@ -426,8 +519,16 @@ ptouch print --layout badge.ptl --set name=Alice --set id=A001
 # One label per CSV row; the header row names the placeholders
 ptouch print --layout badge.ptl --csv people.csv
 
+# Values 100, 105, 110 through the id placeholder
+ptouch print --layout badge.ptl --number-var id --number-start 100 \
+  --number-increment 5 --number-count 3
+
 # Batch to image files instead of a printer ({n} is the row number)
 ptouch print --layout badge.ptl --csv people.csv -o 'badge-{n}.png'
+
+# Numbered output to individual image files
+ptouch print --layout badge.ptl --number-var id --number-count 3 \
+  -o 'badge-{n}.png'
 
 # CSV from stdin, with a constant value applied to every row
 cat people.csv | ptouch print --layout badge.ptl --csv - --set dept=Eng
@@ -438,9 +539,11 @@ cat people.csv | ptouch print --layout badge.ptl --csv - --set dept=Eng
 | Flag | Long | Description |
 |------|------|-------------|
 | | `TEXT...` | Text lines (max 4) |
-| `-l` | `--layout` | Print a saved layout file (.ptl); overrides content flags |
+| `-l` | `--layout` | Print a saved .ptl layout or import supported .lbx content; overrides content flags |
 | | `--set` | Set a layout placeholder, `KEY=VALUE` (repeatable) |
 | | `--csv` | Batch-print one label per CSV row (`-` for stdin) |
+| | `--number-var` | Generate a numeric sequence through a layout placeholder |
+| | `--number-start`, `--number-increment`, `--number-count` | Configure the numeric placeholder sequence |
 | | `--list-vars` | List the placeholders a layout declares, then exit |
 | | `--allow-missing` | Render placeholders with no value as blank |
 | `-i` | `--image` | Image file path |

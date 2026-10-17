@@ -1,0 +1,1141 @@
+7dba3b47c50477134319a4b383f9d5a464a422da0a6900b588cda0e6566877fb  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/brBltcom.dll
+b75acd2f89a7d18c0a87b083d058a1d055bf543e5d8e1267838def43d0c75d3a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/brdevlch.exe
+7df0c4feac8e702a7155cebd69f8f6f05b7b714b4e8ac7299f3579bc97135640  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/brdevlch.ini
+2933e0f31fc83696ee3c171c1c813df907b64c9fb4018bd0bf65ef6b07c60a95  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/brnetutl.exe
+bf4d92472e5c5e527e0c228b909a1a51901da8008c24fed110081b3a8401db2a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/brsrvlch.exe
+8d84a71520e6205c9fdf37c28c6a41f98dd6056860dc988e5da611a354fdaac6  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/BrUsbPrnIO.dll
+e43910f2181352d9008d296ccc004b42855e779d839b7a957debc812ef6ae282  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/brutilch.exe
+da0505c0816e9c4d169dd2f4e23c921ab084680f12b75f264a9270668b75e282  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/BrWFCfg.dll
+a32b780b9eb7cd7508fbad28494dab0a822ae5a8f9d8c5071d2643e406fe1ca1  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/brwlankey.exe
+0857848bf52e9c97d584b093b34a64e711c5db1327186f97a6daadb7b6abd82f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/BrBltComSharp.dll
+c82ad2ae8c5c1f045cc9e20eca0c426be76d9386f942c99a1369de251c94a74b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/BrBltComWrapper.dll
+544d97ad0f3d5155fd3ec015fc446ba15d5cfb83fe7e4740862af09cd2bc8930  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/brdvset.exe
+5c9f42bd66f768defc49a329e1345d8779b49dd1ebce884fd0806f099a293c32  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/brdvset.exe.config
+0ea9cb1f735a7b275923b21dcdf90a3e6fb0b7522fa33b397c254dd1f70f4789  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/common.yml
+53beeee25d9ca467778916f7888bdbd0eda51a44499bd9184e6afb83ec383702  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/PT-E920BT.yml
+7df79858e11d4fd3dc9c5f6905d0bb8d263435bd5efa74a709f294663bef87e3  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/PT-P910BT.yml
+6a86a31f147a9385cceb3be66bb7eca29a3bb9cc90c9a51e0e654ba07f22e3e6  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/QL-600.yml
+1e686b915741d1bfa986f503f60759b47d2e4dffce776eaef23833c29f80dec1  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/RJ-3230B.yml
+71143a33820998cae1eb0e6ab23d43204c7223d490135821eca841fb1183ec28  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/RJ-3235B.yml
+b7a6421144d5c781948548a15f9e2038327f5fdde5c9236be135d97bbbf4b36f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/RJ-3250WB.yml
+3470f1089b5b0674ec850b86bb21359e3c265803f615777a641f59e22745b558  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/RJ-3255WB.yml
+33d8192d350bcc47140f0a8c87eaa5573457cf64aedfb2cbc7eceb79e11b5042  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-2310D (203 dpi).yml
+d9e766821126dd1d8157da5642320c7025df7543b708afb6b4436465ab622150  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-2310D (300 dpi).yml
+586a1777dfe2b8c271282cfabdeca57965d6e44afd504093c7d569c4faa21134  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-2320D (203 dpi).yml
+9669157365495daa9be094ab604e529ab481b6d41220ffae48f342996e0b83ee  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-2320D (300 dpi).yml
+be2670207eb8dd3253b7edc44ea9a7834b6936e77df71bea9b5a5290b9a1bf56  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-2320DF (203 dpi).yml
+f77d19f96ac5b9b911e2a32b123593e09e008843c831ec17c8df103738ec960e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-2320DF (300 dpi).yml
+6472d971a8d9d67485aa4bf8b48c8cccafda5492c95732ac2a667a8fd6bac623  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-2320DSA (203 dpi).yml
+791418cdc72acb334319be469dfcfaf6b37fd446f1dee7939acecbcef985b5b5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-2320DSA (300 dpi).yml
+4d4decc101a2ef6d5ba95110b1d4b8b08177304d02c27b545fd082d4c00ce243  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-2350D (203 dpi).yml
+4af1461d965e1ef85487a6aa032d08a04f16d97ca9be52e6f9c763e1ec834e81  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-2350D (300 dpi).yml
+762946e63fe1d8b42b9365242ccc48927ff4adadfe0cb748333b829002a39f7e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-2350DF (203 dpi).yml
+208031985f88acc399a7a5b87065d1590d0beb319b7c50ea00d55dc76b86d814  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-2350DF (300 dpi).yml
+84887b879a839e528583175fc2ab12472e4b0528103d63aa3edc4bcc768fe2d6  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-2350DFSA (203 dpi).yml
+824519572f67780eecf32957624d1660f07dc90526a935172dfb3fb43f85deec  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-2350DFSA (300 dpi).yml
+03e24d9a05c83f5ce12af07405615123d9e4fcc77a1cabcbb16cfab148ff6d42  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-2350DSA (203 dpi).yml
+3291b0724cc01ade5983e96e2d3641e479505ed164a07a2dead7d4670d251c1f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-2350DSA (300 dpi).yml
+0022be713c9f0826a11fe600d0e7b15302f122a6c72630a9b2ad3007bc84ca05  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4210D.yml
+37eee753e64e5e98050b8c4f394cbe0e835a87cb07e1baf88c43e2f4a70baba8  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4215D.yml
+eb8aa28cd123a90cfe195a7a15234ad2a5c1299ee3eb79b73d928defee5ecfcd  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4410D.yml
+4d30bc0bda8f0e9078820b158c6482818a7d0671cb3a70130c95fef9a43abd42  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4415D.yml
+bee2f509a539b309ed0a27621f0f35973eb524064f30c66d67abec68a51bbdac  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4420DN.yml
+9d45397791fe515208c65a28e2e07c8775338da9f9e1b6b020082bb4ec78c930  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4425DNF.yml
+9a3e6562ca589fe7f3af88d613b8ddf854d452d53b059996a1ef50510ef3e0f2  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4425DN.yml
+be5cb944130980a60ce92b0390039a971717ad5aed43a6adf6d2b5aae53ccdd5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4455DNWB.yml
+3724a1585d3da3f557c054fb7d1d394f0849202572f19b617d51e497f81b0423  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4510D CP.yml
+1c67f622763643369d7ffb5c3a734b618094ccb07c13141354b7869351dd00c5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4510D.yml
+bc7d8509406ff9f5d2c50fd0046bb767f7679f7ab5136f88648c3670b0821a3b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4520DN.yml
+2df49bd7fe09f71b87f15f755aeeba70e221a567c3f7708ca83e63ed493e69ab  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4525DN CP.yml
+6aab334ead9333f31a6bdf64ca5a4218b1243b574963bf5223927a07a4fa1091  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4525DN.yml
+491ed8db54015b3a70e12e9827bd7b8e5c9abeaf40c995195709cfd37ae6dfbc  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4550DNWB CP.yml
+9911380af88fa26b1e0845272cb539980ca824fefc0b95816f25766bd744e89f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4550DNWB.yml
+86cbe0c2ecfc6ef4a55b8d4f1c567fc36c06a1438dfa7c75cf6503c57cf22781  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4555DNWB CP.yml
+f7affbb1faa9a5a5d92d062fe8771fd802f770fcdad4b17a2998840e9b750c48  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4555DNWBF.yml
+9defd56938fedcef99d9527fdd36c81e9cdcba355a82fbfb8b94e6e37c5e67f4  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/config/TD-4555DNWB.yml
+bfeaba7d52619771d75b9c9da70bf111d309e375640d2fe7d88fabc77ce20436  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/cs/brdvset.resources.dll
+ddc525cc67dd94455d9f761250eaa0600ed56e4b55bcf6cc2e14a4769eeea8c3  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/da/brdvset.resources.dll
+debba821f4c61d809710385b3dd5550c120806b7e4cdf5db1a83d52b38a4bf5a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/de/brdvset.resources.dll
+9c1b377e310a0a98fa5b035686962d2ecc507df7667260f5fe2b2871ab4a9bf5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/de/Microsoft.Expression.Interactions.resources.dll
+80e500b12cb498510d12179e5570dfffc96d6d1eae6250d2c603a5081fa0e4ec  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/de/System.Windows.Interactivity.resources.dll
+f9e0749b4c75dfd4ad4c29d910eca695f748b69188118d75c5cf21fe24c175f4  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/DeviceSettingsTool.Command.dll
+7049519c3b4cf2b0e58cee541e587d181373616416ad1d5ea97a445f2b71ad18  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/en-gb/brdvset.resources.dll
+0b6aaf8a127947e5495ce078d2670dbc889b2e97d4ac650352711efdaddee147  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/en/Microsoft.Expression.Interactions.resources.dll
+f6608fc706718d18fc0502f2b238552fd32be756eb681ad625c70565d94be72e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/en/System.Windows.Interactivity.resources.dll
+e87cffa1c1e12d02354a3bbcde3c9012099503a0f05628a90e673c49bbdee870  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/en-us/brdvset.resources.dll
+181735dad338d336e43452b85326573653db6a94d8934e4338b0e60ddebe08b0  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/es/brdvset.resources.dll
+6eaa46ec19b0421478820237d15c52b0ccd3f90124f896fd9dbf80a831200ba1  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/es/Microsoft.Expression.Interactions.resources.dll
+8812ed9d74bc60d01307e400f5dc94181a68beb32e218d9e30a54e2a591a3a47  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/es/System.Windows.Interactivity.resources.dll
+2b9bb64418d073b2aab613f4c2a48eb4f29b7ae16b84aab9c4565e7e3891ab0d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/fi/brdvset.resources.dll
+afc0c32732177721ceee233d4916585580fdb3b3fa63bc0a1d630747a49392c5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/fr/brdvset.resources.dll
+5514c115be1ba90905316c4293d10982d99f7c28360839c58c1b20faa0516a27  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/fr/Microsoft.Expression.Interactions.resources.dll
+37df47bc049b5153dfbd52dcc65ab80372bbc4b3c95693f70173682cd2db34aa  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/fr/System.Windows.Interactivity.resources.dll
+0bb91986420750b314839982d1e1c0ca05f72005e61ca28e5ebb1df9cb1e1f45  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/hu/brdvset.resources.dll
+4ea29aaa542332d05fc9fbaae5018a1cc7cb76b5b821b57a6a8a7b7cd28610ec  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/it/brdvset.resources.dll
+cfc76c5b86249a36b2cb603e25266a9b8fc9916853d40e146975aee6482f7722  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/it/Microsoft.Expression.Interactions.resources.dll
+f8b1652768cc2e26bcaf0306c6f50f8575e3f12bd8739825074681c78852361c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/it/System.Windows.Interactivity.resources.dll
+31eef38feb12529fc5ad5c2f206b593394921c58abe6e849d65ac386630fb8fb  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/ja-JP/brdvset.resources.dll
+5944de2852058baed845897bdd4f0d4d489b3124ca4145c5802f9bc87abda931  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/ja/Microsoft.Expression.Interactions.resources.dll
+6ea0d3fef34185428bd16317926048ee4c87c612cf6b02d5f5df5dbaddb1cd0f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/ja/System.Windows.Interactivity.resources.dll
+78b2272712110df984bda1da1912a4dd1f0c3a8d874fd038ae7df1e1c215ff55  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/ko/brdvset.resources.dll
+7ebc16f7d253f0c04a3474549f5bd9a377e4add8b7a27cd75a13e90cd3168c0e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/ko/Microsoft.Expression.Interactions.resources.dll
+4122685e20adf67776c20b33bcc3867f8a0c4a81a744b036c19d593f46a86d56  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/ko/System.Windows.Interactivity.resources.dll
+f3fdabf605b9371105bd1b8f98053199f9c70ed1beef28fe6bb473c687a15e98  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/Microsoft.Expression.Controls.dll
+f273009490b8d94957c40b8e2d1b7c96ed5af8da905720ae66dcf6633d0f6704  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/Microsoft.Expression.Drawing.dll
+a1798a6aebe8e4797a4cf79e5acd4ba53161b88bc1e076baed55d786cd8ba4a7  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/Microsoft.Expression.Interactions.dll
+a2239c54b8e1531d2719c0f43cf129dad8111f081eb1fd5834ff1178062afe8d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/Microsoft.Win32.Primitives.dll
+b4e592b75be301f5473ff57a1e9be229e4b878e2ddd4a81eb714d4d366922693  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/netstandard.dll
+bf9df1d60c9f7a913b04c78bddd9b331139ca476e901771ad0aac8b32eed01a3  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/nl/brdvset.resources.dll
+7c03392f0e6e254938f4d2126eb070ff6affa81b864cabb4bc905e9a317b07fb  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/no/brdvset.resources.dll
+25267302554dd028831c02e15c05b79d3ac305d1e8280557739f24b472d3ef0f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/pl/brdvset.resources.dll
+9da61e5cac6cb943c756ff578aa91f84709dcf7c0d6a2ba8e30645da66b75a74  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/pt-BR/brdvset.resources.dll
+01127499473396a202b08acec89343de57bcb836a0b6a767fc16174621081879  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/pt/brdvset.resources.dll
+c0da0128ce1f5ddae8422a55d8200d0d4367add7a4a1f88fee39878682d71567  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/PtFiloSharp.dll
+06a96b296b254fa8f434a77d078c0de018cf23211c4c725ab86d26880be103da  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/ReactiveUI.Blend.dll
+a872a48cc6b5d14e5d647c5fa1b3ecc7fedc58ae2ca196453f1aa9316413b29c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/ReactiveUI.dll
+79e045c822c464efdb9279f1c2ca604d95fccbd54b4c2873d16acc5e3f9c4aaa  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/ru/brdvset.resources.dll
+3f535a9a3e8f8cfe95b8bfb79fe29029c13b077c54bdf9d2da3602ac2739e2c8  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/ru/System.Windows.Interactivity.resources.dll
+7b62e433083bca967cb1bc9715f5cee223bf06a8e85312c63e58274cf221f7c0  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/Splat.dll
+4cc5f968649d384abc5970df45d5c5709c4e8d68f035532f22740de04f8fed05  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/sv/brdvset.resources.dll
+d7b8eef809b3ac7bb378f754868fac2c9efafa0b236af40951bd9adbb41770d4  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.AppContext.dll
+755a08fa1084cea43a2e9741563337e8334927edc935531a8f2ffaa852b63d1a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Collections.Concurrent.dll
+47012b4f6476a124d2cc25eff7c4ef2f8aa11f8b2d29caeea537edb379c9868c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Collections.dll
+786b5de084e66547a8444b96240f96afe4586415fa19a991216bff86ba83b93f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Collections.NonGeneric.dll
+57e1b676d525fe9d4ca2e44438e6827cc36dcfa5c6719241beaea722b631f41a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Collections.Specialized.dll
+8e965fe4bd7de581d2210857d98e2cf54ec3255a7505fb2c5c36cea628d7864a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.ComponentModel.dll
+8520e971c7c01151eda2db0926efee0beef8332438931bd66ad29f5b01e8b370  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.ComponentModel.EventBasedAsync.dll
+5da63e60f621db91d6e62c682b03140343b6100aa616ab9571af7c72685894b0  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.ComponentModel.Primitives.dll
+cae856a513e3fccb6e4ca0ff9598be286fce72fec54719d15cb80760e6795aaa  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.ComponentModel.TypeConverter.dll
+4bc7c6aa5b22b9810224a5fa64b1129229cc936399ecbac3170adf6ac190cb51  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Console.dll
+e9e1cd35c7150894238647e0f99987d3075449ac85cecd4ac8bf153546eaba9d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Data.Common.dll
+22bc43d79647ea2a7f93161e861f822db734984a9877b200729e725c994b5084  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Diagnostics.Contracts.dll
+f100c98338c5aef384fae8a972a55857bea66b807b9d618959597b2dc670cea8  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Diagnostics.Debug.dll
+9588d767f89c720a44932ccf1fa4c83d2ed8061cb6f5d84c55fde6af109c737e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Diagnostics.FileVersionInfo.dll
+d6acb4e5e05d35baa8492915a1482dc1b342793dbf204f996012181699350226  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Diagnostics.Process.dll
+00df771c103fe7807fb7ce8bae04a0af2e671f78d3745d5afdfdfaa913c338f5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Diagnostics.StackTrace.dll
+b519cd18583f0c04b667dc02721e9e862b087b16c7418043169cd8ccd8c4abcc  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Diagnostics.TextWriterTraceListener.dll
+086553ae664eb0e54a5d4275a04e8222e7d28c303711b52a03a17ab59fb711d0  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Diagnostics.Tools.dll
+d00caae65d6c773511e3c1db251eb1bbd8f15a214849b70264f09e799a88fb1e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Diagnostics.TraceSource.dll
+d3e576ba317c81eaa9386d00c3bf6c67deca39d94b8ff5289daa556f154fb6e9  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Diagnostics.Tracing.dll
+adc9f909cd5f19eaa4c115811081f7dc82664ae172c867cd17b9d563971bba49  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Drawing.Primitives.dll
+e6f7e85aba3170f1f2ed1511cf6f6e1c1705a633445d6b54c63f0740b88327dd  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Dynamic.Runtime.dll
+d024302780e8a553d1f9e8a1203d9da290e5faea98e3c7dd442e18d0006ae957  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Globalization.Calendars.dll
+3f19fd869fbe8607275d1ebb516ac094a5e955e48b49746e77d3fbf616c7a573  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Globalization.dll
+e4306d45771dbb05ef626deaaecac4b592a01f9581af8305bee1d4f9b61e0725  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Globalization.Extensions.dll
+4d5a04fdd37f8037cef5320fd1df03f0ca2e343203faa9c75a0eb239b2d1c3cd  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.IO.Compression.dll
+db25476a1be203a8d974d4f798a751e8f06b18a2a243e666c6196f98a5230c8a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.IO.Compression.ZipFile.dll
+9ea6d51ad742f84d6b9d522421fead5640760dfa377ce2db4dd90aa53ab8ec48  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.IO.dll
+18ac90cbbcf66fd5de073a8bdd36174887112259c751c0c660dfe22dc55f434d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.IO.FileSystem.dll
+38fd1c4dfc9eefb4059b3edfc2277cdf5c393505075a69df1d2d9386f3da64f4  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.IO.FileSystem.DriveInfo.dll
+e198616384b3769f59d75b93b7748c680a32ed5612a7c0962cf50360d91e9ff6  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.IO.FileSystem.Primitives.dll
+97917bee00d402053f3a5f086ba4673a0decca7122d7f3c54732e6985ed673db  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.IO.FileSystem.Watcher.dll
+8ade837d8c5a9e9b86e53433f9f6b14b46579e5853b16016be38e074b2f501e1  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.IO.IsolatedStorage.dll
+7ccbddf2958791ef6abd3b3190947425d9f20b58dcca0356e3a3516b237f22bd  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.IO.MemoryMappedFiles.dll
+6d21c51235765ccf33a439bd7a7a30c1747045a2024690441b27ffa756864106  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.IO.Pipes.dll
+83e5bfcc716a230edc34d833884f1db8e7576203f3d8446a365a0dd4b066f86e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.IO.UnmanagedMemoryStream.dll
+8e82a7eb78145b232596143ebb0c4e8a5dedec40a23979b73a7ea2c0d7053d1f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Linq.dll
+d562835fa22f99f31805d0fef78efabc25aee2a208ff09eef6ed7d694c5d4fac  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Linq.Expressions.dll
+a79e6ae035071a92ef8156f7f172ca19e9822e8938badf2b0598ee497677534d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Linq.Parallel.dll
+1ebc28cd528d72b0ac5904f5b2a99c9231df9f5c094cd30c625bc82f90e4bab3  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Linq.Queryable.dll
+9e95cf0f09bbab170a5cb51eaea1f02f96d0f26a323f533e2a8a3a9735d373b0  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Net.Http.dll
+318972ddb33dd69db074f5429a4a53b9f2b02466890bb95b4333616c1451f2b5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Net.NameResolution.dll
+df8b5d84af8aa4668de0469c511f5e711e5a002641f83192975c8f0de177a5e5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Net.NetworkInformation.dll
+1cd9caf5efebb639fddf67956e77f3061bfd31f37194a5338ac37960e6c3320b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Net.Ping.dll
+6cd57d46254107f5647f4722b13d06d35415f2563e4497bbb68aef009fe04d78  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Net.Primitives.dll
+ae974b917e4a3286911fb695e33a49cf427edb0fe807942f82c00d3d9ea32c09  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Net.Requests.dll
+d661d373601401179b8fd6ea3d0c3b22b43d3395c8819f34c8f4b9fa389c647f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Net.Security.dll
+0471adfe3c942a0ee66de0933994d6f3b8fa6b493bd4d26107baaf3423ab2f8f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Net.Sockets.dll
+134145d8448140e816cfdc024055eb8f2a7b59f0d6e53a1ace095884851f3017  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Net.WebHeaderCollection.dll
+8b8d6928cb2566f1cb819451319532ff739c781c9dabc118ae00878540726e28  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Net.WebSockets.Client.dll
+01e22b0dff9a4fd42d1cd88875f5535892b098f1843975490dd0b2b58dc1a90d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Net.WebSockets.dll
+531c420f6f9c4be9caf471640747bb2bf3cb44252ee713f92506c32300768683  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.ObjectModel.dll
+258aa1108bb9b7d2a07aa69b1be824ec12b78e601ba50256279247906e1e9729  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Reactive.Core.dll
+a70861e3883fa563a1b74d12bfc9a97622a75c178805a0a686fa8f30339cb09a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Reactive.Interfaces.dll
+ad0cc601e1c3f7fa4af96604c5f0897ead6128b4fae6bc99bebfddcd4ae93f04  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Reactive.Linq.dll
+c2167a4c24fc409b4c6c26131abe9b039da979a1a96b038279a13e50d3507051  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Reactive.PlatformServices.dll
+2273749a273be09be54fe0333f9ccf260099d2e2cd107e9f08d4eab4bc9c0aab  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Reactive.Windows.Threading.dll
+6f78f01a94b26321b7ebea46ccdddd9ad1f66fa4bec5859c00d6d0c05d9404ac  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Reflection.dll
+c5d25dd58961210d303080e41187f02e4428f98755bd80e008b78d92f45b6202  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Reflection.Extensions.dll
+3b025d2b23707aa46d6a8007aef04a21ab911aa637a246aeb2438cc0bb343702  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Reflection.Primitives.dll
+eb95572b5c60b9dfd20c867b07122f75d5b91b3b4f72dfce93e40b39c7c72077  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Resources.Reader.dll
+ccb8357c4a86a43de07c51c08f72a6d556615e36cc0863261cca2a06d351dabb  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Resources.ResourceManager.dll
+77b72c026f8905605beefc9b868ce2a1450cb016b7f5bcd2d36624f5b9e4c830  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Resources.Writer.dll
+7a97507f947db55a6e1f1675695b030e31426016f6889a0274e4a93d0e34dd5c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Runtime.CompilerServices.VisualC.dll
+dd1031fb31f113d1ad330a72b9d7c7dfb11a54d64ac6bcccd128659e459baae1  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Runtime.dll
+d1aa9d8b34e55f8fd79cf2c9bbfc987aec42211028f0daa2e55de5a1e004aefb  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Runtime.Extensions.dll
+6603cb97fe1a499e8d8037ca0442b0292b9aa0ec6278e5d9a503fbd83eb05bee  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Runtime.Handles.dll
+22bf4ffc0750e87a5cadf71c0523e8d424f99f00ef6f97ff9ff514941a99f9b1  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Runtime.InteropServices.dll
+6d2aaa9600d9f1c834d9ed341945f9da928a6f424f0b929a83773b54891ca33c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Runtime.InteropServices.RuntimeInformation.dll
+1486fdbbbdc1b4cf9946b0c495bb3fef8cc9aa493e4d7ec84d12d0d2deea9d21  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Runtime.Numerics.dll
+ce31d2e2786c0e4dd30fe8f634e85bd72e87dd456bf1985f73979e089dbfeb2c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Runtime.Serialization.Formatters.dll
+3b1580712337195b5116a2a7e025859a422788a191cbd3bd598e3e673083fca2  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Runtime.Serialization.Json.dll
+751770ade8437f579c43396878cc89e8498f8c57cad199bd645dc29ceef37d82  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Runtime.Serialization.Primitives.dll
+142eaddef0fdaea4a36b6f4e95dc39c5b0da316858e5d703ad5c6a6e9715731f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Runtime.Serialization.Xml.dll
+a2a360a11b0c70c8759e64474904477a6cf962018a223f74342ed1e987b3c6e8  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Security.Claims.dll
+ea7cd23e92507a6e452960a264a3f8ea79ec271c1f26d32531d1ec1b36293cac  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Security.Cryptography.Algorithms.dll
+916465fd03c9bff244b83286f420212188366b8718925792b32ee463a2ba4ffd  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Security.Cryptography.Csp.dll
+4b946c5685cb16cd3022ead7e25ff229ff28636c5c3331f77685c1cfb556f3ac  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Security.Cryptography.Encoding.dll
+f396c3f5a242d12212d4c07d116ee5ecdc176303d365eb2428c80de24210160c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Security.Cryptography.Primitives.dll
+cd408d64f3575630f8eaa8ef9e9a6ffdb85b3fd9675a5e974f4558aa7f89ccca  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Security.Cryptography.X509Certificates.dll
+264931d4a012557b8037ecf4ac734ac781cd84ac1b58ccfd65ffb90d7d12b2c7  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Security.Principal.dll
+898237f41534d8d199d017955be71f4feed51e70785855939acd5aaad4687dd1  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Security.SecureString.dll
+4ae848dd74574d7a88c5eac2c757973633b1be059e7c8a5ea42498565e9fd094  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Text.Encoding.dll
+ab0660b3f71e1d529cb587e3a32439cc1ac2dd6ddf656ce657afbeceb5058232  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Text.Encoding.Extensions.dll
+f349d119e9fb2e9b7d024e0cd0240c11c519bd0e239b2c7e59298feefe7d9651  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Text.RegularExpressions.dll
+9524d7a9a08fb2463d33ed5eb66c561ff8a0d6dd6e974d2de2f4d9780882995e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Threading.dll
+ac41356747ea5d7b43e746115a7eb25640fb93a0c929dae6ed4d00e0aba53e8e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Threading.Overlapped.dll
+a8f4f243e2679f2eeaf72831a1a2432ff1d0a77035a524e166cf6e7ea798e600  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Threading.Tasks.dll
+c24aaab27296e3537cc890cbb1d497a3642f10272e5a662e3f117ddb6a0f6563  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Threading.Tasks.Parallel.dll
+4d46a95f15892d0347630f7ed9a4dcd9d8b460bf91560774f4e51f34248fb146  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Threading.Thread.dll
+6828c7a01201e78eed0b32a94d483a837df6c548e1c7182b45533191ae347b7b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Threading.ThreadPool.dll
+88a0e021a2b22c2d26e8c700b211d0c98eedc981f9dae6bb4f5168af3d0ab546  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Threading.Timer.dll
+372f6c6c170d71c09598647e9739d8319646172687330bca6086dde952981db3  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.ValueTuple.dll
+46fc3734acec935a4cb10bbc00307a7160d47c6348f74ba486092c9e2cf19b43  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Windows.Interactivity.dll
+eb2b8632e28027d4b32502aceaf232c9553f1cd33f869f1f8a426b5972b4e056  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Xml.ReaderWriter.dll
+a8996dfa7ffcbc18d9497f1a804c69212c624d0e054f79b8e3639078f139fd55  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Xml.XDocument.dll
+fc221fad5851c22c7ec8fed6f2279898d712542f74c3eca466fd93a04d02bdbb  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Xml.XmlDocument.dll
+a341b004256850e6a9e7db7c26008f65814a8026684d1c4b9b406e3f8cd5d245  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Xml.XmlSerializer.dll
+6f01d1be55b7a67de65302661fc28972fce618653af7fd6ed6643b15c347a794  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Xml.XPath.dll
+b6922f4879e31befa16945d83c182d798d8784209866bb9453bdc02e2d40cbd3  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/System.Xml.XPath.XDocument.dll
+754b9a4f082b5081267b4da21e299f8ca0cdb8449044dd3dd5b5e46d2ac40a54  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/th/brdvset.resources.dll
+b00ef4293d094c9f8f1a144b7bdb2bd5ae226808fe6096882b40659c6dea4de5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/tr/brdvset.resources.dll
+cdff43e6fa2ffc82e085f25dcca6274c47c1c3fd4c3265467486866eb64e7357  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/YamlDotNet.dll
+3e88e7c19dc4986f7332341ab5c3888f49f89374ffabcc49da3387b3147cc99f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/zh-Hans/brdvset.resources.dll
+486142afd9a78d7394d5376460afcdab958946f6b38601115647970908a57dce  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/zh-Hans/Microsoft.Expression.Interactions.resources.dll
+24dd678f1949d2025847ada2859f500211898f78642667866b531fd41bee4e13  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/zh-Hans/System.Windows.Interactivity.resources.dll
+8be28324461379af2db668ca44a34b72635083b4d0c165ff86db3abd10338fa9  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/zh-Hant/brdvset.resources.dll
+a6c64d285e9b045646c0287984371db67881ce02139fd2980ef3fdc190f261a3  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/zh-Hant/Microsoft.Expression.Interactions.resources.dll
+7afc9aaa994dee7951fe90ad6996bb7852509d97ee97f752b5b681714e497c10  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/common/zh-Hant/System.Windows.Interactivity.resources.dll
+02f5bdde3d8fc3a4d8e806ecc88942e2b054bfc2eaf9c5066fa2adfdcb784e20  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/brdvset.exe
+3f5f49b3f89f1020bcd16def0903ef5abccfbb8132561319d17ba1e20d523d72  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/brdvset.ini
+7efa3c5528e985a1198acdcee53fd4564effd4e73bd24c25c5520a4d4e144d83  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_ARE.dll
+4eabcc4005479ce520209e1adec8dc0505fc57cd969259c69eace4f87e8c1bc9  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_CHS.dll
+38e717988d8f8ebc3cb4fb49f957462d07a879f07720b3982bb986015ff923da  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_CHT.dll
+67153a8f2a6116b9d8c245677cb4279dce4cb65bf687415b7d7f66b2f5a7f8c9  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_CZE.dll
+222950b6e74490a934179d881fdbf5e9ab6354fffe1c5f2d63853e06f9e74806  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_DAN.dll
+719b369ad9facc0611b50668267c97924f16a910b90372e0f9fa438a287af831  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_DUT.dll
+75c5e6e3b31087fdb0d7099437eae732c57cb74c603335cc36c83928e6abd53f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_FIN.dll
+017ba1fde8a683bce2f7ea19a064d02bca22fc8832eb49dce0f0fc6e8508866a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_FRA.dll
+0a2d8c084f25d1cd22b463f4d591b8d7d64b96254a8c830533bcaec87b8d3ce4  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_GER.dll
+094a8daf8a62863f1f6e47339b183e16cea937dabdfca19e12ca1c0c9d7e8a60  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_HUN.dll
+ebf862cccfec378c2a7eaa21f63f0680f609f66f91e6fe29e41c472b0238b9e8  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_ITA.dll
+2818addfa694e7e9a6d381814f1c01ec0554cb827721ce2d4afcbd701d0cdb4d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_JPN.dll
+62326da446a0616b6708ec5f6ccbe0906fdf681bf35247b5e84331e8237aac3a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_KOR.dll
+2502a2103de6d8ddd8cb0e1e407cd656b7e94f83e8054d5568f70671b91797fb  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_NOR.dll
+c75c5bdf72a2f627b5d1077a3d72ccee93362097b792aa2b9f3209c38d8fdf87  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_POL.dll
+d3edd62410e0971d3fb760068ec3b2f9ae6391902ffd8ac5d7f0e0fe1d066f8d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_POR.dll
+9357cbbd9d494199ce972dff07c304ce8835415eb6a0d9f62c17be508b706db8  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_PTB.dll
+dbf41c9de14e665f34ea0fafb294920b054f0d7f58a17eee14ac0ab4e44219ab  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_RUS.dll
+180798c4ce1133ce8e411647f513df7cc1325031bb89bd8485a0da09a4d0c4b2  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_SPA.dll
+0e7b0f50eb5bf45fa8dacf4eed74f5a2778faee7ae12b7b04d772baee397b0a7  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_SWE.dll
+379842477b2f664fddc063971f504777afd281865a349d24896352f504efa0b4  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_THA.dll
+59035fb9ddd3a01bd6469ba43bcb1a3a73bce7fb6378a4982aab7f0271709d97  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_TUR.dll
+edae2b0b998bdd89dd834b9c35e775fc3985532a0068002eebdeea31af19c5f4  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_UK.dll
+c9580af62cbae49927846459ec1eff2b85d6373cf5e32c5d03ccaad123458ada  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PJ700/res/brdvset_US.dll
+c4909482b995ddb8b818dd56f35151228be3b1129ad7311a3ff2ea8e834dcece  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/brdvset.exe
+c04558b0bf20730dd518c1dbbd067d675a3bdd43b522a97b4f1835ed9c4593c7  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/brdvset.ini
+d511acf73ffb6bab26d742e75cdc613b18893304dc45ce0c7c7caa209c96ccc0  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_ARE.dll
+52f91a5bece49f78b7b66b36fa97acfdd3512ddaafe0478d3d950e74e4f9dc9e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_CHS.dll
+b14c9145f9ecde2a2ef2128e398d95e1c17110eb9c35db564e1d83fa10b23475  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_CHT.dll
+25ccdf07be7fb59411716fbb6910c3368155b5d21f9fb2c46efd974a8ae79ef6  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_CZE.dll
+4e1106fee840cf43e5b03e3081a9950ca590c85cb68f461318de3e74c2a9de97  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_DAN.dll
+27ac701b1b3a4b519c2f86810401ff6ad673351852df10c98c17bd8666fe63cf  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_DUT.dll
+98b5dacbfdcc23c99ccddded94c0ad9a9999fbcaf018eb0439b5fd5465ee52b9  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_FIN.dll
+8b21bdb4426ebfddadc0dbd3abd0ab412bd094b06a70576f9c15b61f215c0190  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_FRA.dll
+f9b4b88b0291c06784391663d32524eadc4644379b31822fbd1ea46eaba41f39  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_GER.dll
+b956ec278dfe413157329aad2b60792381299be05f1d66e227339b8c8a50433f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_HUN.dll
+22a8b4a6415296d04e87a9488ff06adc13a2411e1ff004f840b5aff6ba0cbbf4  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_ITA.dll
+3ded93c865218f0b58bd2b671b9b63866f8e4babb94a4a1b15e82728a5e359c0  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_JPN.dll
+1876e0b2f7dc887771c724027cd0835bde77a4888a415223539c1ca126f63da4  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_KOR.dll
+64187e1d6cdfe74d05bc50bb0d98b3661005c864cba1b90ea7dba9cae6fb1e06  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_NOR.dll
+d1e05cddda77994912529697a558149f762e0965e112cc6d56ec07e9907bd37a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_POL.dll
+a3d57f7ab19b6526a25c64c66178e3fe2a47499de01ed3f2f562078da1a160f3  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_POR.dll
+f056331c8b11fc91872eea54d43548d98207e03210879ca97219589426025d05  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_PTB.dll
+c2e0a387e4981e3a35f5b3399a91270d85b840f65fa507a798914d61eaca2201  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_RUS.dll
+133d753d9ba37d41ed0b253875cefd45e21a8e17020148d0b02ca408ba8655c6  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_SPA.dll
+fa62563630e6f99a3864a665d17cf639a46449ac5c99281c56fb1bca72e58e93  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_SWE.dll
+1b054a78331de8bc19df9127805be6d135db2bba6453c32dc4137e66d25fcc98  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_THA.dll
+2f1fb1fc3ae2e85ffc70588be45f8e5d1bfeaf2917c210e90fda8a49cfdc2055  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_TUR.dll
+7b912a3063dec0eb209b4e6571ab71b0109da89a471d429bbe47106cd0fe1a18  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_UK.dll
+f0ad017c825156721d27bb751bb354474b4bfadcd2d128da8aa25f0058fff29d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_US.dll
+0495bbbd74048583a6bab33072d2380c689db28fd0eafb3ba2487ee5f675490a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT800/res/brdvset_VIT.dll
+6c0e79839771e4505099340698e5a8eb7d4885477ba053ff2cb225e218aea36d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/brdvset.exe
+487588a8eb683e9c9b21ab860f49cf8ae3717b3cca369376c73551da04b19df7  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/brdvset.ini
+8dec4df7238833a7aa1c0ef05b2bb3b16afa603d0c6f3d6b1adbddcda3b7cc1f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_ARE.dll
+c99e82ae44b14f614d1f52bc655ad3f4d33c1a1ba164b3aa5f316010696db8f5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_CHS.dll
+9e3e10b2a33c11517b81d7a643dbf416c56cb9eae42f8fd400b1bea5ee02f24c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_CHT.dll
+57bb73de73f6785e23cfbb6a9a6e014222fb44010a1a3fdfc5f22dd14cf40378  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_CZE.dll
+d8304e5cdc6b4944b6b2f5160322f543c6433c9c7fcfd81c642f163da960daae  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_DAN.dll
+617e1cea90c0464c07e03f758749c0dceb852d7d3a480894fc2527f3fcef05dd  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_DUT.dll
+a4af53f907334f61a0e59653ee22a6b89e859bc0b6ad0a6d2c08c772e1d243c9  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_FIN.dll
+0c212eebe973da31919839009392b38cc562aa47fcae1485236c048823a72493  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_FRA.dll
+e28029c16ddf2ac45c82fb7fab379701139da1ca4a2d6958a671efee470a4876  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_GER.dll
+1eb0e145d9777c852efced3724fb82fb60ceff7f5002b9111c9e02ae210ec2ae  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_HUN.dll
+56e95679d9eaac424bcdfa7fe95fdb0d4fa6cb42b2b664d839e256f097b5fa7e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_ITA.dll
+ec295806b924314b90594553ea32b5e01cdefa4d09e310928db276d12997f0d5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_JPN.dll
+28c75b531c17724ac45d29dcc250fae4ba56e9c1bba3dda1248afd07d735b27d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_KOR.dll
+436728376b8e8dc50f6fed26971c25f5fbfcf4b23e6c53269dabdc3587312566  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_NOR.dll
+3806ac61b1930f51702946955cda602f5f9f4f9c2b8d0d7add4311533f837db1  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_POL.dll
+6a269dd1c579c35968fc0dbeaf2b382fc25baf4351954b1a5c45927347799683  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_POR.dll
+5fb1e1b720af33c28e59df4a211d7bb58527126047cc6d862f1e07c6b3e84366  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_PTB.dll
+f6c449827df2529cc0503ed8114979bef78a426f62d783bdbfe9488fbe498b47  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_RUS.dll
+500d541a51d47642be045605478ff7ec3973fdb1a144cf4837dfc0794a2503dc  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_SPA.dll
+944d5fd416f3f19dbc2ebdeb9a40b7e53d5b3bd4ce163efd8897d29cbfdd7109  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_SWE.dll
+30152abf260a6dad11a539c99cd3a9457e6f5e5f736109f8f6a86c68d82fc719  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_THA.dll
+49a85abd051858fe7205a630576771db37d2f2e35524576099b6fa235f63fe1b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_TUR.dll
+4f574074debdb3577088e0bfd5f46bba55c5c21c98a59b110ccd99175f793436  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_UK.dll
+19bf4b9e756b3703105f061ddabff6a8f0c0691170adf965e514c4d07b268305  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_US.dll
+eab9d0e9b0507f77eaf177f0d79248dbcfa24331837353ef846edc49cf830434  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PT900/res/brdvset_VIT.dll
+85e3b9e9169574684398ccb8d92e73b1172c0560a07efa96e5132c8d4236677a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/brdvset.exe
+42aa31df487bdf1b0e4ba7aafbacf92adc38b513447d8e0c614b88950d50c7c7  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/brdvset.ini
+eb3630dcffaf44f784a5471b14499a84b1f2f30dd0074dc183c8cc673e04e9f2  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_ARE.dll
+38a839c6885be3d4be07bba0c6239370f4158b8c33fb512d3dedf35eac660207  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_CHS.dll
+b4721df5ced3fe896fc237fcb9bf726d3c622a85512ea459db1588c4940df0a3  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_CHT.dll
+8e06cdd542630c954d7705ce157793b593d138fe4f5446718fa4a147a929d829  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_CZE.dll
+a0fe90f57f57a7fd30fe1fe9e1e5f665368ab6ea88e84d7932005dec072ba1f6  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_DAN.dll
+dcdcf0cd17cf437050010d87c9a6056ade2049c17fd729cad9fb7beadcdae124  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_DUT.dll
+83d7932caf41fa06545f5e00ca828436f1caa2b2aeb6861b72db7914628d8aba  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_FIN.dll
+16ddce424a0adcfdf705702e632a267e9db4be2c3b67c348e56e883e5cb54ad5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_FRA.dll
+09e6dc4fb6068c28f78eabf3d1a6a0fd3a52330277e8b963b2205ed9a98bab0c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_GER.dll
+0f056f076f6f9861dab1c9c7a3160b46046af6e3cf850f0a4500021a961a4de4  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_HUN.dll
+425efba59d6922220fd768adc6124cd2a5f14cafe5320e4cd5907444f88c505c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_ITA.dll
+354fcdccccdbb1dd106c8ba8398edf8b3ed3db8bfedbf369f990d40c5388b6e9  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_JPN.dll
+875b3c5540711ed2c45832df50c0213489c81dbd526059986d1b4f324e911217  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_KOR.dll
+54ac8167017c941d7c12b287d3b9e6facb653a846f88c5b3ddbb4ba5399fcfd7  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_NOR.dll
+c5c10f5666d43743bccd9d64ce563c30c0fa358ace4da55f7f11c33bb5b336e8  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_POL.dll
+bbb8a7daf6e2dc14266e86a63cc0182ceffc0f1196afa6de7324755075c10648  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_POR.dll
+1a66b39e4d2719e9bb8df38afa8a1b24270e057138ad1e9e5edd3af29c752c6e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_PTB.dll
+8b7d21e31c646cb09656821caafbfc8c2cc9d3c30c065b8a6ec7048ed0f325a3  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_RUS.dll
+3528f8dfbdacfa4b7823ff91e8c020b1c672fa25a8045993cdb78a136ef155c7  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_SPA.dll
+4fc706cb54dd8899fd1b97db6c91ac3658b086762d24d32412ac92b5099e1551  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_SWE.dll
+a5b80d8e63762145c098561f8860e99f0b669adc1d98bb8971b7bd266cb04ff5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_THA.dll
+8edf5bcee18e75513f84d4fa6716149e8b2970460ef266e1827482a4ac53c6ca  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_TUR.dll
+ca2e83a81636b2ebc3345a36c1f1fffa31e622f3cf102f507488eec7bd013dd5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_UK.dll
+adcf276a536676b4119530bad5447c22429a4069cc47e2be3f24ab8d6b1219e1  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_US.dll
+a12592aaef03c972588bcdc937a07713434075fae3e94e99cfe8436d26400931  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/PTP710BT/res/brdvset_VIT.dll
+1a08311063ca050afa93b42b4500bc516326aa824322494e2c3ae33b83c98e90  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/brdvset.exe
+85fcd0508a3cb8829d1dbb4681f90944f3fa1acca912997157b94a80f4f8979b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/brdvset.ini
+748aa5b25e38f8dc28d88da3c68cdc8a0cc9a51a1bf4b4ce78d64e9fa8d4a8cf  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_ARE.dll
+587acb4a0b3bd062c2d616d888d21ac128a5dbf279d7c29c66ed114e1d3e69e1  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_CHS.dll
+4240da329c47b21b2b46bb6c4683f3953f730e5017ca5d40d0833b2148b45f67  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_CHT.dll
+7056e0c380bfd178d273b4aa4b2742fd95a657115d23f7c4959ee2d100701d41  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_CZE.dll
+5716ead8a71201ac7949ac828b4ba4329a2e5cf38b100399eb9f256bf4fb9d44  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_DAN.dll
+7b6e985df8e73877a81b86e932fd3f63a58d1d54952d42a52c2845c074732ecb  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_DUT.dll
+7952a114d81137f98c98faa888638d0909eeef94a451e61d094e32463982188c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_FIN.dll
+ac754aa04a23e85628681025759230e15e6216fb32fc2166d74bb0116a4e3f64  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_FRA.dll
+4eaee6a7c8dcde97a1d440a7c0c1ed4df213bcdce8e1e37c81526c1029ae664f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_GER.dll
+8ae71c9b93cf04a2959f8108d3545c1ffeb76af90572f65241896ee4f34e4c0a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_HUN.dll
+b7cdeffab4ebbed4eebcfe0b1e1845b8396724ebb44f378f23de6d4447eb92d4  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_ITA.dll
+368dee78baa4cd834edc3b2fd3fe1561ff3095a3b0f84cb5760fa65a126fb367  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_JPN.dll
+c8307b8cac9eb607bedcc5361f6f91e0f5bfef30eab45148870b2dbbc84e1844  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_KOR.dll
+0b869325c19fc5d6eded5297f84a2fc71fb4514180d90d94ec90cfa2c43c7cf2  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_NOR.dll
+c93f4d6ab43097a9a3484d3e7128d1c0b134ef2e83235fdb84d72c9f315e4a2b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_POL.dll
+c89f982e7f7ad8355aa0488e5245d371be6f066d7418edaa3a51b063e146a2fb  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_POR.dll
+950b07e7fa34e3e9093f30656566dfc9b1117592e0ac267195bea84e7650a2af  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_PTB.dll
+8de8bc0b08e6e6ab418a7edf1dc5e7fedc8005b47b6ccae2e3461e60431b53ab  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_RUS.dll
+df7408a991283b280ce3b1257947b188f2fff7ac1d0adb11bf66c9dba3d5ac1b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_SPA.dll
+d4836da91f099b4f2caeb8785384f89f256d86efd6fa22985e919d13ce5ce77f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_SWE.dll
+f0411d82922e14b269860be63851523ad16c581b6343f73f6874886b344546b7  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_THA.dll
+c3dacf10d4a3a0ff666d3026444f41746bd7a43fd37f201290c6932a9bd131c4  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_TUR.dll
+99d0535a4faaf1ed9ba719c286c77da28bf3b20d864959a7427397c6ef2c8f7a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_UK.dll
+784a301ad7ad976c78352b43eb82d5049fa901312785b3a22116d845673ebac6  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_US.dll
+c8d7f1a6356a4fc9cb699ceb0156f69b770e2fdda3c051ce7315d5befa00c49f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/QL800QL1100/res/brdvset_VIT.dll
+5650dea000dbe2b5cb3900cd94a30dd371d4c74cade9d15bab7e297a56298423  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/brdvset.exe
+1c4601ffe17e9d9d0d643e37bd73beef2faba499dfedb8a1751a05c4ea00d2e6  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/brdvset.ini
+4b4f55adb55ad221b54f4abdef03a29192adc8dc101fd3ab9634c93ae797d00e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_ARE.dll
+de99f753010da56ca046bf3eb19d4e4bf4ad74b7c494b74667db67f7d571d4b4  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_CHS.dll
+e1ff7dbdba5f02454c2973f2977dea8e12f329fa0c01f40224f785152b78e44c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_CHT.dll
+21a77350c1e1da1861831fce3709339ed8f63ac4b63e54249414a3dab0925184  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_CZE.dll
+e02e30f273b670bfcbf4c7b92e95d7884d7932c3fc2cf22927e22ef1c2035d1a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_DAN.dll
+75c3c3d044f8aa160c481a50acb0e84be94b5b0eab1f25bec0813c30cc493d5d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_DUT.dll
+0ff28fee22dc552eaceef43e0bb228e4f1ab9d26c345025ff4f732876bbe270e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_FIN.dll
+ed2996386677fada6962fb695df2069d7625d2fb5950fac6d41ef3c2be68de4f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_FRA.dll
+fd9de47ae14d6406abe4a56cdef7b051d3954384e578baec85af1b96416e8e4d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_GER.dll
+54a7556e929efbe99a0e7a5d9c7e81f043704506f09bf0d4bde889c738aac443  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_HUN.dll
+4b491e73793370cf4b9d1e2f2ebb64f88888144781e269b9dce2cc485a66ac45  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_ITA.dll
+b0839ffc69b7d49e2d1a70813b90c74ab57666a229d4bdfe2989165497621a21  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_JPN.dll
+2c81f14fa354b1f8154d813f418a4b91c83e96358f08c417fcf4394af72d3b53  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_KOR.dll
+c6511071c553b479d510e62ca24bb6df08a910dbe49ef11489b433ec6b082c8f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_NOR.dll
+70671f9fb6fc59763e03d627f4cf3c0f4ed8b3aa1320d02e513acc627d6af63a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_POL.dll
+f1704b2b490a5e70f81b047121922311a935593a65c89c2966b62b08e31cd2f8  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_POR.dll
+62107884f7283b78e48f7d4930f21a4745715b8f17c6319e0e8688e9e6d99cb3  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_PTB.dll
+954be9d9cad3c9e6dc932d71ea74176906e57c293b12b83f53731dcc2226b734  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_RUS.dll
+ef111ba36b041c382d6f117d05f26b3810963d80ff57dc7333b4551b0f926009  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_SPA.dll
+9ce3b4bad09b3920f9d2b89b8c28a7c40bcdd675df289b04ebae6450ab9c5b08  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_SWE.dll
+d5fd76e97d8aee4897b5df2f44a4ac60574ffff0f57ae9632bec76a7a95a726b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_THA.dll
+b09e999bb324ccdff1ec06cc8110bd129ea97915e58b4d04307cb5a626e5a285  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_TUR.dll
+db918185ac505c544946a37c49d88ebc2ccfcf08096d909bd0a269bb29b1b294  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_UK.dll
+acce21ded31aad2a3d136f808fced934fb8d05cf2246bcc8f8d4a6993c13a673  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_US.dll
+ad8d104c38490278a0b5787fa162e9d1b23e3754c226c4f2b30169ccdc84f7af  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ2000/res/brdvset_VIT.dll
+2e2909f870082d276e1e62e28fd02a0786ed1aefd524593a17348cf3e4c20543  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/brdvset.exe
+3222b130771506b3c92a765579125448d94e80fca5bc18fe8da154d834eaf7b5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/brdvset.ini
+27bc1e2e522f7c1ef9f5f15dc514e5153e6ca7d054f47e32d0976555b2912f2e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_ARE.dll
+bcc37b18d288ed348cddb4ff5671d54a382964f768c64f5392327052a2c8867c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_CHS.dll
+1d43f6479e412f836a5ba61bc772c58f95d9d98de42993eb153e873d35da9a28  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_CHT.dll
+5c3023de7feb6cfcbb59cc883d1c7f9980519307d80133ad18cf8558b283833c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_CZE.dll
+1a8e94204d93225a99811884508808e80782e04007149c42573dddfc42bc1c64  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_DAN.dll
+e88be14a56f42eed71fe27b113e983804978dc94d41082594ebb9ec8eb087a85  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_DUT.dll
+3a2e6962429cd35bf2400ef63fa4496961e25960e5975f45f58522ac8002390c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_FIN.dll
+05fc6ca9fdb720390272b5e383f19bad62c499d03b35505f2d7b033197f097e5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_FRA.dll
+a45d43a76d6110c9e6f439608b2e822238890b218b2e79307b6fc05bcf5981ba  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_GER.dll
+429049ecc565fb2490a18bacb5c96758eb434fdcef4749e19a1c0bc138c822cc  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_HUN.dll
+ec790a40edddfdd0718be6490eeb12ffa7de3a1ad8d26bcfcfe509646616ba34  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_ITA.dll
+77eb70c43fedddac3bbb3bb8b4e8fddaa3575bd65965f3deda22005c153436d2  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_JPN.dll
+c73b44bd7ecaa4c9afba8b65732ae54219257cca25d88328d98db30b292b9a97  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_KOR.dll
+c99bf5c1725f7caf59d39e8d0a2250daed1c40fec9ac9046d0b567d02b97fc81  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_NOR.dll
+fb6fabf93b29c55d07d854fef7e6c136866e9a764114cce93cc18ffa420e2505  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_POL.dll
+63f1abac77be5ec4f6188b562b5660010c0339ee281bda45d32feced7c560df0  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_POR.dll
+8b86581a1dfee48a9c7ca89d4447983200e3666a413bf1ba297b39950d5da62b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_PTB.dll
+02e3ebd3e35a7516ab0ea71920bafead9e152228d71bd0b16aaec76c1b9e5c2a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_RUS.dll
+93828341b9417cc1aefd2e1da1da5cdf373099f4d5bdcdb5a05d1cfb1d25ee2a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_SPA.dll
+d7127efc9de7137684f4e6698524bedf7f6a3fd6025215901013bb4aa32cc4cc  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_SWE.dll
+00c8a4837a005c698f87d4a6401f044f541fc76c8a5efde6c37d7d4a259305b8  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_THA.dll
+36198d2d2d1eb449a9e22e95a024f2ed9e4ea150503eb816a63b2e9b03033ec8  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_TUR.dll
+265ff1db14b883e65f15f1e32b57643ac44379da753f7241222db4d84e7da4e8  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_UK.dll
+8a4a928d6504f103bbd8f151b26a1ed717f7d3be94a19dfb9b97e6027eeac101  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_US.dll
+760c150eb6884f459ff1432d93d60486f0e8bdecbde8a48d15953c9149a27779  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4200/res/brdvset_VIT.dll
+abd77a81298017545eb2043812af33e451695a78ccb0234bb6bddee448c50b03  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/brdvset.exe
+ab95c0576d1d8401278901b663326155ab8955e776c736b4ea0635133156f72f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/brdvset.ini
+2e42b434bd0a811174ad8829bf222db3867a8db6de9c248120d5eea3e681ba4b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_ARE.dll
+1575d9fd0a09fae185fff92242aec65cb03d31f2a72a30a2506e4d620c68c839  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_CHS.dll
+dad7a7ebcb20c8540de65090fa04cd7b5e2c51e6ba260990d73c443682730a1c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_CHT.dll
+664e2284e210285f6fff995f30524fb92509eb614cfa6151f6f708ddec064a65  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_CZE.dll
+6554820051989db732f726ed50a6eaebe0d00ae29a17ea9bbfbc446b8a24e216  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_DAN.dll
+a6eab0a51d5cdb3ca799286a86c9ef80efdce6dd818e1075cbd2e214ae5a039a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_DUT.dll
+5c5bfdec84739e407ed72213f7daf413ad99d6a72d980ea1d26b2710de295c07  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_FIN.dll
+243afadea7f9365ae589bea48920d9b485bdec37b8e6a7786ab222e42bc71c75  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_FRA.dll
+b19dd081bf218fbcd82982c95166460ed200fe0d4ef14df76e734d588c6c6436  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_GER.dll
+19da4a10f2aad9b0f1614904d98d5066a62ab9ed35670d98c6034fbcd789df5f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_HUN.dll
+91fe7cb5067194231daf6b0a3b5cec9782f8e1169d732c448670d1be7dd0fc01  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_ITA.dll
+c63e6bb53f9eebe6f91c11b6dcc22b9361994b5a68e5fd3736c306660fc77e2c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_JPN.dll
+43be2d8dc021538811fe1b09414fde3974b31b2fa11b71abd6a4f422f7eb0e6d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_KOR.dll
+ebd8d40d79db941410b5c933c0c2c8991e101cd4c9a71c5c054283629550fa14  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_NOR.dll
+88aa4f32c9b1bc6fcffcfdde07313057af1e3dc7b5bc593cad62adcb984d1c02  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_POL.dll
+a772fda1fda12c500f1846d8b229333ef8a1836a83d849004571f3f5b9277e25  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_POR.dll
+72199de117658bee83134e21965d3f890812d761fa8fe1292d9159df93cb4842  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_PTB.dll
+1322a5e289d83dbf4c6172f13a6e18b121734de4cf43179e85bb3730f5aec6ce  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_RUS.dll
+a00710bdfd05559fd7f0d33c515a6383828c9979b0fd4dc1b4dffd249d891a10  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_SPA.dll
+eb3135a7d1f19da0cd65f935c7c6d4653a837a4d10229ec0f51542ab38f7a397  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_SWE.dll
+cb04f72fb224aa5d72e21d9f65dc8881b476914e20d761da32487190fb94fa5b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_THA.dll
+d3ad8ad41f281afa04bd7df00a74d99749705d2a904de81f89e79d898ec40f1e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_TUR.dll
+183831da4aa5d539542484c589873392ff305444dd823a289d1af7ef03313f33  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_UK.dll
+46463aeea25bc19ed9fdcef98cbe22d098583aef60ff6d5a19b8662d08194c43  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_US.dll
+2df0ec45d2bbdf786e89d3d1c531d6e6ddcc4fac5f177fd77877505235728453  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/RJ4235_4255/res/brdvset_VIT.dll
+ec2082a559e443970abf47314be8c1e16653e8bbc22fb42c4b724cd08628ec12  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/bst200ut.exe
+96da169f849cd4aa74f8814821579a618030ae3ae0f6f2ca1c83faa627cf6de8  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/bst200ut.ini
+5dc0a9546805c69412e814aa1609d8edba0aeb070c075201a2a16b56e331b0f2  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_CHS.dll
+a14547e565fe0b1caed0e78332e5f0cd9e041d7e4bccced103b4635c6b134b01  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_CZE.dll
+fde2349442112f41b43e4a21ac3df33b7d2731c4c69e9dad31ecc8526c2ab95e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_DAN.dll
+1abd7e65f8ed80d73ccd8373cb2d478176d2369dd7e72e150b748df24bb201fb  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_DUT.dll
+af2fc3de3b09f57ac9aca6a7c3b44df3e9c3bcf313e3623c6f3c949eb9c4de79  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_FIN.dll
+1a842656296cde8c6d1d523abfb898472aef78b2605e6ee795eb00d7f4d0f87b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_FRA.dll
+61994f3bccbe2da9e0f598a71e33fd80527e53fb8b70b5d61484568e33b61741  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_GER.dll
+ac6f2cdf342e2734adddab5ec8bfc132de43556187c4c9dbb7c303e7220f65a6  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_HUN.dll
+3166f6a334572b5402c4c29ee745c7fcd9088b25380ab4b85be80feb945e5531  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_ITA.dll
+3cb59c45bca39ee24e96e0d2c638a9c0c6e1a08f5b20760882679fc4ad8a5b70  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_JPN.dll
+5fa793350b068e4f68ef9e425b2eaf4223af94d002591bd23ea05d117e24fc07  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_NOR.dll
+f78c6d0abafc79dc802260eece1940e692296ff06a83c10e0f123c758bfc5ef6  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_POL.dll
+123f6ea96cc2bb999d9bed8d26733229aa1325cc88966ed3d872cebb6f3f6793  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_POR.dll
+9f23550799f369b3b244827c1392b3689929390f6f2574d86563451b32f1bae4  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_PTB.dll
+d1fc9d4f64ae192f7fe11a7455b874ded7ceaa80c71b830cc867fd01f26edbcb  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_SPA.dll
+81599bdc743adc71745e75e43047fd565f54d3d2960a52209db69f4fb85e371b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_SWE.dll
+6ed9e70be012cc77096179a5c1854eecb26c590aace656d022ecebe0191a614b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_UK.dll
+1f405905c8ec1b0662ae9d236e37a96799202ad7355bf9e45942c3d6d046cd96  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/DeviceSettings/TD2030A_2125_2135/res/bst200ut_US.dll
+86c0b4025746dc8b7f716721c3b5ec047945c98f374edb7bd7d28e85c34930eb  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_ARE.pdf
+a98bfeb3716cf33b65b5179c6d0ce4459596e51bc244321b4a71428d8322a1be  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_CHS.pdf
+f489e03e6f6ca08374a8c01fa42010e7fc07baf97a57f1a03c70f4a66ddd108d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_CHT.pdf
+91378aeb6bc41b10f3a3ef208a78a6358f50928331a3a3cd1f55cec7afd7f6fc  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_CZE.pdf
+a4608aadff041156662bae48d814c3836feac565daaf8c8157b1bd55414d40d2  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_DAN.pdf
+d7937897b412027675b2d5f54f24811bda9a73aaf19a38763d01aacf8489468b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_DUT.pdf
+41f34486d643f0c39487f58ee394c7cf73b023001fa7f7613103d03105929ccf  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_FIN.pdf
+2e4b82e87a27bbe78c80493497653334ad5f3fd65b2af0736cc004ba48d8019a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_FRA.pdf
+12513ca312a249b323f755c40a381923036053b9bd28e4fa3a13f1ce9dc0b1ef  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_GER.pdf
+09c98509c8d65d8efa2ff690c51676491114a89601cb17fe2c618a9eef96ea58  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_HEB.pdf
+eadc48f57b2d4785a041020f0264ddf1f2bfe698a9829feea046720e02cf93b3  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_HUN.pdf
+334844b8b6e18ffb8b6be399d394799b64c407beff243cb76336749f591caf53  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_ITA.pdf
+8a187bd63c51d106e8c062ac78e833f52aa6792e6a2dfcc86677991720859c3c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_JPN.pdf
+fef7dcf31693628cf9f9f148efb34d5acee0e4c21d17cdee7439a86321936c61  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_KOR.pdf
+84dc3b3260e21775b4362e73062890396579bfa97b9223345bddcfd7cd8e892a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_NOR.pdf
+025618939170b745ca1c78dce4f7e54ea87eb36d324355f90cfe500fd38674f9  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_POL.pdf
+657155683638459ec327f2986bba52b12353dff4b9a2071647564bbe0c103a88  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_POR.pdf
+9f80467fc5bad1790ba3b5a29f139750b01ebc21bd53b67fbbf54b4e8e2ebe30  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_PTB.pdf
+796efbe04293640db804264b1e0a3951c1165257e6ce7c650b74215fe7e982ee  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_RUS.pdf
+bc48101d807ff989b673196d69bb2073c7a7f3887fe48e04ce6274d157fba53d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_SPA.pdf
+50f33b46ecc844a31b12382566f23d278beac16cf0ca66c84ec826a324abc4f6  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_SWE.pdf
+a94471a0d0369c79f8dfcfcd25dedf33eb7edb54664892c430fdff0ef0a7c9fb  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_THA.pdf
+48dfd5185ceb36858a4b48a02d225a0842b3bd603b098b81040d984766c31f75  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_TUR.pdf
+3a38e01fae70ace73241758f1ba8556e9177e6f0c5df77dd1f0f3510b28f31c6  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_UK.pdf
+93ec79c78097bd0a892c88b399626b28408227571da9694e4afecfe1df8c0c08  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_US.pdf
+0b5b8b87c47b814885de258684cfa25b88afae7a9b52ed0468f5f47ce43fed32  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/Help/NetSetting_VIT.pdf
+cb37571af3bd15c60bcb2cf4991ae35777984339ff889027092f8f5a3c89452d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/ptfilo.dll
+4655041b8bc98b0926f01e83469ab2637607a6e4f1101acd8116d5a62e3e80e8  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/P-touch Template Settings.exe
+a88af5113bea7409cc3719740b7a160c55c19862e74fff4ed3f3619d368231fc  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_ARE.dll
+c4d77cc62cb54b494c721e999979026cc2f2561b108e64a17a6f04861f5753cd  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_CHS.dll
+25de4663b5f752345da3e79237033cd141f81e8937dacfda8d172704990ba7a0  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_CHT.dll
+c401f3aee4be61e0c3640642e5600b26702351aba12b9a184027f914aa439271  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_CZE.dll
+64e8b12a05b095b09f2f04e10eed277878468f75bc6d4471b8df10e18e77f361  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_DAN.dll
+a4e21192b3ef607534f7f20032726714508b99caa902fee816e2a1b8b5cffdd0  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_DUT.dll
+bee797cba05d8b38390dac4bc29dcf88ea35d192c0a92de3f208bdf7bca4d927  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_ENG.dll
+bad00eb53632f3c9f8fce08f330b9613b18d5de75f259399650b5f37817cfcf0  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_ENU.dll
+63b995dead096aec9dc6751c04155701ad4ee10b2e3122008402812014afbfe3  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_FIN.dll
+788e1f81525d418cfd873851fa45fb49617310fb9fdc4c5f5c679120363032f8  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_FRA.dll
+2a47791fb01ed6f706690576dda37961e400177e224771379b0980ae4418174a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_GER.dll
+c3ae8e361d9f19a111c5c7bbd6ed1b39d294b85d340ca57039ab20dd778f80ae  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_HEB.dll
+75d36a2b119d464cb0ac4402f98f0a1317b63592613615857829bde47466ef9f  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_HUN.dll
+0c3bac5ff8ecc8d77de3e1a2d2bc6b07b9d282162afce59fd9e3d17677a197e1  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_ITA.dll
+bae11bcd94bf4fa64371ad7137abafe13f9e418e1b670e2d4125160c3f336984  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_JPN.dll
+8c7f7fec3c2d7eb1ef00b20e800f7f13ad09523b42e9c17656675603e4037999  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_KOR.dll
+9ce708975928864b014d6896fefd3674661c981bf3ad643cc0e1ccc5df09e9b4  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_NOR.dll
+34b628dd909b0ae48249fe58a0c182069066e405f4721e1aee2d3830e9a3a44d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_POL.dll
+f0ee15b7627032bcb29a1ab8aacfcc0b7b41e5a66e40428eb3aec67009bf4a15  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_POR.dll
+559176dfbe24b5192c72fa62da43c74bc63e9bd5a9b25f5a1500fce988b49324  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_PTB.dll
+de87abcd7da576b676d89ee3c6230e2fa4ae7ee7900746dc40eadf75cb1467c5  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_RUS.dll
+7bbbe78ea22f7a6435b219000b29b3c8ecc498c81d9eda83a1f8b33bd54376bd  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_SPA.dll
+774e1a84d332dec7a992c48093b9aa5d0af708f96ea7e77b7880b89074c6849b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_SWE.dll
+53003dfb89c069e25cfce726563d55f89416c48001ec4c3ebb5dc01363423f0d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_THA.dll
+93da9773a2298a1baa44e56ec19e274da126c461c543fac9fd6364a66a00579a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_TUR.dll
+f8fb7edcda708e1651a59621cf8b7ffd9d457b7d87dbf001b3bbd9dbe615b9e0  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brnetres_VIT.dll
+6e87f12c40f248b8d5a6b0c991888ab2f8f0a71a9faebe2226d6c1ccaedf0e5d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_ARE.dll
+b6e1c703d29530bdb1d0060d3c20b87b10f3eb39fbc39b9f94f6aaf96609fddf  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_CHS.dll
+9b1de9dda382c0a761ae53fb87e361c870ebe7c9eaa95648b5d45eb6ce5d83cf  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_CHT.dll
+6a01139b6913bb361ec8adaba742513f1d89dae331e46b767b05f47141ad4e42  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_CZE.dll
+db24ce1db88ebb8225c164b5b2f0d2dcb3e4da726d2e756cb1e8e4464dddab52  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_DAN.dll
+d1effd2b57ad23bee78511666c8ab7fd369d17b14bc1e0da644f3ea23fbd5a9a  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_DUT.dll
+1a9891bfc147dae273edde0b5c54bf04961f5cb45b2ee31bb6936a8b79ada86c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_ENG.dll
+947303d029d2e5b3afe9a82fc1ed33e26c5776f03c7c261de4bf11313a260d39  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_ENU.dll
+5405517dd3139b0e64c450394f47511d00ee00215bfa9b13758babefe86cc35b  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_FIN.dll
+6c1a4b6bdeb5a4b58e942e22fd2da96779cf256f043970b3b265da9f43063479  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_FRA.dll
+958bdaeed758f75b6773318140d2331fd7dfe6a4e9603d13d4d5f7e54f22b641  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_GER.dll
+a450f4916a3f117d4d9b0b7b01ebc17db627942e4328f542c024444d0dcf57b4  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_HEB.dll
+307ae18388c478a2166bd931e3ecd1d548d503481d86819b4210cc17e2efd878  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_HUN.dll
+7e248b5f0a144745349a3075dffc059f03fd6b34319ef60ea70b63089fe04234  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_ITA.dll
+fccde9487c92b81aa168a85ab03f433efc4c730f1745774a1670ad71601238ed  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_JPN.dll
+9d653fa5de4bc72f9cb2e1d52522d41c0ef635c7d3c611d217623059f83f3ea6  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_KOR.dll
+5d9ada02d61148ac086d323a70cac1091e869e11070713efe9673f3fbb688d4c  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_NOR.dll
+debd924cbb00034cea8dc855dc39c996098cad7c87de8e7d790ca0e806310bcd  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_POL.dll
+b7c87d22cb68b7c7bc4e0b11c72b9061169d510f4f0bf5d5b7e9fa3ab29ca5ad  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_POR.dll
+c9e1f3d984321bcc23b6c9e7c401b9e571ede408af3f3fcfcc7c7172be50b574  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_PTB.dll
+8dde661625f8eff08092e3907f551a3fde390d7d9200858f97052e6cc771c9dc  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_RUS.dll
+fc5af076e52be094aa0cd039697721bba4bce7c3ea55a23977122696f9355e92  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_SPA.dll
+caaf03604418a3ed9fc604a86e621460c13f176c48dbbd4955d52bbee41c2bc9  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_SWE.dll
+3ae3d480bcc0f72fd02d55891cea4c9e32679784dfb13be3a7a31a90cb0c194d  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_THA.dll
+291da3918b1de6ee38a395ffacc1a7949bc879bf1bc10ba19fb63fa5f502229e  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_TUR.dll
+2b43ea3e29bf9aece46bb045db24cafaf8cfaba1db72fec915aba9a40d1d69fb  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/brutilres_VIT.dll
+d7630622dd64a33ea798c852410a98bb8fb22f7c20aea9c2012a68c583e091c9  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/PtsRes_ENU.dll
+2df62ac3a094b54d2b4cd99c72d67341a0330795c4c338eecafbc78c7455a199  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/res/PtsRes_JPN.dll
+aa9cafc67b7b58b61e5e5c9df0ec70a48093ae3f8f3edb5306de8e53b55889e2  reference/artifacts/printer-setting-tool-1.6.0142/Printer Setting Tool/TrCnv.dll
+68d0d67f1d21a58a9a42f0cc4329ee7202b2dfc0518894cc8636fda064c00fb0  reference/artifacts/ptouch-editor-6.12.10/6/Accessibility.dll
+7d04c459465deb364b73e95237e54bd1a9e83abfd0bfa138cac8c8ae06dd2db9  reference/artifacts/ptouch-editor-6.12.10/6/BFirstDotNet.dll
+6bef4d3b4520d9f9b665d033b3423aeb3656888d722e04831c42c879c4c24d00  reference/artifacts/ptouch-editor-6.12.10/6/brBltcom.dll
+7ecdfe1838bfa149dcb168682fd656b4038990c550ab21ae05704d670c35c726  reference/artifacts/ptouch-editor-6.12.10/6/BroSNMP.dll
+661b38c7497eb7df1949a914870c1fa77a4d56ecd8ee3353af327fd7f315fcf9  reference/artifacts/ptouch-editor-6.12.10/6/Brpsnet.dll
+6ac095f9982d4839c3a26a9003f7e07f7ac40e7fb8917b9bfed394ae397deb3d  reference/artifacts/ptouch-editor-6.12.10/6/CalcBinding.dll
+ad3b993410865f3bb56d9dd32dba30f2608f346b889ae87b5637c2118793a79d  reference/artifacts/ptouch-editor-6.12.10/6/clretwrc.dll
+176e8172ee81964a576ab643c2cf6ef8fbfd5c4729e974324914f7b8821e1225  reference/artifacts/ptouch-editor-6.12.10/6/clrgc.dll
+33a99255218f83fb8037380604f0a4d05a70bde5f4d8aa7180616fd759787376  reference/artifacts/ptouch-editor-6.12.10/6/clrjit.dll
+a2b04c69868b08a600518ebbad1661d38de4dd0e0a8e638c22d4641d410e50b1  reference/artifacts/ptouch-editor-6.12.10/6/concrt140.dll
+3eceee9042e90da4a433007729778f72516f762599f7920839c751e180a47cb0  reference/artifacts/ptouch-editor-6.12.10/6/ControlzEx.dll
+44e0380f1ad3591c22dca08d53bcd291a298e160f3a412edc61a0b2c1b0ed75e  reference/artifacts/ptouch-editor-6.12.10/6/coreclr.dll
+99a8c79f3e0d8af5de13b83a7d699a5998dfde012339cc3a2ad12b76f76bd6d7  reference/artifacts/ptouch-editor-6.12.10/6/createdump.exe
+4fbabbed1950f753d580a96ece9de4393a082fbd3b41342c7adb4d7de24db1aa  reference/artifacts/ptouch-editor-6.12.10/6/cs/Microsoft.VisualBasic.Forms.resources.dll
+14c3108d2bc526e0400ba3a9fdb55c3eec7323b5dc3dad28436ba770d221f445  reference/artifacts/ptouch-editor-6.12.10/6/cs/PresentationCore.resources.dll
+68a3dc5b8d9c1154896087d11ea8b5b7032bbf33040a6276d747ae16abf6ed7a  reference/artifacts/ptouch-editor-6.12.10/6/cs/PresentationFramework.resources.dll
+04bc224b1f762767fe0456e50521b33162a74cb724397c4c6511935db4b1ca74  reference/artifacts/ptouch-editor-6.12.10/6/cs/PresentationUI.resources.dll
+6203d26344c04958f44b498c92f86006000b803b890d7433f64b608b3514f503  reference/artifacts/ptouch-editor-6.12.10/6/cs/PtouchEditor6.Wpf.resources.dll
+587cc8c30bc3036a3bd7c54ad7680467b4f253143a6a802398ce1d0ed3f2355e  reference/artifacts/ptouch-editor-6.12.10/6/cs/ReachFramework.resources.dll
+e899d81eaa39a0ff9ddea5f948af308d6e64dbef699cbd6a6b71f18caef63915  reference/artifacts/ptouch-editor-6.12.10/6/cs/System.Windows.Controls.Ribbon.resources.dll
+7add8602042fae316437e4504836faea08789f9e17fd7c34878f10422f05a994  reference/artifacts/ptouch-editor-6.12.10/6/cs/System.Windows.Forms.Design.resources.dll
+d4bde66f0b65f168742ce16330bc065c0616368dba1dbb01c07964d0790399ce  reference/artifacts/ptouch-editor-6.12.10/6/cs/System.Windows.Forms.Primitives.resources.dll
+4e1aa41d66c0ea5e54f7ffc182b2019c7046a6dd2a6ac6c87cd3428644b04ee8  reference/artifacts/ptouch-editor-6.12.10/6/cs/System.Windows.Forms.resources.dll
+e8bdc2246784a7532083a601cef11c1ca9f8901bff41db0cb318d0d1983abc05  reference/artifacts/ptouch-editor-6.12.10/6/cs/System.Windows.Input.Manipulations.resources.dll
+0f23b430150c274117787e587611b98bd1a7c167aed7e7538cffd4abcef544e9  reference/artifacts/ptouch-editor-6.12.10/6/cs/System.Xaml.resources.dll
+0e0e9f87ce96c0c5af61f296ab86a7d5e44572c04276fd29a0f5108379a091a3  reference/artifacts/ptouch-editor-6.12.10/6/cs/UIAutomationClient.resources.dll
+b1f7abad42eb0653a1e71db6c7885f6250285ff1e3a296f04557a57700d97e81  reference/artifacts/ptouch-editor-6.12.10/6/cs/UIAutomationClientSideProviders.resources.dll
+5303a5278b1e9e8de0992aea5556a5624f0c55cb632fe8dc6afe618c27ae4199  reference/artifacts/ptouch-editor-6.12.10/6/cs/UIAutomationProvider.resources.dll
+4252e32d42010abfbbbb0bc54d1f252a4d0758e8a5e5c8ed850d9b40710312b4  reference/artifacts/ptouch-editor-6.12.10/6/cs/UIAutomationTypes.resources.dll
+63eef4cea056b7ec953cc06907238c3ab6fd7d23e283130caa398c367d0732cc  reference/artifacts/ptouch-editor-6.12.10/6/cs/WindowsBase.resources.dll
+c0f826640da149f5d6e4dc89168c8ce080855fc1261ca608ec5ae0755a72157a  reference/artifacts/ptouch-editor-6.12.10/6/cs/WindowsFormsIntegration.resources.dll
+b6bb03086bf06f348a21618e5d5767aba764d07a40a2872be486b8a70d9aa1eb  reference/artifacts/ptouch-editor-6.12.10/6/D3DCompiler_47_cor3.dll
+1b4e0e6cb05e7e7409283eed44545e40d1f855d99194d7f8ea37ef394d02eb6a  reference/artifacts/ptouch-editor-6.12.10/6/da/PtouchEditor6.Wpf.resources.dll
+6dbf23023dbe304ddcd6c4037f652d21ad722f75fd0711bb1ee69f209283a23b  reference/artifacts/ptouch-editor-6.12.10/6/de/MahApps.Metro.resources.dll
+31cbbddc3c784b4f03765f952a88dba0eda5c969ee5b1ad435a1efe1e8ba8258  reference/artifacts/ptouch-editor-6.12.10/6/de/Microsoft.VisualBasic.Forms.resources.dll
+4b20ba3a37ea988b01fe36718d960bc2fc2aebe588b797d058ec8cc266097ebe  reference/artifacts/ptouch-editor-6.12.10/6/de/PresentationCore.resources.dll
+877637c80d08dcab41a95d157005b041341c61251a268988c26439982f40273e  reference/artifacts/ptouch-editor-6.12.10/6/de/PresentationFramework.resources.dll
+e6750f6433cbd94d973f93ab46d121a9cb62fe9ec0fa21bf2b85a214335200ad  reference/artifacts/ptouch-editor-6.12.10/6/de/PresentationUI.resources.dll
+0e444defc47c2de9ca4cec732763c6e1d1da772ff01c915cb366835d9228a267  reference/artifacts/ptouch-editor-6.12.10/6/de/PtouchEditor6.Wpf.resources.dll
+9f630a18fccd86116c56cf6ffb1ecd4dfeb3a0b5869b12277f376d82ca981756  reference/artifacts/ptouch-editor-6.12.10/6/de/ReachFramework.resources.dll
+bf1f828b86cfeea298dfe10baceaba42b47b689ce75852d970cb37fcd967e32c  reference/artifacts/ptouch-editor-6.12.10/6/de/System.Windows.Controls.Ribbon.resources.dll
+c35337785a9d773684b88134d7985d245069173803ea411b5a2942d7820acbcf  reference/artifacts/ptouch-editor-6.12.10/6/de/System.Windows.Forms.Design.resources.dll
+6fd07b56011fb2e9781cba2962aaffe41fe7bd7702ef592642aabaea2c457906  reference/artifacts/ptouch-editor-6.12.10/6/de/System.Windows.Forms.Primitives.resources.dll
+c813019d3d85da868593ff7cbd7c9669de753bbeea3bbf9c74a396989c4f1abe  reference/artifacts/ptouch-editor-6.12.10/6/de/System.Windows.Forms.resources.dll
+3373762a429159303c989d60d6d11346febfc7e47e19f3310e5ed64f336eee7f  reference/artifacts/ptouch-editor-6.12.10/6/de/System.Windows.Input.Manipulations.resources.dll
+01c9f54773ed2df2149da98af0e02ad7e4b05fad8a6c21821f5ebb4f0d597a6d  reference/artifacts/ptouch-editor-6.12.10/6/de/System.Xaml.resources.dll
+301fb1d1343b9e0292508342a0e5799b1c621bb2bf8c433c84880da2e2230a32  reference/artifacts/ptouch-editor-6.12.10/6/de/UIAutomationClient.resources.dll
+a1899b93fd95a35ec8b46b57c7efd34a2abe97da9c0a94a75965e1b86e453286  reference/artifacts/ptouch-editor-6.12.10/6/de/UIAutomationClientSideProviders.resources.dll
+185a77238f902e64cb770327583ffb03fa8efc40e1d4ada613c4cefaa06c3e91  reference/artifacts/ptouch-editor-6.12.10/6/de/UIAutomationProvider.resources.dll
+b24e284d0cd8c3d4f8a86ca8716558b10b1123490f93c7ea174cb67c8338d3d1  reference/artifacts/ptouch-editor-6.12.10/6/de/UIAutomationTypes.resources.dll
+07a6b9c398b0dbf8269e35af88c16ff4423667ac5d2c34bb204d2457bfe08c64  reference/artifacts/ptouch-editor-6.12.10/6/de/WindowsBase.resources.dll
+8e9d719128198affce2b8f96444771c51c61f62b8c646a443f8d6857dac8aae0  reference/artifacts/ptouch-editor-6.12.10/6/de/WindowsFormsIntegration.resources.dll
+42e9a820ae12406e80ce9c41ae300ad9be1442a75ef852a7748b0ee7ee0a7e38  reference/artifacts/ptouch-editor-6.12.10/6/DirectWriteForwarder.dll
+c0d771a04369e470a005f3832cf69ba1f3611f1e644b480d528c6d46788ae996  reference/artifacts/ptouch-editor-6.12.10/6/DryIoc.dll
+fa2b7ace43555e7d1a2877e1403b3abdd280888be2da60488e7098fb3efff865  reference/artifacts/ptouch-editor-6.12.10/6/DryIoc.Microsoft.DependencyInjection.dll
+90cba34dc0fc2c59279ddd20becaa0e8b436049e4856b2376ec0b4c00217a792  reference/artifacts/ptouch-editor-6.12.10/6/DryIoc.Microsoft.DependencyInjection.Extension.dll
+eafe57805d6d1906cb68fa401f5852b56264ee906ce6e941deaa17bcb841d4bb  reference/artifacts/ptouch-editor-6.12.10/6/DynamicExpresso.Core.dll
+763ba1ea3a9aadc8e5d8a2bf2f2fd5dfd3946195cebc79ae702be4affb45a747  reference/artifacts/ptouch-editor-6.12.10/6/en-GB/PtouchEditor6.Wpf.resources.dll
+250e20f7c2596bf4f9e86abe4c9b03e1476fa40cfdcb86493035b1721e8cf91a  reference/artifacts/ptouch-editor-6.12.10/6/es/Microsoft.VisualBasic.Forms.resources.dll
+0c0dc2c5ca7f9d32b8b08951a631c4644182ff3d088ea04315e69deefe5f137d  reference/artifacts/ptouch-editor-6.12.10/6/es/PresentationCore.resources.dll
+6770ac0472f7775200ee944654520afa76134e62146b6bbeebc4165218d69f82  reference/artifacts/ptouch-editor-6.12.10/6/es/PresentationFramework.resources.dll
+1607083ec49d2c0d511790b4c4ff45588e5e19a98cc35850593905cd11b72b17  reference/artifacts/ptouch-editor-6.12.10/6/es/PresentationUI.resources.dll
+c496cd65af7bec4106270ac97eb25286b7cc94d6c81ff3f3f9ec33608f081a1a  reference/artifacts/ptouch-editor-6.12.10/6/es/PtouchEditor6.Wpf.resources.dll
+23410d6e93b2f97a7f36ad585be9f1648451c4ced75e6926dd8e3f440f45a880  reference/artifacts/ptouch-editor-6.12.10/6/es/ReachFramework.resources.dll
+1c3ca9ddb39532d125b7b2b0a92c00787088ba8a39a234ed1a80fb602236b518  reference/artifacts/ptouch-editor-6.12.10/6/es/System.Windows.Controls.Ribbon.resources.dll
+95427da2720fd22c720afd948f8fbbed60de276adea39b080979f2a477d1d832  reference/artifacts/ptouch-editor-6.12.10/6/es/System.Windows.Forms.Design.resources.dll
+7440d7fa727fa8705c4e2ce0af8a775054ac241a45b618ce905afed385a25669  reference/artifacts/ptouch-editor-6.12.10/6/es/System.Windows.Forms.Primitives.resources.dll
+711707b4d199359bf0b4ef98cf386a6c97126b71b37b8d5e681d3ace615e69f6  reference/artifacts/ptouch-editor-6.12.10/6/es/System.Windows.Forms.resources.dll
+c37cd178ca79a9430fd9a5412d982dd69aaf7a2bce5603f9a160755b4dec6037  reference/artifacts/ptouch-editor-6.12.10/6/es/System.Windows.Input.Manipulations.resources.dll
+e96a0bca9b7ceeeb937ac51906937c41365743ddbed8c4e4e31e4405aae538a3  reference/artifacts/ptouch-editor-6.12.10/6/es/System.Xaml.resources.dll
+e51a8e246586e2a253313230be08c92fee47ee8b420b215997bd45315fee53f0  reference/artifacts/ptouch-editor-6.12.10/6/es/UIAutomationClient.resources.dll
+168e135fcd3b7f59e0fdc06995a0ca17ce6b5ccf2a74eae503f60db91a4ba70d  reference/artifacts/ptouch-editor-6.12.10/6/es/UIAutomationClientSideProviders.resources.dll
+6aed8e55c85276fc1d8fb383fdc542bddf63e9322a7e66da9df21154f107df93  reference/artifacts/ptouch-editor-6.12.10/6/es/UIAutomationProvider.resources.dll
+84997227998daa692ed6c9db5d8456609dc221b55e3b99e3a979987e229f663b  reference/artifacts/ptouch-editor-6.12.10/6/es/UIAutomationTypes.resources.dll
+8d911c89f3882b07c36cac2044d3b0b8fc45886be73833e3af274057df630f7d  reference/artifacts/ptouch-editor-6.12.10/6/es/WindowsBase.resources.dll
+7a4eab3272c2adc879d72860b42d39d73195009510fd802352b43629a785f24c  reference/artifacts/ptouch-editor-6.12.10/6/es/WindowsFormsIntegration.resources.dll
+6f035e1ca24cceae9f8c600d3e38aed4c95f5a18a435e3bd3c3bc81d08acec23  reference/artifacts/ptouch-editor-6.12.10/6/fi/PtouchEditor6.Wpf.resources.dll
+9b7777b61219382d22c3e4a4c6986366d660ee5c7b8062af719dfeef595268cf  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/ardccstmoritagbstd_bd.otf
+81dd62d0b3c1b639bb1abf973dc3a7c6310487e88de7fe72610d50d8e6ffedac  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/ardcxiangjiaorenb5std_bd.otf
+060fc24370ad01c19d151fe5ffbf5436d144334b95a10c1fdcafd635206ae565  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/artianniugb_bd.otf
+cd9d6df571c4a7f5a755fdbfe9c9567532decb49c48b36ce6af9e4428a4614f0  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/arudjingxiheie1g30_bd.otf
+4475059e6546d57ebf95527182fbcc98096e2ea23ce4efe80cf95fff0d954600  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/AxisBrotherBasicProN-B.otf
+d0248603d223cc59722429247004250c6d7eda042f243ec747390f15efa049bf  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/AxisBrotherBasicProN-M.otf
+f886ef2bc07c5457751b4efa8915244f9a1a90425646a6ec7cc79979997ee859  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/AxisBrotherCondProN-R.otf
+6931b32e570171fd97170fe87cb4da472ede7230acac24d3b3b4903fef2667e1  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/BRFACEJ1.TTF
+01a5a26a99be6b724e5ab82ae01f74e9b5197ba3ce843479cd112207c246baf5  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/BRFACEJ2.TTF
+167ece75817e2cd58382f455e188d9789bbd3b26b19e4eef42e88c127c06ca56  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/BRFACEJ3.TTF
+216bab2ecefc45bd377157b345c7c00e3dd0713ccbf63a03340c5798a8ded3eb  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/BRFACEJ4.TTF
+22282ada7a6fb767d8cb96e978f44f631c8d8b11956028b0843f2384b936bf9b  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/BROCBRT0.TTF
+9134eb42967722274e08d7191e6158ac3ec54ba89f2381ccfbf6fe33c61c02f5  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/BROCRB.FON
+0668285a640b157871458adc82c2e4a1140ad116e5e70674ccb42e16e4838793  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/c041014t2_2.ttf
+f8db180cc6ac7aa8f8a68b4ac797e789f66b4bdec4285201f2e511ae5478f7bd  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/c093000ib_4.ttf
+8045848b95dbedf28ed05a9f21a487c2c13c5b795a979fa327197187057f4c53  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/d013013d.ttf
+3245a96505faba764482b9323a2a2cf5c7d9e4e2083387baca1a65ccadce1a40  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/f005000d_2.ttf
+3d000d9eca37fbe26b90b9963f6baa8fb77063fa78e2b381876cca33d971b379  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/f011003t_2.ttf
+88292183ff9351ee0b7480fbd44a9eb6d425712de7d87ab913c2c82264ff74f7  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/i014003t_2.ttf
+5eacda60d683c0f04591aa9ab505e5bb9f45528a18fd7afd3900100c89b59c93  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/PTRK-MM.otf
+f823c0a75a92c316b4ca851cde097a9ef4eef9962565373cc166908bb201b645  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/PTRoundToday-B.otf
+2258c9c3cf0416bc7feae3b3ee2cabcf582be32a7196e6876cd0ae3b6a268f13  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/SDCoffeenDonutTTF-bMd 2.ttf
+8444cb974f5b56ddd79d0e8a6ff2cf995818a19187f1199ca4f12e10f4646a7f  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/TBGoPro-Bold.otf
+cee7618417d664607edf4b9ef005cca6c0cde2652dad5bbe1e0bd8d7b93e9efb  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/TBGoPro-Regular.otf
+beddff15bfe160fb4b554b02e1872fdf69052f650195dce95687a8a2cb96e63b  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/TBGoStd-SuperLight.otf
+afc22d88ec7bef4fbf49ad53bf4fbff7363642e20abc7befda46c9bd3b044e10  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/TBRGoPro-SuperLight.otf
+b33253bc4bb7fe0ed8c0edf2901504eba1fcc5f5b2f34d8bfbffa110e0b5b9f2  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/TBYMinStd-Heavy.otf
+bcfd6da8c2da30ae90e5a399fb0bef72d4edd1f4984b6e5848934297cfc7ce9f  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/TBYMinStd-Medium.otf
+b92651dbb0cc32e5ebcf74773f1fd07838af8d83d52f9a33d3eae64a5cd612cc  reference/artifacts/ptouch-editor-6.12.10/6/Fonts/TRoShinKaiStd-Md.otf
+9b87fa460d3cb40dcb7ea95582cb503d6d331e7fac4542e1b14bee0d00e113c9  reference/artifacts/ptouch-editor-6.12.10/6/fr/Microsoft.VisualBasic.Forms.resources.dll
+72e6733d2fc28f001b72531320959049acf4d246073c29c8d3cc295bf309b58c  reference/artifacts/ptouch-editor-6.12.10/6/fr/PresentationCore.resources.dll
+d4eb912c56090cb46070913cb108db700d546c60b5c649b96f662f36966839af  reference/artifacts/ptouch-editor-6.12.10/6/fr/PresentationFramework.resources.dll
+c75a1086e0c31036fc555d2757aebcd89e9bfe6ac570f72c0872981780a6e1fe  reference/artifacts/ptouch-editor-6.12.10/6/fr/PresentationUI.resources.dll
+67b5b5e660ae441f3e50d56b06a63626ae2da22f229b354bc79fe36ca57d492d  reference/artifacts/ptouch-editor-6.12.10/6/fr/PtouchEditor6.Wpf.resources.dll
+ce89382c61cb0894e582c656c157cb0d2d5f70ba18e74ac3e54605c6ac447efa  reference/artifacts/ptouch-editor-6.12.10/6/fr/ReachFramework.resources.dll
+cad9db1deb059986d853849c9726ddd339246647ea1195d00d021f3256ad816d  reference/artifacts/ptouch-editor-6.12.10/6/fr/System.Windows.Controls.Ribbon.resources.dll
+b53f680d91944e97da491597d1b85483ff7d7900660d5585ca2fc206aaea6a32  reference/artifacts/ptouch-editor-6.12.10/6/fr/System.Windows.Forms.Design.resources.dll
+925149e388a81dc00966c392c6dda3b147f15da7d40029f9d0504b3cee00b223  reference/artifacts/ptouch-editor-6.12.10/6/fr/System.Windows.Forms.Primitives.resources.dll
+4f6d036b013a68e9a3e1bc8c4da0ca5b512877c4504c22ce8b627ba3f186b461  reference/artifacts/ptouch-editor-6.12.10/6/fr/System.Windows.Forms.resources.dll
+e1c4748242e6770628dc78cafc4cf1010a5b1251fec5635bf578bf40b100b2c6  reference/artifacts/ptouch-editor-6.12.10/6/fr/System.Windows.Input.Manipulations.resources.dll
+0faf632f4776812c089c3881f7eb11ad2f861a90d994519e7cc0498a055813f0  reference/artifacts/ptouch-editor-6.12.10/6/fr/System.Xaml.resources.dll
+11439bc7e502cdf57d1a7212462afaa98c5d10239b6103c1876a80aafef7f072  reference/artifacts/ptouch-editor-6.12.10/6/fr/UIAutomationClient.resources.dll
+673faab371df4d8c49cbfaefdd3d4bdd490c8ed58bcd6d3ed43d26609e44910c  reference/artifacts/ptouch-editor-6.12.10/6/fr/UIAutomationClientSideProviders.resources.dll
+e7c7078b78ac932870bff3ef7f8dbd2a3fe655d468af534dd9f31b4a68aabc32  reference/artifacts/ptouch-editor-6.12.10/6/fr/UIAutomationProvider.resources.dll
+bc92d1c0a4f1ea3c287683f22465b577e50ff51e97794f35ce0fa579b3ab3e27  reference/artifacts/ptouch-editor-6.12.10/6/fr/UIAutomationTypes.resources.dll
+f5216685ca5c8e656837881df444f63bbc27e4d108e5f00e7b05974b4390268f  reference/artifacts/ptouch-editor-6.12.10/6/fr/WindowsBase.resources.dll
+161e4f30a6399757c517bca97a163766cf77b8fc6031f90db88fb419f31125d6  reference/artifacts/ptouch-editor-6.12.10/6/fr/WindowsFormsIntegration.resources.dll
+46fb59878922b36c28f04638fd337bae60fd0ffc477c5b7c2fe24e19276ac094  reference/artifacts/ptouch-editor-6.12.10/6/hostfxr.dll
+1eea1f8dd70d51717663f50ced8f1a64b4ed396ff007e247213e58883a9a49e7  reference/artifacts/ptouch-editor-6.12.10/6/hostpolicy.dll
+a2c0f0c2731565059d9be07b87d652f3deb5631d7460e0e351ba0340f75053e9  reference/artifacts/ptouch-editor-6.12.10/6/hu/PtouchEditor6.Wpf.resources.dll
+3e92a4313321466acd41374b81d3bc72ae90b4235946bb55f7fe5ca2815bcc53  reference/artifacts/ptouch-editor-6.12.10/6/Ijwhost.dll
+93167d179ad8da0a36ed35e43bcb89d567f049b760622dee146836ec4e64ced8  reference/artifacts/ptouch-editor-6.12.10/6/it/Microsoft.VisualBasic.Forms.resources.dll
+4653b68c618129f823e3d23ed8dc5f5033d7664327d8b5cd2e444f85ab7c0d93  reference/artifacts/ptouch-editor-6.12.10/6/it/PresentationCore.resources.dll
+fb7c96194983ac900f7a4a47f467d0676cdbd87496246b59e099d5d8525ec994  reference/artifacts/ptouch-editor-6.12.10/6/it/PresentationFramework.resources.dll
+0416a5c44376b9dc99a86b9269fb4427e8310c79dfa84fbf8dbc0db425d534f9  reference/artifacts/ptouch-editor-6.12.10/6/it/PresentationUI.resources.dll
+ee26750d0ac0ce73ebf2defc484d70d52c9f9c308e5387176c9654f9fc44ab37  reference/artifacts/ptouch-editor-6.12.10/6/it/PtouchEditor6.Wpf.resources.dll
+92c282551d0819696952cd98a5cf0c4960d9de8f33ddb0ec50ff701aa6515101  reference/artifacts/ptouch-editor-6.12.10/6/it/ReachFramework.resources.dll
+f75ec05c1dcf3e2704b76c5313bfeb8390a0dc0935a9552e2787d03eafc328b1  reference/artifacts/ptouch-editor-6.12.10/6/it/System.Windows.Controls.Ribbon.resources.dll
+76fe9a38b51c348408c71f9aa561d54c6560874b2f21bed11117080cd1e25fc9  reference/artifacts/ptouch-editor-6.12.10/6/it/System.Windows.Forms.Design.resources.dll
+da7b3503ab138c719a4a9e520d0a88bee79c244950ada951b582e77cfc3b00f5  reference/artifacts/ptouch-editor-6.12.10/6/it/System.Windows.Forms.Primitives.resources.dll
+9670b9deb9eb6f5d617631bc135c3bc422998d803eff5a3ac645b79be36c5ab1  reference/artifacts/ptouch-editor-6.12.10/6/it/System.Windows.Forms.resources.dll
+23f9806c3170c8f9e17818be01ed32f6d22216814ccfe965c29a713889ba7124  reference/artifacts/ptouch-editor-6.12.10/6/it/System.Windows.Input.Manipulations.resources.dll
+1f02408a4e08970c9157c7b79198510b4921b2a077077c711871b4e050993dec  reference/artifacts/ptouch-editor-6.12.10/6/it/System.Xaml.resources.dll
+3bf7d2237fab71c5eb62fec2ba62aa88a2c2d20a5d01435bb1c7bb0c55f4cff3  reference/artifacts/ptouch-editor-6.12.10/6/it/UIAutomationClient.resources.dll
+00b3584f38d8f7ebc6f513c30f0e44948a8b9f210f11717db92c2b43e0b8f8a4  reference/artifacts/ptouch-editor-6.12.10/6/it/UIAutomationClientSideProviders.resources.dll
+dafd341e16c60fb8a7988fbaef2aa610d935ba311a7ae6a5ba88921b469df293  reference/artifacts/ptouch-editor-6.12.10/6/it/UIAutomationProvider.resources.dll
+8fa7a13f9193c0ceb36b338d175d62f6dad543aa7ee1a89ba10da2f09179a39a  reference/artifacts/ptouch-editor-6.12.10/6/it/UIAutomationTypes.resources.dll
+56a138d131d2151af56237db84160d40afaffa957a2b09a245d1f79a1038874f  reference/artifacts/ptouch-editor-6.12.10/6/it/WindowsBase.resources.dll
+20f9d1e8271cb12d71b06881a2551734d402665786b1f4b27a8ea2042d2c4de3  reference/artifacts/ptouch-editor-6.12.10/6/it/WindowsFormsIntegration.resources.dll
+f373ae9be9f7f404f3d54db2d21ec767ee19f6cad85bad20b8babd43381bb49b  reference/artifacts/ptouch-editor-6.12.10/6/ja/Microsoft.VisualBasic.Forms.resources.dll
+eedd78467668fd13e94b93ca35c311aac21e57a471048b61b94ba18f998bc2c5  reference/artifacts/ptouch-editor-6.12.10/6/ja/PresentationCore.resources.dll
+937e738280029b091ab620b5df7e0f3729930defcd7115e7677673333624788c  reference/artifacts/ptouch-editor-6.12.10/6/ja/PresentationFramework.resources.dll
+c9f8c494f20114cefd6e85faebd1a90cad3bdfd76103681925959894742e6f6e  reference/artifacts/ptouch-editor-6.12.10/6/ja/PresentationUI.resources.dll
+08e345e48e23fe83ff40ce5e8dcb8169728eb3c33bb18f837061117ef53f7545  reference/artifacts/ptouch-editor-6.12.10/6/ja/PtouchEditor6.Wpf.resources.dll
+467387ea4d3095ce4a24aa17a4607f95f1147b6b07e387b68db2a6f5456bff29  reference/artifacts/ptouch-editor-6.12.10/6/ja/ReachFramework.resources.dll
+79293a2313285670bd0266824f4b2827c9cf6eb225827225ae198aa130f31954  reference/artifacts/ptouch-editor-6.12.10/6/ja/System.Windows.Controls.Ribbon.resources.dll
+c73d48a47f1882105c6dfc460031d1fb28e898df1005713782888297179dce00  reference/artifacts/ptouch-editor-6.12.10/6/ja/System.Windows.Forms.Design.resources.dll
+a81fa9555390f85e6d1a50df2424d144e52f894341a29a6ace7d728b5d80050b  reference/artifacts/ptouch-editor-6.12.10/6/ja/System.Windows.Forms.Primitives.resources.dll
+5a592315c4741039230d8dabec3ea53fd8d9ad7c2bdc4d127c2632666058532e  reference/artifacts/ptouch-editor-6.12.10/6/ja/System.Windows.Forms.resources.dll
+73b5fda1c941b8814aef3c455d5a1ae0774254b315a162b62fe17b73ad9ab90f  reference/artifacts/ptouch-editor-6.12.10/6/ja/System.Windows.Input.Manipulations.resources.dll
+22f503c4b3798838f02837bb0e842ac87fe6df441e89d03c80b96d4afe687aae  reference/artifacts/ptouch-editor-6.12.10/6/ja/System.Xaml.resources.dll
+4342fb5b2cc0e232fcc6535ed159a23dbc5c558820c3a4cafe53bc47a08daddf  reference/artifacts/ptouch-editor-6.12.10/6/ja/UIAutomationClient.resources.dll
+7e4e2f10383ab067d1ff8198bf66dbd687a2f3cc0422e780f586e9174050ec58  reference/artifacts/ptouch-editor-6.12.10/6/ja/UIAutomationClientSideProviders.resources.dll
+15ecbf92e59adf6ff3ac793d32ebad9108d0f5b9ac71ec877ac1daf671a53634  reference/artifacts/ptouch-editor-6.12.10/6/ja/UIAutomationProvider.resources.dll
+714f12a284141e58017176f4298c92e661ee521b42b241c98017457f3c5d3fa4  reference/artifacts/ptouch-editor-6.12.10/6/ja/UIAutomationTypes.resources.dll
+3d7fd8d00b483176234722e52bf690bb8994daac4e963e1209fe528832c45fa1  reference/artifacts/ptouch-editor-6.12.10/6/ja/WindowsBase.resources.dll
+ed8e88461739a00cc50e83485d43907269da5f4f27776ecb6b59c2c816bc48d8  reference/artifacts/ptouch-editor-6.12.10/6/ja/WindowsFormsIntegration.resources.dll
+741245e01bf40b5bfe23ee95f962da36460949a9ea89cca312e8004ac29f46fe  reference/artifacts/ptouch-editor-6.12.10/6/ko/Microsoft.VisualBasic.Forms.resources.dll
+e548cea2bb469a5f2d054e19ba01bc6f3f8ba3fcfd026729486d68baadaa00d8  reference/artifacts/ptouch-editor-6.12.10/6/ko/PresentationCore.resources.dll
+cb34de9c42cc7359da84181369287e1d1f38b0ee14e955bf699d325336719f3d  reference/artifacts/ptouch-editor-6.12.10/6/ko/PresentationFramework.resources.dll
+23add9381863c69144d9ec71052ad229e373e66be36d9c184a1eec71f313e475  reference/artifacts/ptouch-editor-6.12.10/6/ko/PresentationUI.resources.dll
+df1998b132bd0497e0186ba80e86b579331bd4cd13376d7f5e9ae4b869ac1034  reference/artifacts/ptouch-editor-6.12.10/6/ko/PtouchEditor6.Wpf.resources.dll
+6e83fa8a0bc92a3333c969f5661ed15bbf32cbacddfd074d1f6d8209cea4e773  reference/artifacts/ptouch-editor-6.12.10/6/ko/ReachFramework.resources.dll
+43bc3fccf8d0f5c877f3d6aedfc4d03412cbcd8c81dcd80be420fe204bf03a1b  reference/artifacts/ptouch-editor-6.12.10/6/ko/System.Windows.Controls.Ribbon.resources.dll
+f6c5cb542375ffc7d4f354cf3e39cf1cc4e24673cc8dafb0f482826817104a49  reference/artifacts/ptouch-editor-6.12.10/6/ko/System.Windows.Forms.Design.resources.dll
+9a2fc16021e9fec9c68b4e91e66f7c4bc2ea9d5c2c8f22a9c3f927b7d7422de9  reference/artifacts/ptouch-editor-6.12.10/6/ko/System.Windows.Forms.Primitives.resources.dll
+9075d9ee4c22791bf5a77fdf7aa20cedd158d890d3816d69940283d4517073be  reference/artifacts/ptouch-editor-6.12.10/6/ko/System.Windows.Forms.resources.dll
+ed038e0889edd94f20e6423958bd9d431b2f5f10f0c393c985116b70ee1c396a  reference/artifacts/ptouch-editor-6.12.10/6/ko/System.Windows.Input.Manipulations.resources.dll
+8a87703569e16f961a29eb8f86432f23af3845d2d6d1a7e98f287bb0d5b68da3  reference/artifacts/ptouch-editor-6.12.10/6/ko/System.Xaml.resources.dll
+e7e589feefa8e102d581ab0c9678a3f135b2db8ad3a0bb4a1ed1f773069d3448  reference/artifacts/ptouch-editor-6.12.10/6/ko/UIAutomationClient.resources.dll
+63557f4bcb65d1902467572bd47f0f81c36507a132236922e1ab4d74e8ddd9a6  reference/artifacts/ptouch-editor-6.12.10/6/ko/UIAutomationClientSideProviders.resources.dll
+892e13b6727e0077bee94282b133ca3608cf8c7b7b958cac0f0f0ad20bb7733a  reference/artifacts/ptouch-editor-6.12.10/6/ko/UIAutomationProvider.resources.dll
+d66c754746f2d750467d33d3a34b06ba26e2aadded763f0903401a7204bbe0ab  reference/artifacts/ptouch-editor-6.12.10/6/ko/UIAutomationTypes.resources.dll
+81ccd8f2273ddc7ae12797bf8443744717b56863332d184f24f4047dec00b539  reference/artifacts/ptouch-editor-6.12.10/6/ko/WindowsBase.resources.dll
+94265827f6c4b3148cacb194dbebf6e5e7dbeb789a8a4b42e5a947b517fa747c  reference/artifacts/ptouch-editor-6.12.10/6/ko/WindowsFormsIntegration.resources.dll
+f69a0fa0fd2e37f825436170853e7efdbbe04b299011d8ec11b6c82668fcc704  reference/artifacts/ptouch-editor-6.12.10/6/lbxcore.Win32.dll
+17bc62bf563c28ff9d9bed115194cfac18a8deea196912e7f76faa4478d82e6a  reference/artifacts/ptouch-editor-6.12.10/6/LbxFile.dll
+480bb7a0ac35d4ea5f22995d723de3498db03f0f49eb4e12e7ed9936367fc4ff  reference/artifacts/ptouch-editor-6.12.10/6/LbxViewBase.Wpf.dll
+0a9f3bbb079a8868fc3efdd7d77c02774b8904768b1e36723fc4f6be01c9e085  reference/artifacts/ptouch-editor-6.12.10/6/LibDatabaseDotNet.dll
+fcdbf8ae3638dd915341f12d30d8c32e759010a7994f20a383d32ff40312fc97  reference/artifacts/ptouch-editor-6.12.10/6/LibEscloud.dll
+7b892c240e7deff849895a987a449ebfeaefdc3a94a788a459c32a50dbf12539  reference/artifacts/ptouch-editor-6.12.10/6/LibLbx.DotNet.dll
+18804495a6699fa5c65bdb73f2eb232e37c554e3645015805ebf0256d4e825ae  reference/artifacts/ptouch-editor-6.12.10/6/liblbx.win32.dll
+68768ebd9b04ebe7d9f093414c94a4f550741b7f3cf6ec3089b62c0fa76ee308  reference/artifacts/ptouch-editor-6.12.10/6/MahApps.Metro.dll
+ede8d9c15305cf7ee5fdbb26903401fef7b65f81f7d91b3ce9b4b129d878a501  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.CSharp.dll
+6564545beab3cb9cd35cfb0cb77d4ec8ba3297d384e98f2fa24c536184e7830f  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.DiaSymReader.Native.x86.dll
+fefcdb267a73099cb90e5af56b5ef2bca59bed974339b3a6810352bde23537a6  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Extensions.Configuration.Abstractions.dll
+5a47750f5c8eb91a203a743abbdc27c7feceeb2218d39445df6560629477eec9  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Extensions.Configuration.Binder.dll
+b5cd9da2c3364a5b201cecb0c80e25227d27ba44d96343d2894ff8ef3fd81550  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Extensions.Configuration.dll
+a0106a638facae621f870eda720cb6c980c1d5d49c2f4351134e3fe043b9291b  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Extensions.DependencyInjection.Abstractions.dll
+8d6e7b64cce554f0a0fbdb2ba80745895fa0b4e6cc378b9fedfe8ce86f0d8ae4  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Extensions.DependencyInjection.dll
+bea3cf225599b05a521902e12e23de6a2309937dfb3763ccd2cea62ad2c4fe37  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Extensions.Diagnostics.Abstractions.dll
+5c83650f1c0a15c8e3831a4d48008b3baa338505a3be48780a3d86c2cd4662a0  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Extensions.Diagnostics.dll
+d2d48c083b235e50d7fde369930131d6cb2941c2c6ec727958a23d45e8048b55  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Extensions.Http.dll
+29e6bfaf5ce079ad4d70dc547d966038992a7428df6e726084eb9010ec837715  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Extensions.Logging.Abstractions.dll
+4330a5efe9d110afb7f8e567d5b43eee976e0f7f6802d13a211b65d747529179  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Extensions.Logging.dll
+b9ea7bb70bfecf5c649f2559300fce232729257cfdb4221dc96f1ea778227353  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Extensions.Options.ConfigurationExtensions.dll
+5f9b0e589f1ce9ca656588cd92cc0bd53803fdfad258fb2916aaa14aedce682c  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Extensions.Options.dll
+446ff16e903e7479558816e213a3adee9a1c1adad65a56d853801b10933e29d7  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Extensions.Primitives.dll
+f77570442d82f2385f158a636ad66e4c910f684d98e2579127d8482a11289ffe  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.VisualBasic.Core.dll
+c2cff6652802ee7e53a46456b63284bd716c0de1500d996711f0f7662504de63  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.VisualBasic.dll
+9eb4e8eb18bb53e1b8305a7cfe48467d72998c27029ab4ee7987c80ac54fd604  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.VisualBasic.Forms.dll
+979f81cdcb6e16fd34bb12e9d1f75f8835076d66861082ed93172235c6d4d3d0  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Win32.Primitives.dll
+da549b1d429718c70204e72de063728dd58eb349e81d5ce03b5ebe88493a0055  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Win32.Registry.AccessControl.dll
+f983e05753fc660f76c1959ec7a34245ce688f2c3bd635441268e8e87ac9e087  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Win32.Registry.dll
+eb118143bed07dfad4781f6e0e7d0fe76931c5868df88520c35fd8329cf23175  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Win32.SystemEvents.dll
+acf2664d35f432ab9ea003040e5154ae8bb40a8f07d3eebee7093e97f44a96ea  reference/artifacts/ptouch-editor-6.12.10/6/Microsoft.Xaml.Behaviors.dll
+461c3b3f1a2cdfb7508adeaba6e3d7ee63d55c744094a72be0b7f5168a74f400  reference/artifacts/ptouch-editor-6.12.10/6/mscordaccore.dll
+461c3b3f1a2cdfb7508adeaba6e3d7ee63d55c744094a72be0b7f5168a74f400  reference/artifacts/ptouch-editor-6.12.10/6/mscordaccore_x86_x86_8.0.2025.41914.dll
+a2762092c03f42d7b6f4174af689c3356177d3cd7fe04c39327bb30950c937a9  reference/artifacts/ptouch-editor-6.12.10/6/mscordbi.dll
+5a0e9a836fa6beb079ec5d702ad977f44bda24b2cb9a22c72be2686b306c94e3  reference/artifacts/ptouch-editor-6.12.10/6/mscorlib.dll
+52de9e31899de427fd3dcf586080c622a0eec0320c0b1bb77e3df2a3672cc4e7  reference/artifacts/ptouch-editor-6.12.10/6/mscorrc.dll
+f7f1fed9faa50b4ded05b9c0dea93d4be319e6ffc7c35f8864667de5ec28a2a6  reference/artifacts/ptouch-editor-6.12.10/6/msquic.dll
+01a58552686d0c6b9fd67a7ac81169fc0013aedf59a8efdc611f94907489a31c  reference/artifacts/ptouch-editor-6.12.10/6/msvcp140_1.dll
+2a5365e03cc6e78b408dfca81537f3734bf3d7cf9cc13ae33204dfbc641dbe43  reference/artifacts/ptouch-editor-6.12.10/6/msvcp140_2.dll
+c4a2bae74e008a5bb2445f9078c14df9dcb03267248dfa64e7d04cdc8af5208e  reference/artifacts/ptouch-editor-6.12.10/6/msvcp140_atomic_wait.dll
+a5cbecfd9b8892ec9a60e30fef7ef2158032c6d91efdfbaca87c082bcd48bfa9  reference/artifacts/ptouch-editor-6.12.10/6/msvcp140_codecvt_ids.dll
+97e71a3c697fb1ab3af777db39009e4602525e8c3aff0837ecc7031cba188165  reference/artifacts/ptouch-editor-6.12.10/6/msvcp140.dll
+ff53c9deb3d087df8090cea3379280becb6b2830546164d52bc55a6ee5d3159c  reference/artifacts/ptouch-editor-6.12.10/6/netstandard.dll
+72cf291d4bab0edd08a9b07c6173e1e7ad1abb7ab727fd7044bf6305d7515661  reference/artifacts/ptouch-editor-6.12.10/6/Newtonsoft.Json.dll
+9ef5e42588a2bf321ba6765dde6d16d4da46b6cc77e4ee92be13eeff932fab59  reference/artifacts/ptouch-editor-6.12.10/6/nl/PtouchEditor6.Wpf.resources.dll
+54573cfec719b348a8c6559a665f49c337ae3f295bdb5dee24376286fb966597  reference/artifacts/ptouch-editor-6.12.10/6/no/PtouchEditor6.Wpf.resources.dll
+e3f1c70e60a169fd7065fb18a12eee378ec972e8fa3b6c45269f2c55d0617871  reference/artifacts/ptouch-editor-6.12.10/6/PenImc_cor3.dll
+3b356a7533ff2640faa63a9f1688348ec6bccd7f331f8eb533dc739da6c8d943  reference/artifacts/ptouch-editor-6.12.10/6/pl/Microsoft.VisualBasic.Forms.resources.dll
+2c4bf48b3013ce09c63f846cbf72027642340961970089ac9148220c1bacf1c1  reference/artifacts/ptouch-editor-6.12.10/6/pl/PresentationCore.resources.dll
+517666003b89eca8a806bf7b5ee38927951f37d1fcf0f06141d3ad56cc9bf48e  reference/artifacts/ptouch-editor-6.12.10/6/pl/PresentationFramework.resources.dll
+df9f8ad581729f11cf65a0b7d7fda29973dff00319a9bbbbcb6d1c77f5ff9e25  reference/artifacts/ptouch-editor-6.12.10/6/pl/PresentationUI.resources.dll
+25f024a0a6828c0b2bbb94cdb74615eccfddca15b7104e54cca161d5796d7346  reference/artifacts/ptouch-editor-6.12.10/6/pl/PtouchEditor6.Wpf.resources.dll
+5205587a63e547ef289538c489f56b66442b550e5b3ff2de962fd862fb0ce98d  reference/artifacts/ptouch-editor-6.12.10/6/pl/ReachFramework.resources.dll
+aac412050e14257fc56bc72087d9ff0c4fb88fdf39e8be472dc72eaeb33e2c4c  reference/artifacts/ptouch-editor-6.12.10/6/pl/System.Windows.Controls.Ribbon.resources.dll
+a20a7d044924520e9c4b69155665bd27ea8771f418aa912f5dfbc233f22e4e51  reference/artifacts/ptouch-editor-6.12.10/6/pl/System.Windows.Forms.Design.resources.dll
+b81ee9ce3087abaeff3be96c27cd4dc25409f06ff091858bdb6aff5801b3558b  reference/artifacts/ptouch-editor-6.12.10/6/pl/System.Windows.Forms.Primitives.resources.dll
+94dc815bb8efbb769cec51a2e4bee90ccc61082298a76838291b019c5c4ec4e5  reference/artifacts/ptouch-editor-6.12.10/6/pl/System.Windows.Forms.resources.dll
+e2ea3e988f3dfca711cdde185f3a353060abeb1704ef8e2a84da96899f101440  reference/artifacts/ptouch-editor-6.12.10/6/pl/System.Windows.Input.Manipulations.resources.dll
+715e73cdefdda1784770dafba656984404d3a677f2a378c43d1ec6cd0756d433  reference/artifacts/ptouch-editor-6.12.10/6/pl/System.Xaml.resources.dll
+883eba90adaa7c5760dbeae477a5467ad404da49ff808dc96ffd60b360529ed7  reference/artifacts/ptouch-editor-6.12.10/6/pl/UIAutomationClient.resources.dll
+00d467c70743a913209f44d5bb948c4fab50af3f72e0582bea9621ba589f3e77  reference/artifacts/ptouch-editor-6.12.10/6/pl/UIAutomationClientSideProviders.resources.dll
+d68dbbb699806b56a525dfddc7b10d76cfa07e9befce79953c7fa999da28b56f  reference/artifacts/ptouch-editor-6.12.10/6/pl/UIAutomationProvider.resources.dll
+6d8652a9944ada108635e7f619b892a2f58bba4b96fecaa51897725130a18421  reference/artifacts/ptouch-editor-6.12.10/6/pl/UIAutomationTypes.resources.dll
+9d15067885c10ba0b16442d2b01d7a23dab7d4e1fae8dd1191d1b3cb77c78db3  reference/artifacts/ptouch-editor-6.12.10/6/pl/WindowsBase.resources.dll
+7defc5ab8f3a31ae7cef68a73b516726cfa6f9c2f60ef08639a05f91e9e2e278  reference/artifacts/ptouch-editor-6.12.10/6/pl/WindowsFormsIntegration.resources.dll
+aa094fcbebdc740cb963c5a1da24a1d5267d9ad94ab7b141372efe5904bbebc3  reference/artifacts/ptouch-editor-6.12.10/6/PresentationCore.dll
+be0fa3312e1b235c886d3d3da1f7324a7f65d634ae22f337978007ba351a6c30  reference/artifacts/ptouch-editor-6.12.10/6/PresentationFramework.Aero2.dll
+36b43db12bcbe5b810f1fb59283d0ed805fb0294f3aabbc58c6ea7de1d1085d1  reference/artifacts/ptouch-editor-6.12.10/6/PresentationFramework.Aero.dll
+ea02f9a9a41c3f0df27b3def9f7c9e0b24aeaddcff5a12047cf3b37aab9bca10  reference/artifacts/ptouch-editor-6.12.10/6/PresentationFramework.AeroLite.dll
+1cef477cddfdb8ac44a8adedaebab8bd65331791dea603ba934b714e0aa6cd5a  reference/artifacts/ptouch-editor-6.12.10/6/PresentationFramework.Classic.dll
+37515f3250e44a2ee14b0ba8697e72c68d2204022f9cb4d4729cf4934db6ce2c  reference/artifacts/ptouch-editor-6.12.10/6/PresentationFramework.dll
+c9e8969474710692ffd7c96644d6189902a3527cada4f24068bd2b5bc8ff6a69  reference/artifacts/ptouch-editor-6.12.10/6/PresentationFramework.Luna.dll
+9d9e69a221cadcb487f989241cce5e12633e0e5fa9d0c1977c45e80005f20e8a  reference/artifacts/ptouch-editor-6.12.10/6/PresentationFramework.Royale.dll
+dff13335a37e862a77b078f8d565b3c76c3f03ffd1cc09c6ce26ca64507ac0e3  reference/artifacts/ptouch-editor-6.12.10/6/PresentationFramework-SystemCore.dll
+808bd3c312b43f20d56731c47421fceb652c2866020f5ffdf8e4cad4495d0da7  reference/artifacts/ptouch-editor-6.12.10/6/PresentationFramework-SystemData.dll
+8963ec1b8270d8b2844460e40dceda4b0c4fb65bc2504ef46fd5b814e386abaa  reference/artifacts/ptouch-editor-6.12.10/6/PresentationFramework-SystemDrawing.dll
+dbb380f88f65eb5a38043f2b3962354fcb8ff112e76eeb8d4beee30e373cd329  reference/artifacts/ptouch-editor-6.12.10/6/PresentationFramework-SystemXml.dll
+989b3ff64f4e10ffba84da01222c2c5145241b9a7d9be48f050447c60cbff2f9  reference/artifacts/ptouch-editor-6.12.10/6/PresentationFramework-SystemXmlLinq.dll
+0e85acc84ab4dadebd21e7afafea7aa7f18b0632842ef24cfe37819ce22e02e6  reference/artifacts/ptouch-editor-6.12.10/6/PresentationNative_cor3.dll
+a0ad8258fe2782dd94921b37215b32ba793432ec2bb6373ea213fa0b6990cbd5  reference/artifacts/ptouch-editor-6.12.10/6/PresentationUI.dll
+cce1d1a71e71c48b6772edaab1f509f916e1b404544f1d6081112b66f2756647  reference/artifacts/ptouch-editor-6.12.10/6/printsdk.win32.dll
+92090c9c3c5195149885be91aa469b85d2cba9a215cb3bfb65e93945f33d852b  reference/artifacts/ptouch-editor-6.12.10/6/Prism.dll
+ad1666c83f2554b09396386fcec856f9b3068b9bc2a29f13c08d3ce0c23d7d4f  reference/artifacts/ptouch-editor-6.12.10/6/Prism.DryIoc.Wpf.dll
+c3b44b118486a5d74d696c14853e5306ec893dadd0be8ea6f404edae8c66f2d3  reference/artifacts/ptouch-editor-6.12.10/6/Prism.Wpf.dll
+fe91772b02d8edf52c6769899ec08aafcf609140c9648b39eed07116d7da58fe  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/Microsoft.VisualBasic.Forms.resources.dll
+19a9a8160c1401bd8839442ac24922d28a32b0d92610e29e38e2051ab7b7ba5f  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/PresentationCore.resources.dll
+433d07084ba0d165f0ec2aaef0113e9d312703942554818ad278d228f883e95c  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/PresentationFramework.resources.dll
+faf8f81d39d91f6201c7bfc9941ae8a4ca642eada883f415c82544eae7cffd80  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/PresentationUI.resources.dll
+b39b32c85393a106e925d03820117405f9416728b26588e0ca6852b72c0da572  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/PtouchEditor6.Wpf.resources.dll
+b2554652211a1a7d213af53a21d58b0b6669dc1d4c444c2f4f04351380afd34c  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/ReachFramework.resources.dll
+927cdf04e2aef857ad0e7f24f57c0dc158f9ac31045b90d77e055db7295af876  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/System.Windows.Controls.Ribbon.resources.dll
+1426041a8753f825a9122410dec9b2c69c71cab447435d1ae305e1517c840029  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/System.Windows.Forms.Design.resources.dll
+ce9e2749586e99b06901a4a87df5b887c4e47a1727e2579d92d22625954eac9d  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/System.Windows.Forms.Primitives.resources.dll
+a3f00fbbc5bb869aa19e7b77739b05ac5997df44390ae024479911b0bb18d443  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/System.Windows.Forms.resources.dll
+44b8aba76e2eafa6cbd0b0cf7e1ac6c85c7c5fa0a0150f9c2afa0d1569cc72d6  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/System.Windows.Input.Manipulations.resources.dll
+61e3486eb7b419f214874ca5df1b4bdac366cd3d16d401ee35f4651a0c0f946d  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/System.Xaml.resources.dll
+977525866a6ab9dc2c8bc87e3a96a3950d8a26475c5a25f348c6e8d2fff38b27  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/UIAutomationClient.resources.dll
+b83d3b0d7c744f53087bcc4efac096cc6413cd6fcd1d4fae1b036fc5e5161eb1  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/UIAutomationClientSideProviders.resources.dll
+07115ffd988665d6e4725ba11b6b0a1241400e21e63f80e53c75f876be29c893  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/UIAutomationProvider.resources.dll
+55164bdff100de3bcd5db51bfae06f73d4a546a6aac1922c3e7332fa11780015  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/UIAutomationTypes.resources.dll
+6cdc6f8dab122238b0dd7fb7088a8420fd26e2ec5b2bd4cb385afcaf3a55cf66  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/WindowsBase.resources.dll
+586e71ced516a6e5ad674e065c8896f54a95ca8026ea21e8755a8b52675794b0  reference/artifacts/ptouch-editor-6.12.10/6/pt-BR/WindowsFormsIntegration.resources.dll
+c571df20443c12a9fb5cbad12a0b4fb83b7c4b91308d82eb3c1cfca334be60c7  reference/artifacts/ptouch-editor-6.12.10/6/ptfilontm.dll
+e2e4ccec3f576193ff2cec3a9bc706bdcf6b62f9037025635e4c0320929eb330  reference/artifacts/ptouch-editor-6.12.10/6/ptfilot.dll
+979dc9882c53ffdccd17a9c06b9150e30b72fc3decce9561cc96b97a7556128b  reference/artifacts/ptouch-editor-6.12.10/6/ptmdamm.dll
+113364b9e2af783209b5b7ed58a68e0a0486bddb523683954ae538df79deb835  reference/artifacts/ptouch-editor-6.12.10/6/ptmdanet.dll
+8c9fca50803628f1478aae4f71403f398557f6bba48c811e69268e7baad97335  reference/artifacts/ptouch-editor-6.12.10/6/PtouchEditor6.Wpf.deps.json
+8b2e0e56b0df83088162214256b2eba436a6a0061d3624a85fab15ec68569dcd  reference/artifacts/ptouch-editor-6.12.10/6/PtouchEditor6.Wpf.dll
+9d9eb89694bf01993bd648aa418b1a9c97918fa237a1d515914ac113c2344c34  reference/artifacts/ptouch-editor-6.12.10/6/PtouchEditor6.Wpf.exe
+a2fd8b3d9006146387275bc4c711550c0b40fdd81012a706dadbfb66696814ae  reference/artifacts/ptouch-editor-6.12.10/6/PtouchEditor6.Wpf.runtimeconfig.json
+34508c78f993a9ab3f9322d8c049794f41f0d60fe9b7e58afea4bf3bbeac4772  reference/artifacts/ptouch-editor-6.12.10/6/pt/PtouchEditor6.Wpf.resources.dll
+0c46dc8f0574e341032acd2b26701a139d457c1f5adffa7d206480d65299085e  reference/artifacts/ptouch-editor-6.12.10/6/ReachFramework.dll
+513f83997240111be9f367bc4b7146d97959a24eefc1ca7645f568f025439fe6  reference/artifacts/ptouch-editor-6.12.10/6/ReactiveProperty.Core.dll
+b52576c5e340ba1432d7fa265be60bab5b190cbf33f93efbb589c0b451463e02  reference/artifacts/ptouch-editor-6.12.10/6/ReactiveProperty.dll
+3d9e3c345bafa1874f2dc06dde58917bdbdbfc312b17c8edae188921a2ba4242  reference/artifacts/ptouch-editor-6.12.10/6/ReactiveProperty.WPF.dll
+02a0e91567a2405ff079b66b654446944d6c25d34b4542a3cb8a40583673fc3d  reference/artifacts/ptouch-editor-6.12.10/6/Resources/Images/lbxicon.ico
+ee6291be310f4ba8e5feb6298b3990f6f8258f28afe3ac92647223aff08dc02b  reference/artifacts/ptouch-editor-6.12.10/6/Resources/Templates/CIV/10_NewTerminalBlock.lbx
+ca95bd192271facb575bf5e947e827cb7b1ea094c3b374768dbf0822ab8c1029  reference/artifacts/ptouch-editor-6.12.10/6/Resources/Templates/CIV/1_NewSelfLaminating.lbx
+472d717819881def975b8c9e67da82b9633a3903aef5afc182442c68c8b88069  reference/artifacts/ptouch-editor-6.12.10/6/Resources/Templates/CIV/2_NewCableWrap.lbx
+59a7ed86c82c10ac078557e19e92bf854b267851866473880e198a0c1f1986d4  reference/artifacts/ptouch-editor-6.12.10/6/Resources/Templates/CIV/3_NewCableFlag.lbx
+ef220d34b7ce57a3f69f4ec46384564aba371e2006df87bbcc8d71e7fc838af9  reference/artifacts/ptouch-editor-6.12.10/6/Resources/Templates/CIV/4_NewPrecut.lbx
+a3f7d191c51dbda539ce53d2685f1652ff8308d5262a1859b591ee5145c418d9  reference/artifacts/ptouch-editor-6.12.10/6/Resources/Templates/CIV/5_NewHeatShrink.lbx
+f78dbc46aac31745d26ce012933a879b4e61e7cb6a7f75b3a7d5fcd9a7af87fe  reference/artifacts/ptouch-editor-6.12.10/6/Resources/Templates/CIV/6_NewFaceplate.lbx
+05f1950b7b605c7bacc9fabbc173d406ccd5a64e0a93d4689b710f75daacf66c  reference/artifacts/ptouch-editor-6.12.10/6/Resources/Templates/CIV/7_NewPatchPanel.lbx
+7358343f089cb8c8b0f2c13e00b97f07ce63b0301d68f055dc891fd305088889  reference/artifacts/ptouch-editor-6.12.10/6/Resources/Templates/CIV/8_NewPunchDownBlock.lbx
+b288d7a6c0df05af97d9b02c3e419b62bb0af2768a717b2f6ec3f70922bbc167  reference/artifacts/ptouch-editor-6.12.10/6/Resources/Templates/CIV/9_NewBreakerBox.lbx
+aae500e03d692e0255f89eb7c6a49a851d99ab108e3fcf25f6564bd1c6783632  reference/artifacts/ptouch-editor-6.12.10/6/ru/Microsoft.VisualBasic.Forms.resources.dll
+7cc06e6c323b5f4f1629e938e28618a0982f2a665023615798c876ac762c95d5  reference/artifacts/ptouch-editor-6.12.10/6/ru/PresentationCore.resources.dll
+a2f93f57dd22df217d07dda8e0bf52e23a7acf75ea9d5e83926b9ecee7b16193  reference/artifacts/ptouch-editor-6.12.10/6/ru/PresentationFramework.resources.dll
+d3f7fa2cb01b0e01fa55decd21a561fdd6d53a25d20714950f226a821c64cc58  reference/artifacts/ptouch-editor-6.12.10/6/ru/PresentationUI.resources.dll
+6e97c81e3b28cc51110bd68b19ff18b6cad831a9d6985ae6ca3dfd3901b50242  reference/artifacts/ptouch-editor-6.12.10/6/ru/PtouchEditor6.Wpf.resources.dll
+d3d3895b09dd47feafd3c30b2e5cbeb0cf5a0c7013393e44d50f0931a0860937  reference/artifacts/ptouch-editor-6.12.10/6/ru/ReachFramework.resources.dll
+b0ced2bbb3254bbf6740f0639c8d5cb1d857ceb00bad31cf833f97f1eb138de1  reference/artifacts/ptouch-editor-6.12.10/6/ru/System.Windows.Controls.Ribbon.resources.dll
+b61ae951beb1e813d1c80b7f81c34496f48d9e1f23fee8c30c1ba092340a85a9  reference/artifacts/ptouch-editor-6.12.10/6/ru/System.Windows.Forms.Design.resources.dll
+fb2a69789055736cf9613d21f7dfab83178b4667ecc11e66c10dda345aa542ab  reference/artifacts/ptouch-editor-6.12.10/6/ru/System.Windows.Forms.Primitives.resources.dll
+d05da57d6c5896e5e0c7b7d581af793fb9050dd91338373fd932aa6a69b79a6e  reference/artifacts/ptouch-editor-6.12.10/6/ru/System.Windows.Forms.resources.dll
+f50686507fb8bbcebd4cebbbdccec9bd309ec6b4b02c55e93d159be64f1daece  reference/artifacts/ptouch-editor-6.12.10/6/ru/System.Windows.Input.Manipulations.resources.dll
+aecd3fbcd2d2282d438025dfeeb07314863f60656e6d21ee9690d9678880b0da  reference/artifacts/ptouch-editor-6.12.10/6/ru/System.Xaml.resources.dll
+62dbe04309623e21d4d4a2f50d30750d84b8bfbd2be6ef83617468cae629b79b  reference/artifacts/ptouch-editor-6.12.10/6/ru/UIAutomationClient.resources.dll
+3793ae1395708e3dc141fd4a9e7859bc25091255be7193e1c12acf955db8d91f  reference/artifacts/ptouch-editor-6.12.10/6/ru/UIAutomationClientSideProviders.resources.dll
+170fd20fffd116acc87a268cc13bd4c8f1c8958f167f1de0a92b40ce8f8627c5  reference/artifacts/ptouch-editor-6.12.10/6/ru/UIAutomationProvider.resources.dll
+cb173a22b895214fd6257b10a072187db20b763ee281ad74973f1104d394b5ed  reference/artifacts/ptouch-editor-6.12.10/6/ru/UIAutomationTypes.resources.dll
+6882155e617a9a674be378abb408d25c4c7a567d067ae4c0dd60fc6d8a46040b  reference/artifacts/ptouch-editor-6.12.10/6/ru/WindowsBase.resources.dll
+55d1a5fdadb3a5178e3998dbcc890fed6864db9dc2a08cfbe2e9b3b13f9a4e8d  reference/artifacts/ptouch-editor-6.12.10/6/ru/WindowsFormsIntegration.resources.dll
+733ec81f7ae64ff563227bb4562747657051f2999a173c3055b455ddaa0c0f9b  reference/artifacts/ptouch-editor-6.12.10/6/sv/PtouchEditor6.Wpf.resources.dll
+36500bc428f4186ad8b3c785da91c6498e8450c2259c3eab6a1d823822b13159  reference/artifacts/ptouch-editor-6.12.10/6/System.AppContext.dll
+1cc66c6aca8e778a702c655a97be28c39b7d877be8230d0b4fd3b63e45d49d60  reference/artifacts/ptouch-editor-6.12.10/6/System.Buffers.dll
+9a6b51a9c79fdd452aaf2685e92c414e72ec984b6d2241c89e3108b3143ed21b  reference/artifacts/ptouch-editor-6.12.10/6/System.CodeDom.dll
+1d2772046e36a8356e04684368c821134c72196eae95bb1c3c6c6316a61f642b  reference/artifacts/ptouch-editor-6.12.10/6/System.Collections.Concurrent.dll
+a451bcdd6cd1b3df66e4d628128ba6ea39055f4eb9951d282595c27b4100c206  reference/artifacts/ptouch-editor-6.12.10/6/System.Collections.dll
+36696492f0d5e265d0ae555932c9542b3a8fb4c6e28fe81eb1c4dd2851db3072  reference/artifacts/ptouch-editor-6.12.10/6/System.Collections.Immutable.dll
+607edccabe04c0875e17f338515e847a9631096d785f19d36a81f0749fc4f9cb  reference/artifacts/ptouch-editor-6.12.10/6/System.Collections.NonGeneric.dll
+29137e4a5d47c6782c03a5ad4d6f12df9212a6b9658c50aa8ca84feb7e46ca9e  reference/artifacts/ptouch-editor-6.12.10/6/System.Collections.Specialized.dll
+662c1b5f53003830a1a9d7a93b732a4865686e86e68952e38a9ad44ac235ecee  reference/artifacts/ptouch-editor-6.12.10/6/System.ComponentModel.Annotations.dll
+cb16135d99894caf6634f0ce539cdacd628045f62cc967c0ec1d55edb7501d42  reference/artifacts/ptouch-editor-6.12.10/6/System.ComponentModel.DataAnnotations.dll
+63f0f72bd2dc23def47b3f60e50c717501c2fef8bf835b027865d9069de41502  reference/artifacts/ptouch-editor-6.12.10/6/System.ComponentModel.dll
+3dc982fb32a10673ef70db8673b0f40347d692c0b558b982b8d94fe83778e9e7  reference/artifacts/ptouch-editor-6.12.10/6/System.ComponentModel.EventBasedAsync.dll
+af694e353ab293bac3270c86f4ce3258f95a931015ef49b8824cc4fa27e2209a  reference/artifacts/ptouch-editor-6.12.10/6/System.ComponentModel.Primitives.dll
+970ed192ee930b769f2ad00ba55e85761cee92ecf3946c71dbe85dd393c597f2  reference/artifacts/ptouch-editor-6.12.10/6/System.ComponentModel.TypeConverter.dll
+0bd95ed826ec238b386acd2e8314e7bb731200b468f467e5bf8c7bc0bad2a62a  reference/artifacts/ptouch-editor-6.12.10/6/System.Configuration.ConfigurationManager.dll
+63907080b8d3d8d62a9f51ee4b4b789c7967007a302e55d457629f199e38e5a2  reference/artifacts/ptouch-editor-6.12.10/6/System.Configuration.dll
+763f0076aa14438c7046e3291615aff7188cd3b2b1ba04aca628e9e0f9a47e38  reference/artifacts/ptouch-editor-6.12.10/6/System.Console.dll
+10070a6bd1ba0cec97cbc6b6f7138f7cf2b9940af65eb3507cded9e200056929  reference/artifacts/ptouch-editor-6.12.10/6/System.Core.dll
+ca91577ea63e0c7f177a2eeda70494e64bf10706e914e52f323060fe2c2793c8  reference/artifacts/ptouch-editor-6.12.10/6/System.Data.Common.dll
+a86ee6f9ff0f2a33e4b76f9be60a6417738411c7ae787cc9535138465430350e  reference/artifacts/ptouch-editor-6.12.10/6/System.Data.DataSetExtensions.dll
+3ac5e1f475dd350246c3b622e99428224c5897ad8e8bfc9c89158f6089d825e5  reference/artifacts/ptouch-editor-6.12.10/6/System.Data.dll
+230998dedd13a252c891276d77510179abf1e36039dc8976f459f62135a8d1ee  reference/artifacts/ptouch-editor-6.12.10/6/System.Data.OleDb.dll
+33c2a763cd0a573f140de36bf0dc1a63280406e1d47b5b530fac3ca89c71c3ab  reference/artifacts/ptouch-editor-6.12.10/6/System.Design.dll
+80a187f58c1e29d2a821736e05c39868bbb648e4ccbed44af32b13108805c860  reference/artifacts/ptouch-editor-6.12.10/6/System.Diagnostics.Contracts.dll
+d808cf06a91f26cad6840116678c1385d7ced9873d82c3c976594e9a829aa079  reference/artifacts/ptouch-editor-6.12.10/6/System.Diagnostics.Debug.dll
+d5f073a0d8a4dd5ab126006dbe61a4b0edadf48e95158c4063fed5f85c92a6db  reference/artifacts/ptouch-editor-6.12.10/6/System.Diagnostics.DiagnosticSource.dll
+aec735f60ebe03e5cf5d2cd48169dcb9eadc5dcc2803ae3800de911b5fcd2201  reference/artifacts/ptouch-editor-6.12.10/6/System.Diagnostics.EventLog.dll
+2a7dfc9002449c8f930ff0db17837adc94a72bb38f18340b4e08fa9cc8dc07c5  reference/artifacts/ptouch-editor-6.12.10/6/System.Diagnostics.EventLog.Messages.dll
+95f869069e806d2be9b42dfe4b73be6a8d201bb90e6033adbd38d3ecf3858f90  reference/artifacts/ptouch-editor-6.12.10/6/System.Diagnostics.FileVersionInfo.dll
+ec3c7ab01ecdaacc66c6448046f26928976de55e5083fcc3b53f50ca6b8516a2  reference/artifacts/ptouch-editor-6.12.10/6/System.Diagnostics.PerformanceCounter.dll
+1d710cd7e017e954126220130f238df45f2a7912b1c2e4e36c37c5d1e3e4a3eb  reference/artifacts/ptouch-editor-6.12.10/6/System.Diagnostics.Process.dll
+196d0ed7fd44f1d0802567921ba55b1281659977135c7a91215ae9eb12fffbc0  reference/artifacts/ptouch-editor-6.12.10/6/System.Diagnostics.StackTrace.dll
+2763da31c18c8d933136e50c0c9855636f395c619f02c6dece09d81b65afe07a  reference/artifacts/ptouch-editor-6.12.10/6/System.Diagnostics.TextWriterTraceListener.dll
+de96fecaa0dfc9b117a0730ea15e5762d4482b7aed51f9769c4826a1971d8931  reference/artifacts/ptouch-editor-6.12.10/6/System.Diagnostics.Tools.dll
+a4077b9926c45832c96941b123504c713138c52b098d3a0f606c7e043ef766cc  reference/artifacts/ptouch-editor-6.12.10/6/System.Diagnostics.TraceSource.dll
+46f5ff8d69cd69384891cd5f1ffddca281c84fee2cc42d76a43ccb7f12432cd6  reference/artifacts/ptouch-editor-6.12.10/6/System.Diagnostics.Tracing.dll
+223954eb8ef4c8ddf855f7708f30079abc921d1b3de694eb5000b9ad33f93136  reference/artifacts/ptouch-editor-6.12.10/6/System.DirectoryServices.dll
+ecda5503ab794db2630c85c6cd054abc818ad3f6f7d80b7b0be440f9ff66fee3  reference/artifacts/ptouch-editor-6.12.10/6/System.dll
+78deb86eb08066902ab435a9803e7e729cbbc2e17c706174ee49ca33fae8d267  reference/artifacts/ptouch-editor-6.12.10/6/System.Drawing.Common.dll
+66ef938d7b9a91cfbf50f3438a0cbe4684a47be51f8b84f4a5899808666b95f3  reference/artifacts/ptouch-editor-6.12.10/6/System.Drawing.Design.dll
+754dd5353c6718d67848f06f962d49782cb7e10b8831a29d53dbeee431208fcf  reference/artifacts/ptouch-editor-6.12.10/6/System.Drawing.dll
+90ab1069f75ab85943d25a3b24d732f0a8ecfbef2c4ae86ad300e4ddbcdc536f  reference/artifacts/ptouch-editor-6.12.10/6/System.Drawing.Primitives.dll
+f30dc6151a6addeb5992de57f3eb66fe6819b431a610aefb21f027621e0fd6ac  reference/artifacts/ptouch-editor-6.12.10/6/System.Dynamic.Runtime.dll
+91cd465a82f560291b7ebeb9eb6fb2f1e24ea3f37b93abf1cc8fab04e013d302  reference/artifacts/ptouch-editor-6.12.10/6/System.Formats.Asn1.dll
+bbba474b9bea1d778b767c0c64115e87fce63b778cbd9f8e675d215e9d902345  reference/artifacts/ptouch-editor-6.12.10/6/System.Formats.Tar.dll
+218e7a71f9b5580b076338e0ff5e1f51183315a0c838d0e8f05bd3fec460bd41  reference/artifacts/ptouch-editor-6.12.10/6/System.Globalization.Calendars.dll
+67a713bb54daef01dd2350b3ac22443314484b7df3fe424b1c07fc3d9ea0fd9f  reference/artifacts/ptouch-editor-6.12.10/6/System.Globalization.dll
+49548ee22aa218897ed22b02ef3cb017a84fd5e2f7bbfc3cc386dcfd092cd998  reference/artifacts/ptouch-editor-6.12.10/6/System.Globalization.Extensions.dll
+99903e903a9dfc87072938953752227658bcfd4ee204d8c57bdc44d6ffb0172c  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.Compression.Brotli.dll
+0c521b74ba2d2cc4498bc8a42257440c93a4fe717a6fde125d7ecfdd2452eb5c  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.Compression.dll
+abb784add4e4dc0e0483884e5c6486b0a190886ba0d9281185c0852167f0b552  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.Compression.FileSystem.dll
+de42b6f2b834012877493ef42ae6cba2e3c1f74707485f10d66ad070c00b3a22  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.Compression.Native.dll
+cdf44928c07795400b041c97ce4c606930b2925eb8ff9c40e83bb32bbb9fcb55  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.Compression.ZipFile.dll
+ac5535cba00bba3d9c4962a03eee6691b9fca10073507d66b481d8fcc73f351b  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.dll
+66492cb4388eb97e199a0b2e024fd6ee976ec83ccb54fe1630568c16f72c9af8  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.FileSystem.AccessControl.dll
+0a5ba6f4e3558cec6857e6dc65babb6c01189ecaa7e8f84826757765dc468ace  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.FileSystem.dll
+fe7403d1d6ef47ca1993557f618056eb073b21768c4bfd0693e8c994ff695830  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.FileSystem.DriveInfo.dll
+a01e4e7d9fb15f974c283e2064e0509a624860ed0dbf937f2a00829e5cfb9059  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.FileSystem.Primitives.dll
+c852cd7628f331a9740ccb9b707a2e1c2a35a51b0b27a4a8a7ca584dccf704c2  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.FileSystem.Watcher.dll
+c829c6f6a8ff524a835f815760e48702b640272f5144a774206db470e1cae3f6  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.IsolatedStorage.dll
+28e466ccf85e2bbb510c909883617566fd7c4c295139d9e1f88c35f4164a99c7  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.MemoryMappedFiles.dll
+0efaa16dc5802c49b6e00b623d3edd269bbb27c6f22092eb114b147a6bdb53c1  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.Packaging.dll
+95c1040d02b9a56495d42fed8f224f0ce818d5a9da3cc74ef243f448c1fcf8ce  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.Pipes.AccessControl.dll
+0c2d9abc1baaafa19cb5284dc9def0ae14e1285a0a3ccf6d0b0655f10e593465  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.Pipes.dll
+b704efc3c5f5fa9cf0c3838a9af1dfa2108bda5dbb6c9f3b3630669e5a919a5c  reference/artifacts/ptouch-editor-6.12.10/6/System.IO.UnmanagedMemoryStream.dll
+7d1079b3564c91abd86554459e7f3f3bdf0c5dd98c577b9e673fd720cad42e04  reference/artifacts/ptouch-editor-6.12.10/6/System.Linq.dll
+b6a2793ef2230af869e3d3c9f16ccbc581f718531db053b37eb527af6c753b74  reference/artifacts/ptouch-editor-6.12.10/6/System.Linq.Expressions.dll
+887209d2f4f63cdb52e3c06aec4f78c3a85cc6956d2ed1e02b5d8aeead397e97  reference/artifacts/ptouch-editor-6.12.10/6/System.Linq.Parallel.dll
+10b65df27a0438d0b6e39b21a881d27acaf965e15a1554d8b3a38b05681556d6  reference/artifacts/ptouch-editor-6.12.10/6/System.Linq.Queryable.dll
+b2d6e7e991dc9ef154b29f4966f04fd8ed4ebb2c1d1242ea1d5f3e90f8ae5143  reference/artifacts/ptouch-editor-6.12.10/6/System.Management.dll
+3dd7d6a9f9e5b4d1f52ff1fcae7e72c730727d9d4dc6bb74e8be98dcedfda152  reference/artifacts/ptouch-editor-6.12.10/6/System.Memory.dll
+8d2fdd2c000c21496c550ea81b9e35c6765a1196a7cfd5ed8338966e6627ff3a  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.dll
+28dafdea975ace75d5c65a47a63b412bb7e31d8e2d2113ac25970c88c0761a83  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.Http.dll
+c3a657395589b1b878fac2614dcc9209f5bf72445dc972edc99e4472745ecfeb  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.Http.Json.dll
+b3b00829bfabaaf38784411d748a8cdc993608171f7fd96ba3319f2b6335af8c  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.HttpListener.dll
+4e4ec5f578f630e509aa08357a3feb160526e011570e5fa405bf30eae3f812fa  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.Mail.dll
+8e42645f34aba89b343684c54aacd433f98592dce9cd644ef208b8017cc9fb85  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.NameResolution.dll
+52d36d7e10b085a66783241101ba3746dc9fa83d466a1c3290fbcc89633682c5  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.NetworkInformation.dll
+a7e7b329dcd6e1809a57a9d2b4a0a2498ff703ced61c09618382b2aa354ed132  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.Ping.dll
+51bca9f4f5127a386dd757b277768a7a2c6a1e1fd33c0654eb59642c46b1da91  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.Primitives.dll
+f88e101856bcd27894233faf231b012c77f021d2bb8e6cc9e9070977cbeb0e20  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.Quic.dll
+8b70c28c71c67f4db04d38d327d8a0ad26a55e3df4301a04e443c9953df8af43  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.Requests.dll
+5c610ed1fc99b4fcd8fbc2eb3c31f32004a18e2800ba53c9762874e17e20a2a9  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.Security.dll
+9c4e4f1d2de66447dd3cb14c8bdd14205026b90d0c9a0de1a2e6bf36c662b51e  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.ServicePoint.dll
+68b814d5ec6ac383d8a2647a9d280b13cd467ceec48d39212473329b237afb48  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.Sockets.dll
+a5aadd792bafd3eb779e419bd228d94a1e9908250f8c41b030e0ee155c356a8b  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.WebClient.dll
+d1fdf186455a92e54df20b06c2dde5bf0e86f7752fa3f1562904c67834606e37  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.WebHeaderCollection.dll
+6218bd17bf461cdcde5085bdee1ddb717169d16505ad408c86b98348c81b0f51  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.WebProxy.dll
+aea8858a800e09cd968fd197025d3e61d13ef0c8a82002caa9f26735e2a0afbf  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.WebSockets.Client.dll
+4ac74c011e71b7db8bbe264660bf9176640dad7571373ed082b1034cdebbdb03  reference/artifacts/ptouch-editor-6.12.10/6/System.Net.WebSockets.dll
+2df3ba4c1f36b76ed2361a123006bcb097e58dbeb5e479ac82ca25de09d3e965  reference/artifacts/ptouch-editor-6.12.10/6/System.Numerics.dll
+543509dce226c6fcc33f567326f8ac956cfea6daf0492a6942da0f2d78a9ec51  reference/artifacts/ptouch-editor-6.12.10/6/System.Numerics.Vectors.dll
+23739f94a04e41c3257de933ca91d29997cd05e84781c500fbebb277be9322cc  reference/artifacts/ptouch-editor-6.12.10/6/System.ObjectModel.dll
+51391a6dde477d2bbdc76935c91d7a7093ebf1c458f35607b8806141b8e7abe5  reference/artifacts/ptouch-editor-6.12.10/6/System.Printing.dll
+22044a6cacd53cb609229653b5aabf5c8805433ff80f91bb68c9d36c627b90ab  reference/artifacts/ptouch-editor-6.12.10/6/System.Private.CoreLib.dll
+ebf5b1feb7204f61e2dcfc0ae5e0b61e5c94b11b886024bec0a7b2488d5d94e9  reference/artifacts/ptouch-editor-6.12.10/6/System.Private.DataContractSerialization.dll
+cb4aa2cbe80d40c9d9d66424e333e5872ac1b889df9da495b26a44cf03096f44  reference/artifacts/ptouch-editor-6.12.10/6/System.Private.Uri.dll
+e13bee03b402b7d0b4d0991040f674bb715d6406e758e628dd91d7696a0e277b  reference/artifacts/ptouch-editor-6.12.10/6/System.Private.Xml.dll
+c94580f7524637a3a14316ca581923cabc2784c9b34193432732dfa4de6a1aae  reference/artifacts/ptouch-editor-6.12.10/6/System.Private.Xml.Linq.dll
+be602eb01817ddf5f1ed3f377787c65f68f509d66688302c030797ce851f8e21  reference/artifacts/ptouch-editor-6.12.10/6/System.Reactive.dll
+7d1ec2c5dc5720569cc8675a8a35998d5f5986d693ab00a543c15faa323c2924  reference/artifacts/ptouch-editor-6.12.10/6/System.Reflection.DispatchProxy.dll
+ae62d38d2cee76f379804291a8f43300cb2af905a35144369efdec7d54e25705  reference/artifacts/ptouch-editor-6.12.10/6/System.Reflection.dll
+7cc27709e76a74de5cbce5211532d6fa1a0a526f520a80379c5c4c7fabcb0ed8  reference/artifacts/ptouch-editor-6.12.10/6/System.Reflection.Emit.dll
+46430500d0bbdb905bbc2cddf317dca6a34595dc3b699e5315b451f99cb40d42  reference/artifacts/ptouch-editor-6.12.10/6/System.Reflection.Emit.ILGeneration.dll
+7662b0af31963e47a6d985eed3866a426fea5ea805ceaaff4ae97039939d05cb  reference/artifacts/ptouch-editor-6.12.10/6/System.Reflection.Emit.Lightweight.dll
+13e2ad271015f68713b72ba4fad2c678836fe9e84a7368112ce26d219356c96b  reference/artifacts/ptouch-editor-6.12.10/6/System.Reflection.Extensions.dll
+0b925dc101bd8b2a8bb287ecd5033b1ab91ecbe370189a479e320f535e175ccc  reference/artifacts/ptouch-editor-6.12.10/6/System.Reflection.Metadata.dll
+8975af4c5414488f0233aef67dd924b4b41bc612bb1a8d0fd6d7881ff7ad13f3  reference/artifacts/ptouch-editor-6.12.10/6/System.Reflection.Primitives.dll
+bcc123d64e5075e27acd020b200f04e8d0a1d268d5954625ff3532b10642a83c  reference/artifacts/ptouch-editor-6.12.10/6/System.Reflection.TypeExtensions.dll
+71a283fec3e1414aa043e19d8cfd8960189fb94a971a452aa508948e91c57120  reference/artifacts/ptouch-editor-6.12.10/6/System.Resources.Extensions.dll
+549285ff5550130cab24c9e2a2632e383101d556bc6562dca4d0ec77b863bf46  reference/artifacts/ptouch-editor-6.12.10/6/System.Resources.Reader.dll
+111db3e45e68c3d074d1ed222e943ea11da17d0eb2ef5db99e7cdc405efae0d5  reference/artifacts/ptouch-editor-6.12.10/6/System.Resources.ResourceManager.dll
+68a728c920e0d9ea857cb1e3dfaa8cc099cdee16a8421eadd580dfbc5b7c545f  reference/artifacts/ptouch-editor-6.12.10/6/System.Resources.Writer.dll
+42af1ee45b203259fd39083a175e113618e4aae71ce1d7a916ab4d5da2d91f5c  reference/artifacts/ptouch-editor-6.12.10/6/System.Runtime.CompilerServices.Unsafe.dll
+585f9a5d4e36c40e2dfa3e9ad22397dd0d0eca16c6dc3c9240cff30b716a26a3  reference/artifacts/ptouch-editor-6.12.10/6/System.Runtime.CompilerServices.VisualC.dll
+1b44e30c99ca6072b7e0ffd33287759e5025073956f9feaf01119ba237434daf  reference/artifacts/ptouch-editor-6.12.10/6/System.Runtime.dll
+b62bfc7169ca24355e38845905f7221a90d4e752e801d6e6d58f2e6a9a4f2ab2  reference/artifacts/ptouch-editor-6.12.10/6/System.Runtime.Extensions.dll
+92f694a3fb2d71667f1363c0d68b3f39301b5e8155e3764cb8556b41092e1c6d  reference/artifacts/ptouch-editor-6.12.10/6/System.Runtime.Handles.dll
+ee4ba6af6a179772095124c40b63dc24ef8dc5cb12f88951b86592b390cc91e9  reference/artifacts/ptouch-editor-6.12.10/6/System.Runtime.InteropServices.dll
+422d10ac25c97c96890bade8131d9c7c11688f09aab324d893b30af143e1ae18  reference/artifacts/ptouch-editor-6.12.10/6/System.Runtime.InteropServices.JavaScript.dll
+75826542cd6bf74edea90bd8534a732a83ff218741e64690817f29a246fb2b54  reference/artifacts/ptouch-editor-6.12.10/6/System.Runtime.InteropServices.RuntimeInformation.dll
+9c04c1611ee604020f4b9561f7f7721a5c4ab66b123da09a2cb5d17bc2045212  reference/artifacts/ptouch-editor-6.12.10/6/System.Runtime.Intrinsics.dll
+63c907b116e7f426507ce2a01da1ace918d0f088c2e0c39cf868a416f53ae662  reference/artifacts/ptouch-editor-6.12.10/6/System.Runtime.Loader.dll
+055d13286c5f038b9da1e50f9bd3b99d6e489cf2a69c0d3bb334cb14d5508022  reference/artifacts/ptouch-editor-6.12.10/6/System.Runtime.Numerics.dll
+3f001f84be3e5a7809c46fbbc0bd09b5cd50f5be1039376f745b07ed0c64e013  reference/artifacts/ptouch-editor-6.12.10/6/System.Runtime.Serialization.dll
+78eb77eccf596d22d4e77cb1018ffae26f68906895e983d31d92587d89f3f0a9  reference/artifacts/ptouch-editor-6.12.10/6/System.Runtime.Serialization.Formatters.dll
+d22164db81cd47301b395c64407d8d0b3b11e4bf509eb96eb29c7032348b552d  reference/artifacts/ptouch-editor-6.12.10/6/System.Runtime.Serialization.Json.dll
+bc47691a2e92f69f379326c3eb156a54f4a19a38bfbace25c77355f3e2884241  reference/artifacts/ptouch-editor-6.12.10/6/System.Runtime.Serialization.Primitives.dll
+6e1b7d9a2c943a9c35e7ca4a60d6983a72eb212c4d74fd1627acf8b33c7be4da  reference/artifacts/ptouch-editor-6.12.10/6/System.Runtime.Serialization.Xml.dll
+69a41a37aa770f49608f835ecce6c526d9a6fb4d5e6c15932c462f0eddf2b609  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.AccessControl.dll
+ec6396f87033e3d5db953d61c5e4d696eae7bd78540efc22e5dc6ca1a41f50ad  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.Claims.dll
+cbe008e5d2f315cd6c2f9e608a3b346521de21a48022562038b7d26bb1b7aa58  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.Cryptography.Algorithms.dll
+e55dbc821da5fbcd7d247ac0ee57f7dc59a1374efad1b8550f26da93fd931b7a  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.Cryptography.Cng.dll
+18ab171383bb5dec79cc06f4bede6d72cfd52d166123dcc0fb8b0ba65238f817  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.Cryptography.Csp.dll
+c6d1a21d8b5681a5219e804f4a52f789e32e1f5ae77700c7ac58c00036121dec  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.Cryptography.dll
+8e1168cca6e13420fc6bd7b78313f1ea927e246986875614fd2792aaac2d3917  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.Cryptography.Encoding.dll
+d4d7319b148c6c07982ad947468dbf7c97564d8b4f734c2918de35f63d600406  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.Cryptography.OpenSsl.dll
+f8cab6a591c1ff1a81be96ce8731513e45955eace3808c8405badff54af77b66  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.Cryptography.Pkcs.dll
+970824429376c4be5f2437ea73e417b5a907efc07c63b73d24670b45e756ab7e  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.Cryptography.Primitives.dll
+608ee9113c11cf8393ac98a3522b13dd4e2e0340968be53981597ff2f1cdd42b  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.Cryptography.ProtectedData.dll
+778ea17f1d65d750f419e952b093513701a8b596e08c04462e40f9739ed8ccf7  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.Cryptography.X509Certificates.dll
+80352610eb12e2c3c41638e9984583c1e9e9788cb1bf41e19056a14857cc324d  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.Cryptography.Xml.dll
+d109f9c3dc291613546dc1c702b71251c2f7687d7fc2d1c39cad7d986b226089  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.dll
+d4be0b1e399acf7bac095d36a0eafb2678e1eeff02632c9acb76c2ba32f11887  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.Permissions.dll
+f25742aeb1224e7e1eb00eeb7035afd53871fe5bc8225f1afd4187ba80fd5631  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.Principal.dll
+22ec0385cbee81f469cac14785014cc286cbfa30fe3db01a01d5fcf515d3ecd3  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.Principal.Windows.dll
+aad5bf7d8c1c4dfbf2a1aefd357da65901ac8f5cd1106d8890f122b9dad44307  reference/artifacts/ptouch-editor-6.12.10/6/System.Security.SecureString.dll
+af1e261339f634c68a0b0b749ab1047b9218521a50ca3e0e989c6310fd28c9c8  reference/artifacts/ptouch-editor-6.12.10/6/System.ServiceModel.Web.dll
+b684ad5069db8e92f77a03a12954e60a576de2fa57d50845b5e28403fa9a13b1  reference/artifacts/ptouch-editor-6.12.10/6/System.ServiceProcess.dll
+23b95f2d90a246d5dd97ff56db80f0af8a9d2641575146e6e60368b46285dff0  reference/artifacts/ptouch-editor-6.12.10/6/System.Text.Encoding.CodePages.dll
+fc63554bb3a186fdddb89b060f78ce0f7e433dbb82c0002ce547e12820300255  reference/artifacts/ptouch-editor-6.12.10/6/System.Text.Encoding.dll
+0f0f188d61da7b9da406eb63fb144c055429e5e78219536ea950afaf0782801a  reference/artifacts/ptouch-editor-6.12.10/6/System.Text.Encoding.Extensions.dll
+d7725f0b7aa0ba74744dceedcfd43af3f1ee86d54cd9d99dcb022908807db735  reference/artifacts/ptouch-editor-6.12.10/6/System.Text.Encodings.Web.dll
+75df64a388afd9543a89cebcca4784d59b48975cbc00f211f9fe48dafaeaacd4  reference/artifacts/ptouch-editor-6.12.10/6/System.Text.Json.dll
+01dc5ad0dbe21e361ba1f42c82c924c248c03a61acc227998f570cf126623276  reference/artifacts/ptouch-editor-6.12.10/6/System.Text.RegularExpressions.dll
+005060e214882c07285f8ba9e5a241d1b41a5062f04c4db6066bdcf97decf792  reference/artifacts/ptouch-editor-6.12.10/6/System.Threading.AccessControl.dll
+de93ac687748928c052dc992c745accff51837d32fd90f789614611f73eac2c8  reference/artifacts/ptouch-editor-6.12.10/6/System.Threading.Channels.dll
+c95c7b3fd4c64e0bbcce30a46dbe7eb436e3930d392107b3fc23c4fe9f47886e  reference/artifacts/ptouch-editor-6.12.10/6/System.Threading.dll
+fd54616b4f6e80b0b3450e268a3b2a7fa501cd03e19787f8e38829a153e9b9e7  reference/artifacts/ptouch-editor-6.12.10/6/System.Threading.Overlapped.dll
+2e8714c1647a7c04dd5d8048899138b6e5acf9f88ce122a40c5bf3e570ae35c2  reference/artifacts/ptouch-editor-6.12.10/6/System.Threading.Tasks.Dataflow.dll
+1774c1963c370773f43c8cf2afce595be5b6a9fffce6c663bf7871d66db2a485  reference/artifacts/ptouch-editor-6.12.10/6/System.Threading.Tasks.dll
+f5f8ac42deb8747ba77eeb2ac301e4d8f7245dca756b7702e6191eb48f04ce3a  reference/artifacts/ptouch-editor-6.12.10/6/System.Threading.Tasks.Extensions.dll
+8b80781af8841108f66ad10059bd8730f06f4aecbdc7d95e9e4b7c01309f913f  reference/artifacts/ptouch-editor-6.12.10/6/System.Threading.Tasks.Parallel.dll
+9cf878031f38a5c5d7488e262f91f3a63874f0fffdb400a7bbdce927e6f7f0b3  reference/artifacts/ptouch-editor-6.12.10/6/System.Threading.Thread.dll
+3b35c69678ce3f7a668ba37123d8a0879ef4deebb05a172d700b8cd9de3e061d  reference/artifacts/ptouch-editor-6.12.10/6/System.Threading.ThreadPool.dll
+5d0e2419ce3d5d6e893285c138bf5b335ab2358e57b0bac17b35e6ec80e09334  reference/artifacts/ptouch-editor-6.12.10/6/System.Threading.Timer.dll
+a6f85a6b89d3c9c6b9c9998b576bc50d260952be5d41f3460c65b8b027165be1  reference/artifacts/ptouch-editor-6.12.10/6/System.Transactions.dll
+af813be42588c064774b7562ed85fe0cd5f76a51675093f4a9b000c9c72d22d3  reference/artifacts/ptouch-editor-6.12.10/6/System.Transactions.Local.dll
+7a3b7cc5ead3b62f589216e317aba822385a10841cfc1e028f75716883674ead  reference/artifacts/ptouch-editor-6.12.10/6/System.ValueTuple.dll
+682cc261e80df33fdb97eee8d970523b70c26c0232597768d052829a95cccad0  reference/artifacts/ptouch-editor-6.12.10/6/System.Web.dll
+7bf19463693f1ebba7ab18769c8c25468dc903aecf8467048db34f533dde8c68  reference/artifacts/ptouch-editor-6.12.10/6/System.Web.HttpUtility.dll
+04420a9f2bfd3d67794414021fecde4aa9ac127bf904599941dfdb8f8607895c  reference/artifacts/ptouch-editor-6.12.10/6/System.Windows.Controls.Ribbon.dll
+e5e871a64b6e6652922fa690354fde3c67c790fca2676d1e9733c1d5ad6d7689  reference/artifacts/ptouch-editor-6.12.10/6/System.Windows.dll
+1b90723ad65eb224ef5fba0ee7f7ecee670886697fb44bf7e45a2dea898daa31  reference/artifacts/ptouch-editor-6.12.10/6/System.Windows.Extensions.dll
+9be354ed07141f18c572ac2189b8f75bd1c443967d2b52a134da573c91c92dde  reference/artifacts/ptouch-editor-6.12.10/6/System.Windows.Forms.Design.dll
+2157cecb12f2fe6f7f2ab94814e00c334bcce73f351dfac17ca55b775272ee4e  reference/artifacts/ptouch-editor-6.12.10/6/System.Windows.Forms.Design.Editors.dll
+666d1d3fe0c78847684f3b7f0489c10db5a7e6480bc90a988ab5e3baca2aabb9  reference/artifacts/ptouch-editor-6.12.10/6/System.Windows.Forms.dll
+46eaae5cb49a31f4d9cd084c152e543b8a1b0d337a117b7db6d1d43f31ebfbbd  reference/artifacts/ptouch-editor-6.12.10/6/System.Windows.Forms.Primitives.dll
+88c7a1163b04025ee2a280235904cd8d17b10851571b8becd4d1790a7fd9b6d1  reference/artifacts/ptouch-editor-6.12.10/6/System.Windows.Input.Manipulations.dll
+c0127093739b319f01462620bcb2996a4cd5a338a9675bf10c311f72a08de012  reference/artifacts/ptouch-editor-6.12.10/6/System.Windows.Presentation.dll
+4112c9ad92cc836c9d36cf8eab690474753aeb90c9298d31c32ede1a0bf0f930  reference/artifacts/ptouch-editor-6.12.10/6/System.Xaml.dll
+f13f8b30a4b9a69d1873dba1d318f49104b15a3df2dcc76e96fddfa60139eee5  reference/artifacts/ptouch-editor-6.12.10/6/System.Xml.dll
+ca2a5aa1d83ccf4564d65f9c011c0b48ad1add4bdd3cc3ed0b321900cdbfe0c4  reference/artifacts/ptouch-editor-6.12.10/6/System.Xml.Linq.dll
+69b4baa7389a8b5f95ee5b78b1b7b99a19a3b152e83cfb0f550db75607b1fe97  reference/artifacts/ptouch-editor-6.12.10/6/System.Xml.ReaderWriter.dll
+1e2eef0be5b3375375dadba95e7dd5c8d400433649d41c230de088a8aaa7cbfb  reference/artifacts/ptouch-editor-6.12.10/6/System.Xml.Serialization.dll
+fddf54785732f47070754415b5fb49fc7d9922d01239bc731747f058e6132f03  reference/artifacts/ptouch-editor-6.12.10/6/System.Xml.XDocument.dll
+83872f9a586cc01474f49b1a4cbcfa6347e9d20cc1b6de2bee224f4c7afa82ad  reference/artifacts/ptouch-editor-6.12.10/6/System.Xml.XmlDocument.dll
+ad2c98c39de648aafb4ec10d959f563b68c56100e44e59f020f44edddcf5d5cc  reference/artifacts/ptouch-editor-6.12.10/6/System.Xml.XmlSerializer.dll
+a232c2a52aae33c3372fa7f48f52c24b1c5946c03749f022509c5d85b86ac6e0  reference/artifacts/ptouch-editor-6.12.10/6/System.Xml.XPath.dll
+043370a842e1a12f780f486a7e16b50b3e76d35f969af4ce171d848e8b934101  reference/artifacts/ptouch-editor-6.12.10/6/System.Xml.XPath.XDocument.dll
+8fd0db74e64a54f12ed42e6efba24dd6ff6038dd17a642718f04d9535be2121c  reference/artifacts/ptouch-editor-6.12.10/6/th/PtouchEditor6.Wpf.resources.dll
+a950a6f7c9b8ecccc3a50a5c0bfcaeba0182ad5a4e40d9db451d1f4a1c43d0e2  reference/artifacts/ptouch-editor-6.12.10/6/tr/Microsoft.VisualBasic.Forms.resources.dll
+5265038bf3044b9e1851c05f0ccb6d8ecba0e13385272d09275196bd722ae5d7  reference/artifacts/ptouch-editor-6.12.10/6/tr/PresentationCore.resources.dll
+4e43587a72cac51284be37d37beb670314429a7ed003f74fa7878c5e8a5c7c22  reference/artifacts/ptouch-editor-6.12.10/6/tr/PresentationFramework.resources.dll
+7afbe0a99565895b677c1c24dc3c1bb683c690a4878f6bfd9ae047a7df718119  reference/artifacts/ptouch-editor-6.12.10/6/tr/PresentationUI.resources.dll
+1fb7a82d8d6e9d7c9ab0b055e1358edaec72fb8b03df71f9b7cf3dcb9613a3f7  reference/artifacts/ptouch-editor-6.12.10/6/tr/PtouchEditor6.Wpf.resources.dll
+f6f9062b0e8416dd7f24504e03566986086f06c969461c884054387a593c8a1b  reference/artifacts/ptouch-editor-6.12.10/6/tr/ReachFramework.resources.dll
+4b900ead6db2673f90093f0ed921a10ad5bfd2e6604feddd2849495ea0f2186a  reference/artifacts/ptouch-editor-6.12.10/6/tr/System.Windows.Controls.Ribbon.resources.dll
+da3b6ac6a33fe650a5f7cb59aba65bfbd53848cbbb0d3ad6c0dcf03b92c329dc  reference/artifacts/ptouch-editor-6.12.10/6/tr/System.Windows.Forms.Design.resources.dll
+a08caa26518f302f083a3d22f42e70e7f46f6e54060236ba66a11d22f85605b4  reference/artifacts/ptouch-editor-6.12.10/6/tr/System.Windows.Forms.Primitives.resources.dll
+5853544380f6dac481132711cd75af5b16f2786e12d8896ed2d500c848d4406a  reference/artifacts/ptouch-editor-6.12.10/6/tr/System.Windows.Forms.resources.dll
+0e3c1eb8b2e818f8edb9383775ca147d07f9d1b5e81de307a11fa43b5b9b3075  reference/artifacts/ptouch-editor-6.12.10/6/tr/System.Windows.Input.Manipulations.resources.dll
+3e07e9b7775302439daf75edae06bda850935d1753320070f12da6f440287f91  reference/artifacts/ptouch-editor-6.12.10/6/tr/System.Xaml.resources.dll
+3434723ecc43f9c2e24e7606bfb3ce3c4190eb344880bd6db7ab018a487e1552  reference/artifacts/ptouch-editor-6.12.10/6/tr/UIAutomationClient.resources.dll
+ffd46b602f3ce654a5a6481d1e2588e45559c6fbf1c48cec525af720064e69b2  reference/artifacts/ptouch-editor-6.12.10/6/tr/UIAutomationClientSideProviders.resources.dll
+017a00848a12fd3d5c6e69f3a8db5e1ad223962d8336cbbc837948cc3289ac47  reference/artifacts/ptouch-editor-6.12.10/6/tr/UIAutomationProvider.resources.dll
+341c3d97dcdb6020ab0d9da19f77f3eb5b18c13ab852be58ae7e82513c1894c6  reference/artifacts/ptouch-editor-6.12.10/6/tr/UIAutomationTypes.resources.dll
+7af6119d56e570fbe5102ea651eeaa7438cc3fd09e824974cc3cf5c7a6aa674a  reference/artifacts/ptouch-editor-6.12.10/6/tr/WindowsBase.resources.dll
+5d14e9a91bcb40a0e3b3640c7393ff689ad5cc9f54fdc1bc0c78b136c6553bea  reference/artifacts/ptouch-editor-6.12.10/6/tr/WindowsFormsIntegration.resources.dll
+2489c4f4569e3c1152b1d08bb58522bd85ceda0e73b78fe02ecf059c89f7e7c0  reference/artifacts/ptouch-editor-6.12.10/6/UIAutomationClient.dll
+b532c101e0d4fc2f8bbb2bd1d6cdef7e97ce1079096c288c96337c6ad63d7c65  reference/artifacts/ptouch-editor-6.12.10/6/UIAutomationClientSideProviders.dll
+5799ebd4d5a9a3f3e95f02973c850b7d79c3ca7ca57aec2e93366be35deba924  reference/artifacts/ptouch-editor-6.12.10/6/UIAutomationProvider.dll
+317846c159b5c0b8743bae421ceab4cbf028de1d709d618690172198135cb754  reference/artifacts/ptouch-editor-6.12.10/6/UIAutomationTypes.dll
+856e80e7aa1a77fca0c2ce52713721bc0580d74cd999e27ba2a71106bffecacb  reference/artifacts/ptouch-editor-6.12.10/6/UpdateServerClientLibrary.dll
+89ed5a6877a87ec3ec9fe4a0fb14dc950599f0b67318e746084a0c333a6c865f  reference/artifacts/ptouch-editor-6.12.10/6/vccorlib140.dll
+13bc34ffd5ee54112aff4c484caab3904940aef6f74095843080042fe99d7d0a  reference/artifacts/ptouch-editor-6.12.10/6/vcruntime140_cor3.dll
+a9d7732a3c3de09f0601a7fa2555093dcb49f08e2fc62a86091461f0f38393ed  reference/artifacts/ptouch-editor-6.12.10/6/vcruntime140.dll
+bb2b1d16187562376fc888059e2cbbf26c5404f6a4bb7197d1d01b970f199667  reference/artifacts/ptouch-editor-6.12.10/6/vcruntime140_threads.dll
+e0ab08329f1e3b9e84a634bc44ac2660bfa857d370366b940e22a84eea7ad8e7  reference/artifacts/ptouch-editor-6.12.10/6/vi/PtouchEditor6.Wpf.resources.dll
+41716f803ee4d4e2549c3fd6e29630f6b897ab6375ffc114f56b8b3d7ec4ddba  reference/artifacts/ptouch-editor-6.12.10/6/WindowsBase.dll
+7d263678124d7e9171fbcf1fa08959753f9d820c982483e37b75bbb05e6ff683  reference/artifacts/ptouch-editor-6.12.10/6/WindowsFormsIntegration.dll
+b4de4c7926f06bfb12070e7508a2b60b1800f9fc2cdc4223b83f70cc47507124  reference/artifacts/ptouch-editor-6.12.10/6/wpfgfx_cor3.dll
+d9b08422fad9cd89d415df32a87581a5e6fb4c9fe0ca5d724b9fb971504e40fd  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/Microsoft.VisualBasic.Forms.resources.dll
+e20a8eeba483922a2aa82ff2fac12cbc6cafd11e1c9d18f6e9ac098dcf217084  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/PresentationCore.resources.dll
+2bf5ecc30df9f2effb39b40bb6eda07c32511d6acf18775e8f2b77213bf820f3  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/PresentationFramework.resources.dll
+e696f507fb8f453a494449cc783a42838a20ed41babefa594fc859b2a70af6d1  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/PresentationUI.resources.dll
+1e26355f001573b03387adde5be22e119d8512ab313321db38d520bd16d4852e  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/PtouchEditor6.Wpf.resources.dll
+0b2000028adcd7f851a5211df4b4d7b7f3c832cf963d16bd16f8cb844233c88d  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/ReachFramework.resources.dll
+7c4b2582aeb2e2d726f37b26c17a1f9e3a059b0ce50984e30f67f4719c6b736c  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/System.Windows.Controls.Ribbon.resources.dll
+3b67082155fe578108af0ddeaaf89c937e8c704eb11bd678c6ead4a4ee3daa1c  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/System.Windows.Forms.Design.resources.dll
+b994821ef2b811629c48ef804ac4a4649134226d36563e0f4eed0f3cc97b3fa4  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/System.Windows.Forms.Primitives.resources.dll
+77c614fef855446616f1c4ca832ec181166b99a1156856489cbcaa7385f91417  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/System.Windows.Forms.resources.dll
+ac1c71cfbe232e6be0091d07cb78cdedd1b3e0934f94bad39612d1e25bdec11c  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/System.Windows.Input.Manipulations.resources.dll
+82a2e4b13fbdfc5af1d6cd1f6714a99f937d8fa61cf45ff4871d4b475877350d  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/System.Xaml.resources.dll
+250885a9a0a343f3b966e977d69d650056df8a9a9982c076e304d7c9b9049a50  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/UIAutomationClient.resources.dll
+f43f73e7e5257a4776c5170aa83879a67e8ac743366132e07fac462edcafd6b4  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/UIAutomationClientSideProviders.resources.dll
+864ffe8e49ba4e36ffafefd95b8989d5c2f8506b34c8f1a0d58c299dd069520b  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/UIAutomationProvider.resources.dll
+f5c18d4d9eda9eaa38ebe04dc03cf410c239c9fc32b028ab460edd292509f1b8  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/UIAutomationTypes.resources.dll
+0380e9bb37fcf10a41d9f96d6350bb9bec6d4e67f4ba346d1839db76d27d9a87  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/WindowsBase.resources.dll
+610d9d3fc91a3a86be316e02797c3c7439b7e12694a5f29dcae0883dc1aa5a34  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hans/WindowsFormsIntegration.resources.dll
+29ba9142c60b5b83bc7c2d7d5062e061501d333f5c232b8601357fb80869314a  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/Microsoft.VisualBasic.Forms.resources.dll
+3284de73d6864b6cbea49ffd166826af02f030ead67c0f45c5e20921a9bea25c  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/PresentationCore.resources.dll
+4b12ad872bf4550f62e7c823d13fb9ceadd6f8265e95f99f1fd43fa1f036e10f  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/PresentationFramework.resources.dll
+48264f4edb6d7f66e82fa28cfb1a32cff6cd04cfeed66a29014317570bec41a9  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/PresentationUI.resources.dll
+716e9a2abfa3a34ca5c6c5dc1704b7c29ce407dffe712463c736f1dac349c6a1  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/PtouchEditor6.Wpf.resources.dll
+cde61862ce062251e93fc61dc833f9379a6da18b62b21350cd392c1cc1f79a9e  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/ReachFramework.resources.dll
+e098ba0046111eee40099bbbbb3c3d7049a2ea91e4766412db88caf443530e33  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/System.Windows.Controls.Ribbon.resources.dll
+4147c086b2838379a6ce73d6e1a20be0ec86aaee756a934a49c1704755ab7b75  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/System.Windows.Forms.Design.resources.dll
+76d914e285dd326f32e546975a323cc605cb02a6f12371e7e90697f7b3235cce  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/System.Windows.Forms.Primitives.resources.dll
+7062df19b1b22b098bbdab33aab3b5d804b111739619c985894430dcdae81e5e  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/System.Windows.Forms.resources.dll
+75c84eab60e7bc4c2295e0338247915f496de05626ea706371cec6c1061b148b  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/System.Windows.Input.Manipulations.resources.dll
+d9d58b5bf9059557411d1db4955b12d9347fa7d7f339a078711bae9b78badfbc  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/System.Xaml.resources.dll
+323e0fbf682c4449fee301152d73aee06467ff357c9693a4b5a839f39138a992  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/UIAutomationClient.resources.dll
+51d732922a0a25ca1ab5c0eb5eadd1446b16d0a740338ad2ea3b4899132d9b24  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/UIAutomationClientSideProviders.resources.dll
+b9d1cb5d2ae1fa81af551ac55a9f272746f41ff150ee5062e2ba65a4d99271a5  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/UIAutomationProvider.resources.dll
+9a58b67e616908f4a1bdba424bb67223a82cba743f254bd8e47adba89950d963  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/UIAutomationTypes.resources.dll
+cd8d27415e17302f7af426df289c30c8389d75c35f216e8348366c59ae57e803  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/WindowsBase.resources.dll
+5b793952940edddf6b957649a3b2034eecf04e1ab5f9ea5023617258e6072aa6  reference/artifacts/ptouch-editor-6.12.10/6/zh-Hant/WindowsFormsIntegration.resources.dll
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_brdvset_exe.gpr
+074a447b6463ed80272200c9eeddd1e2bc15fce56fce81f8007f9c9830ad3149  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_brdvset_exe.rep/idata/00/~00000000.db/db.1.gbf
+10f60f24c03bd6027f8165292c7f06d3b47442e8eaa1217b577f1bdd98a75eae  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_brdvset_exe.rep/idata/00/00000000.prp
+afed071b228a87fbbb18d8bf39667792d6912c1d1ad2ea2f4f41dac320db8b2f  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_brdvset_exe.rep/idata/~index.bak
+9d2e4bbaaddc9d018996e98484f6556abc2c27fc0cb9bd32b40cf4c0f8ffc6fc  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_brdvset_exe.rep/idata/~index.dat
+71132643f961c07e6ffe9f5aa9ed3dbfd39d2b62460f2bb0396f34bd06be9d6e  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_brdvset_exe.rep/idata/~journal.bak
+7c5e2d010a04b12b18310e9deb831167f77b90a9edbb236be91a2e3c05adcc97  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_brdvset_exe.rep/project.prp
+afed071b228a87fbbb18d8bf39667792d6912c1d1ad2ea2f4f41dac320db8b2f  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_brdvset_exe.rep/user/~index.dat
+afed071b228a87fbbb18d8bf39667792d6912c1d1ad2ea2f4f41dac320db8b2f  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_brdvset_exe.rep/versioned/~index.bak
+afed071b228a87fbbb18d8bf39667792d6912c1d1ad2ea2f4f41dac320db8b2f  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_brdvset_exe.rep/versioned/~index.dat
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_ptfilo_dll.gpr
+2b881aa617a1a079b080f2ed644d5133146f521f8b933c4a332cf20109f780e2  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_ptfilo_dll.rep/idata/00/~00000000.db/db.1.gbf
+87bcddd012bfacb73e7ec9b37be22cfe1d5dd15396c4139480d4da5fcb7c9d47  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_ptfilo_dll.rep/idata/00/00000000.prp
+afed071b228a87fbbb18d8bf39667792d6912c1d1ad2ea2f4f41dac320db8b2f  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_ptfilo_dll.rep/idata/~index.bak
+65da8eb80dc42bf4e47b848ba1df0a7c2bce8958dda5ff9b49039557659aca01  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_ptfilo_dll.rep/idata/~index.dat
+c01529293925d50899688e614d5863e12af2a27c3c604a7d028df70bf58c9fd6  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_ptfilo_dll.rep/idata/~journal.bak
+7c5e2d010a04b12b18310e9deb831167f77b90a9edbb236be91a2e3c05adcc97  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_ptfilo_dll.rep/project.prp
+afed071b228a87fbbb18d8bf39667792d6912c1d1ad2ea2f4f41dac320db8b2f  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_ptfilo_dll.rep/user/~index.dat
+afed071b228a87fbbb18d8bf39667792d6912c1d1ad2ea2f4f41dac320db8b2f  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_ptfilo_dll.rep/versioned/~index.bak
+afed071b228a87fbbb18d8bf39667792d6912c1d1ad2ea2f4f41dac320db8b2f  reference/artifacts/ptset-re-scratchpad/re/ghproj/brother_ptfilo_dll.rep/versioned/~index.dat
+d42eb18ed788220d98e1dc4150fb93163b92e62afa117b746d8b243609b74d8f  reference/artifacts/ptset-re-scratchpad/re/out/brdvset.exe.c
+8134ec0a9e25004f5c56fe622438a38e44edcfcea2dae3d3f48e7bcdb86ac5b5  reference/artifacts/ptset-re-scratchpad/re/out/ptfilo.dll.c
+cec4b337427060ddb38d056b057df0c52ddbb0a3f337ebc4dbfb1254617c16cf  reference/artifacts/ptset-re-scratchpad/re/scripts/DecompileAll.java
+31205b7e1d46c20281a35803d272ed3b8a7efce5cd858c4ed383b50b594ae9f8  reference/artifacts/ptset-re-scratchpad/re/scripts/rtti_map.mjs
+c2d0a8807847b18e24c943b5611c3463885fea2697bf7748d8929578d9f77afd  reference/artifacts/ptset-re-scratchpad/re/scripts/slots.mjs
+5bffabb5dccc93a8cee6252d7b169f80784ef3d3299807870ba3543831edb0a3  reference/artifacts/ptset-re-scratchpad/re/status.ps1
+06330e912771badc2d8cded93c1b66e32e79badb10fded1e242d5e40d20b9ae0  reference/artifacts/ptset-re-scratchpad/re/strings.ps1
+6c0e79839771e4505099340698e5a8eb7d4885477ba053ff2cb225e218aea36d  reference/artifacts/ptset-re-scratchpad/re/targets/brdvset.exe
+19bf4b9e756b3703105f061ddabff6a8f0c0691170adf965e514c4d07b268305  reference/artifacts/ptset-re-scratchpad/re/targets/brdvset_US.dll
+cb37571af3bd15c60bcb2cf4991ae35777984339ff889027092f8f5a3c89452d  reference/artifacts/ptset-re-scratchpad/re/targets/ptfilo.dll

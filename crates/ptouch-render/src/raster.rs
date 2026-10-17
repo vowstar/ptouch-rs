@@ -152,4 +152,37 @@ mod tests {
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0].len(), 16); // 128/8
     }
+
+    #[test]
+    fn bitmap_raster_round_trip_preserves_pixels_at_target_head_widths() {
+        for (max_px, height) in [(128, 37), (560, 225)] {
+            let mut source = LabelBitmap::new(13, height);
+            for y in 0..height {
+                for x in 0..source.width() {
+                    source.set_pixel(x, y, (x * 3 + y * 7) % 5 == 0);
+                }
+            }
+
+            let raster = bitmap_to_raster_lines(&source, max_px);
+            let decoded = decode_raster_lines(&raster, max_px, height);
+            for y in 0..height {
+                for x in 0..source.width() {
+                    assert_eq!(source.get_pixel(x, y), decoded.get_pixel(x, y));
+                }
+            }
+        }
+    }
+
+    fn decode_raster_lines(lines: &[Vec<u8>], max_px: u16, height: u32) -> LabelBitmap {
+        let mut bitmap = LabelBitmap::new(lines.len() as u32, height);
+        let offset = (usize::from(max_px) / 2).saturating_sub(height as usize / 2);
+        for (x, line) in lines.iter().enumerate() {
+            for y in 0..height {
+                let pixel = offset + height as usize - 1 - y as usize;
+                let byte = line[line.len() - 1 - pixel / 8];
+                bitmap.set_pixel(x as u32, y, byte & (1 << (pixel % 8)) != 0);
+            }
+        }
+        bitmap
+    }
 }

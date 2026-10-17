@@ -6,6 +6,10 @@
 //! Provides helpers to list available system fonts and find a font by name.
 
 use cosmic_text::FontSystem;
+use std::collections::{HashMap, HashSet};
+use std::sync::{Mutex, OnceLock};
+
+static PUA_FONT_GLYPHS: OnceLock<Mutex<HashMap<String, HashSet<char>>>> = OnceLock::new();
 
 /// Load a system face for a GUI editing adapter. Printing still uses cosmic-text.
 pub fn face_data(name: &str, bold: bool, italic: bool) -> Option<(Vec<u8>, u32)> {
@@ -53,6 +57,37 @@ pub fn find_font(name: &str) -> Option<String> {
     None
 }
 
+/// Check whether a system font family contains a particular Unicode glyph.
+pub fn has_glyph(name: &str, character: char) -> bool {
+    let cache = PUA_FONT_GLYPHS.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut cache = cache
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let key = name.to_lowercase();
+    let glyphs = cache.entry(key).or_insert_with(|| {
+        let font_system = FontSystem::new();
+        let id = font_system.db().faces().find_map(|face| {
+            face.families
+                .iter()
+                .any(|family| family.0.eq_ignore_ascii_case(name))
+                .then_some(face.id)
+        });
+        id.and_then(|id| {
+            font_system.db().with_face_data(id, |data, index| {
+                ttf_parser::Face::parse(data, index).ok().map(|face| {
+                    (0xF000..=0xF0FF)
+                        .filter_map(char::from_u32)
+                        .filter(|character| face.glyph_index(*character).is_some())
+                        .collect()
+                })
+            })
+        })
+        .flatten()
+        .unwrap_or_default()
+    });
+    glyphs.contains(&character)
+}
+
 /// List all available font family names on the system.
 ///
 /// Returns a sorted, deduplicated list of family names.
@@ -97,5 +132,10 @@ mod tests {
     fn test_find_font_nonexistent() {
         let result = find_font("ThisFontDefinitelyDoesNotExist12345");
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_has_glyph_does_not_use_a_fallback_family() {
+        assert!(!has_glyph("ThisFontDefinitelyDoesNotExist12345", 'A'));
     }
 }

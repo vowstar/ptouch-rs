@@ -1,0 +1,240 @@
+use std::io::{Read, Write};
+use std::net::{SocketAddr, TcpListener};
+use std::thread::{self, JoinHandle};
+use std::time::Duration;
+
+use super::*;
+use crate::status::STATUS_PACKET_SIZE;
+
+struct VirtualPrinter {
+    address: SocketAddr,
+    worker: JoinHandle<ObservedSession>,
+}
+
+struct ObservedSession {
+    init: Vec<u8>,
+    print_job: Vec<u8>,
+}
+
+impl VirtualPrinter {
+    fn start() -> Self {
+        Self::start_with_completion(0x01, 0)
+    }
+
+    fn start_with_completion(completion_type: u8, error_bits: u8) -> Self {
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        let worker = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut init = vec![0; 102];
+            stream.read_exact(&mut init).unwrap();
+            let mut print_job = Vec::new();
+            let mut completed = false;
+            loop {
+                let mut byte = [0];
+                match stream.read(&mut byte) {
+                    Ok(0) => break,
+                    Ok(1) => {
+                        print_job.push(byte[0]);
+                        if byte[0] == 0x1A {
+                            completed = true;
+                            break;
+                        }
+                    }
+                    Ok(_) => unreachable!(),
+                    Err(error) => panic!("virtual printer read failed: {error}"),
+                }
+            }
+            if completed {
+                let mut completion = status_packet(completion_type);
+                completion[9] = error_bits;
+                stream.write_all(&completion).unwrap();
+            }
+            let mut close_probe = [0; 1];
+            let _ = stream.read(&mut close_probe);
+            ObservedSession { init, print_job }
+        });
+        Self { address, worker }
+    }
+
+    fn address(&self) -> SocketAddr {
+        self.address
+    }
+
+    fn finish(self) -> ObservedSession {
+        self.worker.join().unwrap()
+    }
+}
+
+fn status_packet(status_type: u8) -> [u8; STATUS_PACKET_SIZE] {
+    let mut packet = [0; STATUS_PACKET_SIZE];
+    packet[0] = 0x80;
+    packet[1] = 0x20;
+    packet[10] = 24;
+    packet[11] = 0x01;
+    packet[15] = 0x08;
+    packet[18] = status_type;
+    packet
+}
+
+fn standard_job(width: usize, packbits: bool) -> Vec<u8> {
+    let mut job = vec![
+        0x1B, 0x69, 0x61, 0x01, 0x1B, 0x69, 0x7A, 0x00, 0x00, 24, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x00, 0x00,
+    ];
+    if packbits {
+        job.extend([0x4D, 0x02, 0x47, (width + 1) as u8, 0x00, (width - 1) as u8]);
+    } else {
+        job.extend([0x47, width as u8, 0x00]);
+    }
+    job.extend(vec![0xAA; width]);
+    job.push(0x1A);
+    job
+}
+
+fn high_resolution_job(width: usize, packbits: bool, margin_dots: u8) -> Vec<u8> {
+    let mut job = vec![
+        0x1B,
+        0x69,
+        0x61,
+        0x01,
+        0x1B,
+        0x69,
+        0x7A,
+        0x00,
+        0x00,
+        24,
+        0x00,
+        0x02,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x1B,
+        0x69,
+        0x4B,
+        0x4C,
+        0x1B,
+        0x69,
+        0x64,
+        margin_dots,
+        0x00,
+    ];
+    if packbits {
+        job.extend([0x4D, 0x02]);
+        for _ in 0..2 {
+            job.extend([0x47, (width + 1) as u8, 0x00, (width - 1) as u8]);
+            job.extend(vec![0xAA; width]);
+        }
+    } else {
+        for _ in 0..2 {
+            job.extend([0x47, width as u8, 0x00]);
+            job.extend(vec![0xAA; width]);
+        }
+    }
+    job.push(0x1A);
+    job
+}
+
+#[test]
+fn target_standard_jobs_match_golden_bytes_through_virtual_printer() {
+    for (pid, model, width, packbits) in [
+        (0x2060, "PT-E550W", 16, true),
+        (0x2085, "PT-P900W", 70, false),
+    ] {
+        let expected_job = standard_job(width, packbits);
+        let printer = VirtualPrinter::start();
+        let mut device = PtouchDevice::open_tcp(printer.address(), pid).unwrap();
+        assert_eq!(device.device_info().name, model);
+        device.init().unwrap();
+        device.set_media_width_override(24).unwrap();
+        device
+            .print_raster(
+                &[vec![0xAA; width]],
+                false,
+                false,
+                protocol::PrintQuality::Standard,
+            )
+            .unwrap();
+        device.close().unwrap();
+
+        let observed = printer.finish();
+        let mut expected_init = vec![0; 100];
+        expected_init.extend([0x1B, 0x40]);
+        assert_eq!(observed.init, expected_init);
+        assert_eq!(observed.print_job, expected_job);
+    }
+}
+
+#[test]
+fn target_high_resolution_jobs_match_golden_bytes_through_virtual_printer() {
+    for (pid, width, packbits, margin_dots) in [(0x2060, 16, true, 28), (0x2085, 70, false, 56)] {
+        let printer = VirtualPrinter::start();
+        let mut device = PtouchDevice::open_tcp(printer.address(), pid).unwrap();
+        device.init().unwrap();
+        device.set_media_width_override(24).unwrap();
+        device.set_media_details_for_test(0x01, 0x08);
+        device
+            .print_raster(
+                &[vec![0xAA; width]],
+                false,
+                false,
+                protocol::PrintQuality::HighRes,
+            )
+            .unwrap();
+        device.close().unwrap();
+
+        let observed = printer.finish();
+        assert_eq!(
+            observed.print_job,
+            high_resolution_job(width, packbits, margin_dots)
+        );
+    }
+}
+
+#[test]
+fn printer_error_after_print_is_returned_and_transport_tears_down() {
+    let printer = VirtualPrinter::start_with_completion(0x02, 0x04);
+    let mut device = PtouchDevice::open_tcp(printer.address(), 0x2085).unwrap();
+    device.init().unwrap();
+    device.set_media_width_override(24).unwrap();
+    assert!(matches!(
+        device.print_raster(
+            &[vec![0xAA; 70]],
+            false,
+            false,
+            protocol::PrintQuality::Standard,
+        ),
+        Err(PtouchError::StatusError(_))
+    ));
+    assert!(!device.is_initialized());
+    device.close().unwrap();
+    assert_eq!(printer.finish().print_job.last(), Some(&0x1A));
+}
+
+#[test]
+fn cancellation_before_job_write_closes_without_sending_raster_bytes() {
+    let printer = VirtualPrinter::start();
+    let mut device = PtouchDevice::open_tcp(printer.address(), 0x2085).unwrap();
+    device.init().unwrap();
+    device.set_media_width_override(24).unwrap();
+    let cancellation = CancellationToken::default();
+    device.set_cancellation_token(cancellation.clone());
+    cancellation.cancel();
+
+    assert!(matches!(
+        device.print_raster(
+            &[vec![0xAA; 70]],
+            false,
+            false,
+            protocol::PrintQuality::Standard,
+        ),
+        Err(PtouchError::Cancelled)
+    ));
+    device.close().unwrap();
+    assert!(printer.finish().print_job.is_empty());
+}

@@ -17,8 +17,12 @@ ptouch-core = { path = "../ptouch-core" }
 image = { version = "0.25", default-features = false, features = ["default-formats"] }
 resvg = "0.48"
 cosmic-text = "0.19"
+ttf-parser = "0.25.1"
+qrcodegen = "1.8.0"
 log = "0.4"
 thiserror = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 toml = "1.1"
 base64 = "0.23"
+zip = { version = "2.4.2", default-features = false, features = ["deflate"] }
+roxmltree = "0.21.1"

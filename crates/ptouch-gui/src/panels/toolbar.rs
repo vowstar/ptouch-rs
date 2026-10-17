@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 
-use log::{error, info};
+use log::{error, info, warn};
 
 use ptouch_render::document::LabelDocument;
 use ptouch_render::raster;
@@ -69,8 +69,11 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &AppState) -> Option<ToolbarAction
             action = Some(ToolbarAction::Padding);
         }
         ui.separator();
-        let ready = state.printer_connected && !state.is_printer_busy();
-        let bitmap = state.preview_bitmap.is_some() && !state.needs_rerender;
+        let ready =
+            state.printer_connected && !state.is_printer_busy() && state.can_print_selected_media();
+        let bitmap = state.preview_bitmap.is_some()
+            && !state.needs_rerender
+            && !state.has_unfilled_template_values();
         if ui
             .add_enabled(ready && bitmap, egui::Button::new("Print"))
             .clicked()
@@ -169,6 +172,9 @@ pub fn execute_action(state: &mut AppState, action: ToolbarAction) {
                     chain_print: !state.auto_cut,
                     auto_cut: state.auto_cut,
                     quality: state.print_quality,
+                    tape_width_mm: state
+                        .manual_tcp_tape_width_mm
+                        .unwrap_or(state.tape_width_mm),
                     target: state.printer_target.clone(),
                     cancellation,
                 });
@@ -250,21 +256,25 @@ fn do_open_layout(state: &mut AppState) {
         return;
     };
 
-    let text = match std::fs::read_to_string(&path) {
-        Ok(text) => text,
-        Err(e) => {
-            state.status_message = format!("Open error: {}", e);
-            error!("Layout read error: {}", e);
-            return;
-        }
-    };
-
-    match LabelDocument::from_toml_str(&text)
+    match LabelDocument::from_path(&path)
         .map_err(|error| error.to_string())
-        .and_then(|document| apply_layout(state, document))
-    {
-        Ok(()) => {
-            state.status_message = format!("Opened {}", path.display());
+        .and_then(|(document, warnings)| {
+            apply_layout(state, document)?;
+            Ok(warnings)
+        }) {
+        Ok(warnings) => {
+            state.status_message = if warnings.is_empty() {
+                format!("Opened {}", path.display())
+            } else {
+                format!(
+                    "Opened {} with {} unsupported item warning(s)",
+                    path.display(),
+                    warnings.len()
+                )
+            };
+            for warning in warnings {
+                warn!("LBX import: {}", warning);
+            }
             info!("Opened layout: {}", path.display());
         }
         Err(e) => {
@@ -298,6 +308,7 @@ fn apply_layout(state: &mut AppState, document: LabelDocument) -> Result<(), Str
     state.overall_flip_v = document.flip_v;
     state.editor_generation = state.editor_generation.wrapping_add(1);
     state.elements = document.elements;
+    state.template_values.clear();
     state.select_canvas_target(None);
     state.selection_revision = state.selection_revision.wrapping_add(1);
     state.mark_dirty();

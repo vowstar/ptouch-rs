@@ -49,6 +49,14 @@ pub enum PtouchError {
     #[error("Bluetooth error: {0}")]
     Bluetooth(String),
 
+    /// TCP socket communication or connection error.
+    #[error("TCP error: {0}")]
+    TcpError(#[source] std::io::Error),
+
+    /// SNMP network status query failed.
+    #[error("SNMP error: {0}")]
+    SnmpError(String),
+
     /// A model does not support the requested operation.
     #[error("Unsupported operation: {0}")]
     UnsupportedOperation(&'static str),

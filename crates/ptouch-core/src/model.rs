@@ -15,6 +15,7 @@ use crate::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Dialect {
     Usb,
+    Tcp,
     P300Bt,
 }
 
@@ -51,7 +52,7 @@ impl ModelProfile {
 
     pub(crate) fn tape_width_px(self, width_mm: u8) -> Option<u16> {
         match self.dialect {
-            Dialect::Usb => {
+            Dialect::Usb | Dialect::Tcp => {
                 tape::tape_pixels(width_mm, self.dpi).map(|px| px.min(self.raster_width_px))
             }
             // Only this tape profile has been physically verified so far.

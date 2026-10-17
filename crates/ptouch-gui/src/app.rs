@@ -82,7 +82,7 @@ impl PtouchApp {
         }
 
         let result = match ptouch_render::document::render_document(
-            &self.state.document(),
+            &self.state.preview_document(),
             self.state.tape_width_px,
             self.state.target_dpi(),
             &mut self.renderer,
@@ -156,13 +156,19 @@ impl PtouchApp {
                 PrinterResponse::BluetoothDevices(devices) => {
                     self.state.bluetooth_targets = devices;
                 }
+                PrinterResponse::NetworkDevices(devices) => {
+                    self.state.network_targets = devices;
+                }
                 PrinterResponse::Connected {
                     model_name,
                     media_width,
                     media_type,
+                    media_status_available,
+                    media_detected,
                     max_px,
                     dpi,
                     quality_modes,
+                    draft_quality_modes,
                     tape_width_px,
                 } => {
                     let old_dpi = self.state.target_dpi();
@@ -171,16 +177,34 @@ impl PtouchApp {
                     self.state.connecting = false;
                     self.state.printer_max_px = max_px;
                     self.state.printer_dpi = dpi;
+                    self.state.printer_media_detected = media_detected;
+                    self.state.printer_media_status_available = media_status_available;
+                    self.state.printer_media_width_mm = media_detected.then_some(media_width);
+                    if media_status_available {
+                        self.state.manual_tcp_tape_width_mm = None;
+                    }
                     self.state.printer_quality_modes = quality_modes;
-                    // A stale non-standard quality from a previous printer
-                    // would make every print fail with the selector hidden.
-                    if !quality_modes {
+                    self.state.printer_draft_quality_modes = draft_quality_modes;
+                    if !quality_modes
+                        || (!draft_quality_modes
+                            && self.state.print_quality
+                                == ptouch_core::protocol::PrintQuality::Draft)
+                    {
                         self.state.print_quality = ptouch_core::protocol::PrintQuality::Standard;
                     }
-                    self.state.printer_model =
-                        Some(format!("{}: {} mm {}", model_name, media_width, media_type));
-                    self.state.printer_status = Some("Connected".to_string());
-                    if media_width > 0 {
+                    self.state.printer_model = Some(if media_detected {
+                        format!("{}: {} mm {}", model_name, media_width, media_type)
+                    } else {
+                        format!("{}: tape not detected", model_name)
+                    });
+                    self.state.printer_status = Some(if media_detected {
+                        "Connected".to_string()
+                    } else if media_status_available {
+                        "No tape detected. Load media and refresh.".to_string()
+                    } else {
+                        "Select tape width manually".to_string()
+                    });
+                    if media_detected && media_width > 0 {
                         self.state.tape_width_mm = media_width;
                     }
                     // Use the printer's status-derived printable width. This
@@ -195,6 +219,9 @@ impl PtouchApp {
                     self.state.printer_status = Some(message);
                     self.state.printer_model = None;
                     self.state.printer_connected = false;
+                    self.state.printer_media_detected = false;
+                    self.state.printer_media_status_available = false;
+                    self.state.printer_media_width_mm = None;
                     self.state.connecting = false;
                     // Keep printer_max_px, printer_dpi, and quality state:
                     // the canvas must not resize on a transient disconnect,
@@ -503,12 +530,89 @@ mod tests {
                 model_name: "PT-P700".into(),
                 media_width: 24,
                 media_type: "Laminated tape".into(),
+                media_status_available: true,
+                media_detected: true,
                 max_px: 128,
                 dpi: 180,
                 quality_modes: false,
+                draft_quality_modes: false,
                 tape_width_px: 128,
             },
         }
+    }
+
+    #[test]
+    fn tcp_model_capabilities_keep_high_resolution_and_reject_stale_draft() {
+        let target = PrinterTarget::Tcp {
+            address: "127.0.0.1:9100".parse().unwrap(),
+            pid: 0x2085,
+        };
+        let (mut app, tx) = app(AppState {
+            printer_target: target.clone(),
+            print_quality: ptouch_core::protocol::PrintQuality::Draft,
+            ..AppState::default()
+        });
+        tx.send(PrinterEvent {
+            target: Some(target),
+            response: PrinterResponse::Connected {
+                model_name: "PT-P900W".into(),
+                media_width: 24,
+                media_type: "Laminated tape".into(),
+                media_status_available: true,
+                media_detected: true,
+                max_px: 560,
+                dpi: 360,
+                quality_modes: true,
+                draft_quality_modes: false,
+                tape_width_px: 340,
+            },
+        })
+        .unwrap();
+
+        app.drain_printer_responses();
+
+        assert!(app.state.printer_quality_modes);
+        assert!(!app.state.printer_draft_quality_modes);
+        assert_eq!(
+            app.state.print_quality,
+            ptouch_core::protocol::PrintQuality::Standard
+        );
+    }
+
+    #[test]
+    fn p900w_status_without_media_does_not_enable_manual_media_fallback() {
+        let target = PrinterTarget::Tcp {
+            address: "127.0.0.1:9100".parse().unwrap(),
+            pid: 0x2085,
+        };
+        let (mut app, tx) = app(AppState {
+            printer_target: target.clone(),
+            manual_tcp_tape_width_mm: Some(12),
+            ..AppState::default()
+        });
+        tx.send(PrinterEvent {
+            target: Some(target),
+            response: PrinterResponse::Connected {
+                model_name: "PT-P900W".into(),
+                media_width: 0,
+                media_type: "No media".into(),
+                media_status_available: true,
+                media_detected: false,
+                max_px: 560,
+                dpi: 360,
+                quality_modes: false,
+                draft_quality_modes: false,
+                tape_width_px: 560,
+            },
+        })
+        .unwrap();
+
+        app.drain_printer_responses();
+
+        assert!(app.state.printer_media_status_available);
+        assert!(!app.state.printer_media_detected);
+        assert_eq!(app.state.manual_tcp_tape_width_mm, None);
+        assert!(!app.state.can_print_selected_media());
     }
 
     #[test]
@@ -708,10 +812,13 @@ mod tests {
                 model_name: "PT-P300BT".into(),
                 media_width: 12,
                 media_type: "Laminated tape".into(),
+                media_status_available: true,
                 max_px: 128,
                 dpi: 180,
                 quality_modes: false,
+                draft_quality_modes: false,
                 tape_width_px: 64,
+                media_detected: true,
             },
         })
         .unwrap();

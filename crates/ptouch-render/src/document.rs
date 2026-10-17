@@ -66,6 +66,25 @@ pub struct LabelDocument {
 }
 
 impl LabelDocument {
+    /// Load a native `.ptl` document or import supported content from an `.lbx` file.
+    pub fn from_path(path: &std::path::Path) -> Result<(Self, Vec<String>)> {
+        if path
+            .extension()
+            .is_some_and(|extension| extension.to_string_lossy().eq_ignore_ascii_case("lbx"))
+        {
+            if std::fs::metadata(path)?.len() > crate::lbx::MAX_ARCHIVE_BYTES as u64 {
+                return Err(RenderError::Layout(
+                    "LBX archive exceeds the 64 MiB import limit".into(),
+                ));
+            }
+            let bytes = std::fs::read(path)?;
+            let imported = crate::lbx::import(&bytes)?;
+            return Ok((imported.document, imported.warnings));
+        }
+        let text = std::fs::read_to_string(path)?;
+        Ok((Self::from_toml_str(&text)?, Vec::new()))
+    }
+
     /// Serialize the document to a TOML string.
     pub fn to_toml_string(&self) -> Result<String> {
         // Never write positioning fields under v1: older builds would silently
@@ -197,8 +216,13 @@ impl LabelDocument {
     ///
     /// The result is sorted for stable display and de-duplication.
     pub fn placeholders(&self) -> Vec<String> {
+        Self::placeholders_in_elements(&self.elements)
+    }
+
+    /// Collect placeholders from elements without cloning embedded payloads.
+    pub fn placeholders_in_elements(elements: &[LabelElement]) -> Vec<String> {
         let mut names = BTreeSet::new();
-        for element in &self.elements {
+        for element in elements {
             if let Some(content) = element.text_content() {
                 collect_placeholder_names(content, &mut names);
             }

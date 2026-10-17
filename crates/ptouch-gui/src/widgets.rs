@@ -53,9 +53,9 @@ pub fn image_file_dialog() -> rfd::FileDialog {
         .add_filter("TGA", &["tga"])
 }
 
-/// Build a file dialog filtered to layout files (`.ptl`).
+/// Build a file dialog filtered to native layouts and imported LBX files.
 pub fn layout_file_dialog() -> rfd::FileDialog {
-    rfd::FileDialog::new().add_filter("Layout", &["ptl"])
+    rfd::FileDialog::new().add_filter("Label layouts", &["ptl", "lbx"])
 }
 
 /// iOS-style toggle switch widget.

@@ -9,7 +9,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::{self, Read};
-use std::path::Path;
+use std::net::SocketAddr;
+use std::path::{Path, PathBuf};
 use std::process;
 
 use clap::parser::ValueSource;
@@ -22,6 +23,7 @@ use ptouch_core::PrinterStatus;
 use ptouch_core::device::{self, DeviceFlags, DeviceInfo};
 use ptouch_core::error::PtouchError;
 use ptouch_core::protocol::PrintQuality;
+use ptouch_core::settings::query_command_mode;
 use ptouch_core::tape;
 use ptouch_core::transport::{PtouchDevice, UsbLocation};
 
@@ -49,8 +51,12 @@ struct Cli {
 enum Commands {
     /// Print labels with text, images, or both
     Print(PrintArgs),
+    /// Convert a supported layout to an LBX archive
+    Convert(ConvertArgs),
     /// Show printer and tape information
     Info(InfoArgs),
+    /// Read supported printer settings
+    Config(ConfigArgs),
     /// List supported printer models
     List,
     /// Diagnose USB discovery, architecture, and Windows driver bindings
@@ -68,25 +74,73 @@ enum Commands {
     Gui,
 }
 
+#[derive(clap::Args)]
+struct ConvertArgs {
+    /// Source .ptl layout or supported .lbx archive
+    #[arg(value_name = "INPUT")]
+    input: PathBuf,
+    /// Destination .lbx archive
+    #[arg(short, long, value_name = "FILE")]
+    output: PathBuf,
+    /// Target printer whose LBX model and media map will be written
+    #[arg(long, value_enum)]
+    printer: LbxPrinterArg,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum LbxPrinterArg {
+    PtE550w,
+    PtP900w,
+}
+
+impl From<LbxPrinterArg> for ptouch_render::lbx::LbxPrinter {
+    fn from(value: LbxPrinterArg) -> Self {
+        match value {
+            LbxPrinterArg::PtE550w => Self::PtE550w,
+            LbxPrinterArg::PtP900w => Self::PtP900w,
+        }
+    }
+}
+
 #[derive(clap::Args, Clone)]
 struct PrintArgs {
     /// Select a USB bus/address from `ptouch doctor` (changes on reconnect)
-    #[arg(long, value_name = "BUS:ADDRESS", conflicts_with = "bluetooth")]
+    #[arg(
+        long,
+        value_name = "BUS:ADDRESS",
+        conflicts_with_all = ["bluetooth", "usbprint", "tcp", "pid"]
+    )]
     usb: Option<UsbLocation>,
 
     /// Select a Windows PT-P710BT device ID from `ptouch doctor`
-    #[arg(long, value_name = "INSTANCE_ID", conflicts_with_all = ["bluetooth", "usb"])]
+    #[arg(
+        long,
+        value_name = "INSTANCE_ID",
+        conflicts_with_all = ["bluetooth", "usb", "tcp", "pid"]
+    )]
     usbprint: Option<String>,
 
     /// Use an already-paired PT-P300BT at this Bluetooth address (macOS only)
-    #[arg(long, value_name = "ADDRESS")]
+    #[arg(
+        long,
+        value_name = "ADDRESS",
+        conflicts_with_all = ["usb", "usbprint", "tcp", "pid"]
+    )]
     bluetooth: Option<String>,
+
+    /// Connect to a Brother raw-printing TCP endpoint (use --pid to select its model)
+    #[arg(long, value_name = "IP:PORT", requires = "pid", conflicts_with_all = ["usb", "usbprint", "bluetooth"])]
+    tcp: Option<SocketAddr>,
+
+    /// Printer product ID in hexadecimal, for example 0x2085 (required with --tcp)
+    #[arg(long, value_name = "HEX_PID", value_parser = parse_product_id, requires = "tcp", conflicts_with_all = ["usb", "usbprint", "bluetooth"])]
+    pid: Option<u16>,
 
     /// Text lines to print (each argument = one line, max 4)
     #[arg(value_name = "TEXT")]
     text: Vec<String>,
 
-    /// Print a saved layout file (.ptl). The layout is authoritative; ad-hoc
+    /// Print a saved .ptl layout or import a supported .lbx file. The layout is authoritative; ad-hoc
     /// content flags (text, --image, --font, --size, --align, --margin, --cut,
     /// --pad) are ignored with a warning.
     #[arg(short = 'l', long, value_name = "FILE")]
@@ -101,6 +155,22 @@ struct PrintArgs {
     /// With --output, include '{n}' for the row number.
     #[arg(long, value_name = "FILE")]
     csv: Option<String>,
+
+    /// Generate one label for each value of a layout placeholder.
+    #[arg(long, value_name = "NAME", conflicts_with = "csv")]
+    number_var: Option<String>,
+
+    /// First value for --number-var (default: 1).
+    #[arg(long, requires = "number_var", default_value_t = 1)]
+    number_start: i32,
+
+    /// Value added between labels for --number-var (default: 1).
+    #[arg(long, requires = "number_var", default_value_t = 1)]
+    number_increment: i32,
+
+    /// Number of distinct labels for --number-var (default: 1).
+    #[arg(long, requires = "number_var", default_value_t = 1)]
+    number_count: u32,
 
     /// List the placeholders a layout declares, then exit
     #[arg(long)]
@@ -141,6 +211,10 @@ struct PrintArgs {
     /// Force tape width in pixels (use with -o for image export without printer)
     #[arg(short = 'w', long)]
     tape_width: Option<u32>,
+
+    /// Tape-width code for raw TCP printers without network media detection
+    #[arg(long, value_name = "WIDTH_CODE")]
+    tape_width_mm: Option<u8>,
 
     /// Add a cut mark
     #[arg(short = 'c', long)]
@@ -184,7 +258,7 @@ struct PrintArgs {
     #[arg(long, default_value = "1")]
     copies: u32,
 
-    /// Maximum seconds for sending and waiting for one USB label
+    /// Maximum seconds for sending and waiting for one printer label
     #[arg(long = "job-timeout", alias = "timeout", default_value = "600", value_parser = clap::value_parser!(u32).range(1..))]
     timeout: u32,
 
@@ -196,16 +270,36 @@ struct PrintArgs {
 #[derive(clap::Args)]
 struct InfoArgs {
     /// Select a USB bus/address from `ptouch doctor` (changes on reconnect)
-    #[arg(long, value_name = "BUS:ADDRESS", conflicts_with = "bluetooth")]
+    #[arg(
+        long,
+        value_name = "BUS:ADDRESS",
+        conflicts_with_all = ["bluetooth", "usbprint", "tcp", "pid"]
+    )]
     usb: Option<UsbLocation>,
 
     /// Select a Windows PT-P710BT device ID from `ptouch doctor`
-    #[arg(long, value_name = "INSTANCE_ID", conflicts_with_all = ["bluetooth", "usb"])]
+    #[arg(
+        long,
+        value_name = "INSTANCE_ID",
+        conflicts_with_all = ["bluetooth", "usb", "tcp", "pid"]
+    )]
     usbprint: Option<String>,
 
     /// Use an already-paired PT-P300BT at this Bluetooth address (macOS only)
-    #[arg(long, value_name = "ADDRESS")]
+    #[arg(
+        long,
+        value_name = "ADDRESS",
+        conflicts_with_all = ["usb", "usbprint", "tcp", "pid"]
+    )]
     bluetooth: Option<String>,
+
+    /// Connect to a Brother raw-printing TCP endpoint (use --pid to select its model)
+    #[arg(long, value_name = "IP:PORT", requires = "pid", conflicts_with_all = ["usb", "usbprint", "bluetooth"])]
+    tcp: Option<SocketAddr>,
+
+    /// Printer product ID in hexadecimal, for example 0x2085 (required with --tcp)
+    #[arg(long, value_name = "HEX_PID", value_parser = parse_product_id, requires = "tcp", conflicts_with_all = ["usb", "usbprint", "bluetooth"])]
+    pid: Option<u16>,
 
     /// Enable debug output
     #[arg(long)]
@@ -216,9 +310,38 @@ struct InfoArgs {
     timeout: u32,
 }
 
+#[derive(clap::Args)]
+struct ConfigArgs {
+    #[command(subcommand)]
+    command: ConfigCommand,
+}
+
+#[derive(Subcommand)]
+enum ConfigCommand {
+    /// Read a setting without changing the printer
+    Get(ConfigGetArgs),
+}
+
+#[derive(clap::Args)]
+struct ConfigGetArgs {
+    #[arg(value_enum)]
+    setting: ConfigSetting,
+
+    #[arg(long, value_name = "IP:PORT")]
+    tcp: SocketAddr,
+
+    #[arg(long, value_name = "HEX_PID", value_parser = parse_product_id)]
+    pid: u16,
+}
+
+#[derive(ValueEnum, Clone, Copy)]
+enum ConfigSetting {
+    CommandMode,
+}
+
 /// The printer selected by the CLI. USB remains the default target.
 enum CliDevice {
-    Usb(PtouchDevice),
+    Printer(PtouchDevice),
     #[cfg(target_os = "macos")]
     Bluetooth(BluetoothDevice),
 }
@@ -228,11 +351,25 @@ impl CliDevice {
         bluetooth: Option<&str>,
         usb: Option<UsbLocation>,
         usbprint: Option<&str>,
+        tcp: Option<SocketAddr>,
+        pid: Option<u16>,
     ) -> Result<Self, PtouchError> {
+        match (tcp, pid) {
+            (Some(address), Some(product_id)) => {
+                return PtouchDevice::open_tcp(address, product_id).map(Self::Printer);
+            }
+            (Some(_), None) => {
+                return Err(PtouchError::UnsupportedOperation("--tcp requires --pid"));
+            }
+            (None, Some(_)) => {
+                return Err(PtouchError::UnsupportedOperation("--pid requires --tcp"));
+            }
+            (None, None) => {}
+        }
         if let Some(id) = usbprint {
             #[cfg(windows)]
             {
-                return PtouchDevice::open_usbprint(id).map(Self::Usb);
+                return PtouchDevice::open_usbprint(id).map(Self::Printer);
             }
             #[cfg(not(windows))]
             {
@@ -256,12 +393,12 @@ impl CliDevice {
             }
         }
         usb.map_or_else(PtouchDevice::open_first, PtouchDevice::open_at)
-            .map(Self::Usb)
+            .map(Self::Printer)
     }
 
     fn init(&mut self) -> Result<(), PtouchError> {
         match self {
-            Self::Usb(device) => device.init(),
+            Self::Printer(device) => device.init(),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.init(),
         }
@@ -269,7 +406,7 @@ impl CliDevice {
 
     fn query_status(&mut self) -> Result<&PrinterStatus, PtouchError> {
         match self {
-            Self::Usb(device) => device.query_status(),
+            Self::Printer(device) => device.query_status(),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.query_status(),
         }
@@ -277,7 +414,7 @@ impl CliDevice {
 
     fn status(&self) -> Option<&PrinterStatus> {
         match self {
-            Self::Usb(device) => device.status(),
+            Self::Printer(device) => device.status(),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.status(),
         }
@@ -285,15 +422,55 @@ impl CliDevice {
 
     fn model_name(&self) -> &'static str {
         match self {
-            Self::Usb(device) => device.device_info().name,
+            Self::Printer(device) => device.device_info().name,
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.model_name(),
         }
     }
 
+    fn is_tcp_without_status(&self) -> bool {
+        match self {
+            Self::Printer(device) => {
+                device.is_tcp() && !device.flags().contains(DeviceFlags::SNMP_STATUS)
+            }
+            #[cfg(target_os = "macos")]
+            Self::Bluetooth(_) => false,
+        }
+    }
+
+    fn prepare_tcp_media(&mut self, requested_width_mm: Option<u8>) -> Result<(), PtouchError> {
+        let device = match self {
+            Self::Printer(device) => device,
+            #[cfg(target_os = "macos")]
+            Self::Bluetooth(_) => return Ok(()),
+        };
+        if !device.is_tcp() {
+            return Ok(());
+        }
+        if device.flags().contains(DeviceFlags::SNMP_STATUS) {
+            let detected_width = device.query_status()?.media_width;
+            if detected_width == 0 {
+                return Err(PtouchError::UnsupportedOperation(
+                    "The network printer did not report a loaded tape",
+                ));
+            }
+            if requested_width_mm.is_some_and(|width| width != detected_width) {
+                return Err(PtouchError::UnsupportedOperation(
+                    "--tape-width-mm does not match the detected tape width",
+                ));
+            }
+        } else {
+            let width_mm = requested_width_mm.ok_or(PtouchError::UnsupportedOperation(
+                "TCP printer status is unavailable; specify --tape-width-mm",
+            ))?;
+            device.set_media_width_override(width_mm)?;
+        }
+        Ok(())
+    }
+
     fn tape_width_px(&self) -> Option<u16> {
         match self {
-            Self::Usb(device) => device.tape_width_px(),
+            Self::Printer(device) => device.tape_width_px(),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.tape_width_px(),
         }
@@ -301,7 +478,7 @@ impl CliDevice {
 
     fn raster_width_px(&self) -> u16 {
         match self {
-            Self::Usb(device) => device.max_px(),
+            Self::Printer(device) => device.max_px(),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.raster_width_px(),
         }
@@ -309,11 +486,20 @@ impl CliDevice {
 
     fn close(self) -> Result<(), PtouchError> {
         match self {
-            Self::Usb(device) => device.close(),
+            Self::Printer(device) => device.close(),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.close(),
         }
     }
+}
+
+fn parse_product_id(value: &str) -> Result<u16, String> {
+    let digits = value
+        .strip_prefix("0x")
+        .or_else(|| value.strip_prefix("0X"))
+        .unwrap_or(value);
+    u16::from_str_radix(digits, 16)
+        .map_err(|_| format!("invalid 16-bit hexadecimal product ID: {value}"))
 }
 
 /// Operations used by label output, separate from discovery and connection setup.
@@ -332,7 +518,7 @@ trait PrintDevice {
 impl PrintDevice for CliDevice {
     fn dpi(&self) -> u16 {
         match self {
-            Self::Usb(device) => device.device_info().dpi,
+            Self::Printer(device) => device.device_info().dpi,
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.dpi(),
         }
@@ -340,7 +526,7 @@ impl PrintDevice for CliDevice {
 
     fn is_bluetooth(&self) -> bool {
         match self {
-            Self::Usb(_) => false,
+            Self::Printer(_) => false,
             #[cfg(target_os = "macos")]
             Self::Bluetooth(_) => true,
         }
@@ -354,7 +540,7 @@ impl PrintDevice for CliDevice {
         quality: PrintQuality,
     ) -> Result<(), PtouchError> {
         match self {
-            Self::Usb(device) => device.print_raster(lines, chain_print, precut, quality),
+            Self::Printer(device) => device.print_raster(lines, chain_print, precut, quality),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.print_raster(lines),
         }
@@ -440,6 +626,12 @@ fn main() {
 
     match cli.command {
         Commands::List => execute_list(),
+        Commands::Convert(args) => {
+            if let Err(error) = execute_convert(args) {
+                eprintln!("Error: {error}");
+                process::exit(1);
+            }
+        }
         Commands::Doctor { json, probe } => {
             let report = ptouch_core::diagnostics::doctor(probe);
             if json {
@@ -512,6 +704,12 @@ fn main() {
             }
         }
         Commands::Gui => execute_gui(),
+        Commands::Config(args) => {
+            if let Err(error) = execute_config_get(args.command) {
+                eprintln!("Error: {error}");
+                process::exit(1);
+            }
+        }
         Commands::Info(args) => {
             init_logging(args.debug);
             if let Err(e) = execute_info(&args) {
@@ -534,6 +732,23 @@ fn main() {
             }
         }
     }
+}
+
+fn execute_convert(args: ConvertArgs) -> Result<(), Box<dyn std::error::Error>> {
+    if args
+        .output
+        .extension()
+        .is_none_or(|extension| !extension.eq_ignore_ascii_case("lbx"))
+    {
+        return Err("convert output must use the .lbx extension".into());
+    }
+    let (document, warnings) = LabelDocument::from_path(&args.input)?;
+    for warning in warnings {
+        eprintln!("warning: {warning}");
+    }
+    let archive = ptouch_render::lbx::export(&document, args.printer.into())?;
+    std::fs::write(&args.output, archive)?;
+    Ok(())
 }
 
 /// Ad-hoc content flags overridden when `--layout` is set. Keep in sync with
@@ -727,21 +942,33 @@ fn execute_info(args: &InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
         args.bluetooth.as_deref(),
         args.usb,
         args.usbprint.as_deref(),
+        args.tcp,
+        args.pid,
     )?;
     // A read-only query preserves device errors for display without resetting
     // the printer or requiring it to be ready for a new print job.
-    let status = dev.query_status()?.clone();
+    let status_unavailable = dev.is_tcp_without_status();
+    let status = match dev.query_status() {
+        Ok(status) => Some(status.clone()),
+        Err(_) if status_unavailable => None,
+        Err(error) => return Err(error.into()),
+    };
 
     println!("Printer Information");
     println!("  Model:          {}", dev.model_name());
-    println!("  Status:         {}", status.status_type_name());
-    println!("  Media type:     {}", status.media_type_name());
-    println!("  Media width:    {} mm", status.media_width);
-    println!("  Tape color:     {}", status.tape_color_name());
-    println!("  Text color:     {}", status.text_color_name());
+    if let Some(status) = &status {
+        println!("  Status:         {}", status.status_type_name());
+        println!("  Media type:     {}", status.media_type_name());
+        println!("  Media width:    {} mm", status.media_width);
+        println!("  Tape color:     {}", status.tape_color_name());
+        println!("  Text color:     {}", status.text_color_name());
 
-    if status.has_error() {
-        println!("  Errors:         {}", status.error_description());
+        if status.has_error() {
+            println!("  Errors:         {}", status.error_description());
+        }
+    } else {
+        println!("  Status:         unavailable over raw TCP");
+        println!("  Media:          select manually before printing");
     }
 
     let tape_width_px = dev.tape_width_px();
@@ -766,6 +993,7 @@ fn execute_info(args: &InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
     // the transport is clamped to the head width, so it cannot be used as
     // a reverse lookup key.
     if !dev.is_bluetooth()
+        && let Some(status) = &status
         && let Some(t) = tape::find_tape(status.media_width, dpi)
     {
         println!("  Tape size:      {} mm", t.width_mm);
@@ -774,6 +1002,22 @@ fn execute_info(args: &InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
 
     dev.close()?;
     Ok(())
+}
+
+fn execute_config_get(command: ConfigCommand) -> Result<(), Box<dyn std::error::Error>> {
+    match command {
+        ConfigCommand::Get(args) => match args.setting {
+            ConfigSetting::CommandMode => {
+                let device = PtouchDevice::open_tcp(args.tcp, args.pid)?;
+                let result = query_command_mode(&device);
+                let close_result = device.close();
+                let mode = result?;
+                close_result?;
+                println!("Command mode: {mode}");
+                Ok(())
+            }
+        },
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -793,11 +1037,19 @@ fn execute_print(args: &PrintArgs, ignored: &[String]) -> Result<(), Box<dyn std
         process::exit(1);
     }
 
+    validate_tcp_media_args(args)?;
+
     // Layout-only modifiers make no sense without a layout.
     if args.layout.is_none()
-        && (!args.set.is_empty() || args.csv.is_some() || args.list_vars || args.allow_missing)
+        && (!args.set.is_empty()
+            || args.csv.is_some()
+            || args.number_var.is_some()
+            || args.list_vars
+            || args.allow_missing)
     {
-        eprintln!("Error: --set, --csv, --list-vars, and --allow-missing require --layout");
+        eprintln!(
+            "Error: --set, --csv, --number-var, --list-vars, and --allow-missing require --layout"
+        );
         process::exit(1);
     }
 
@@ -839,12 +1091,15 @@ fn execute_print(args: &PrintArgs, ignored: &[String]) -> Result<(), Box<dyn std
                 args.bluetooth.as_deref(),
                 args.usb,
                 args.usbprint.as_deref(),
+                args.tcp,
+                args.pid,
             )?;
             #[allow(irrefutable_let_patterns)]
-            if let CliDevice::Usb(usb) = &mut dev {
-                usb.set_job_timeout(std::time::Duration::from_secs(u64::from(args.timeout)))?;
+            if let CliDevice::Printer(printer) = &mut dev {
+                printer.set_job_timeout(std::time::Duration::from_secs(u64::from(args.timeout)))?;
             }
             dev.init()?;
+            dev.prepare_tcp_media(args.tape_width_mm)?;
             // init() already called get_status() internally
             let width = dev.tape_width_px().ok_or_else(|| {
                 PtouchError::StatusError("Could not determine tape width".to_string())
@@ -907,10 +1162,34 @@ fn validate_bluetooth_print_options(args: &PrintArgs) -> Result<(), PtouchError>
     Ok(())
 }
 
+fn validate_tcp_media_args(args: &PrintArgs) -> Result<(), PtouchError> {
+    if args.tape_width_mm.is_some() && (args.tcp.is_none() || args.output.is_some()) {
+        return Err(PtouchError::UnsupportedOperation(
+            "--tape-width-mm requires a raw TCP print target",
+        ));
+    }
+    if args.tcp.is_some() && args.output.is_none() && args.tape_width_mm.is_none() {
+        let supports_network_status = args
+            .pid
+            .and_then(|pid| {
+                ptouch_core::device::find_device(ptouch_core::device::BROTHER_VENDOR_ID, pid)
+            })
+            .is_some_and(|device| device.flags.contains(DeviceFlags::SNMP_STATUS));
+        if !supports_network_status {
+            return Err(PtouchError::UnsupportedOperation(
+                "TCP printer status is unavailable; specify --tape-width-mm",
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// Load a `.ptl` layout, render it, and either print it or save as an image.
 fn print_layout(args: &PrintArgs, layout_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let text = std::fs::read_to_string(layout_path)?;
-    let mut doc = LabelDocument::from_toml_str(&text)?;
+    let (mut doc, warnings) = LabelDocument::from_path(std::path::Path::new(layout_path))?;
+    for warning in warnings {
+        eprintln!("warning: {warning}");
+    }
 
     if args.list_vars {
         for name in doc.placeholders() {
@@ -921,6 +1200,10 @@ fn print_layout(args: &PrintArgs, layout_path: &str) -> Result<(), Box<dyn std::
 
     if let Some(csv_path) = args.csv.as_deref() {
         return print_layout_batch(args, doc, csv_path);
+    }
+
+    if let Some(variable) = args.number_var.as_deref() {
+        return print_layout_numbering(args, doc, variable);
     }
 
     // Fill placeholders from --set values, rejecting missing ones by default.
@@ -938,6 +1221,69 @@ fn print_layout(args: &PrintArgs, layout_path: &str) -> Result<(), Box<dyn std::
         dev.close()?;
     }
 
+    Ok(())
+}
+
+/// Generate a numeric sequence through one declared layout placeholder.
+/// This mirrors the count/start/increment workflow, while keeping LBX's
+/// selected-character numbering semantics out of the generic layout model.
+fn print_layout_numbering(
+    args: &PrintArgs,
+    doc: LabelDocument,
+    variable: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if !doc.placeholders().iter().any(|name| name == variable) {
+        return Err(format!("layout has no placeholder named '{variable}'").into());
+    }
+    if args.number_count == 0 {
+        return Err("--number-count must be greater than zero".into());
+    }
+    if let Some(output) = &args.output
+        && !output.contains("{n}")
+    {
+        return Err(
+            "with --number-var, --output must contain '{n}' (for example label-{n}.png)".into(),
+        );
+    }
+    let mut values = parse_set_args(&args.set)?;
+    if values.contains_key(variable) {
+        return Err(format!("--set already provides numbered placeholder '{variable}'").into());
+    }
+    let mut provided: BTreeSet<String> = values.keys().cloned().collect();
+    provided.insert(variable.to_string());
+    validate_vars(&doc.placeholders(), &provided, args.allow_missing)?;
+    let last_index = i32::try_from(args.number_count - 1)
+        .map_err(|_| "numbering sequence exceeds signed 32-bit range")?;
+    args.number_increment
+        .checked_mul(last_index)
+        .and_then(|step| args.number_start.checked_add(step))
+        .ok_or("numbering sequence exceeds signed 32-bit range")?;
+
+    let (print_width, max_px, mut device) = resolve_layout_target(args, &doc)?;
+    let target_dpi = device.as_ref().map_or(doc.dpi, |dev| dev.dpi());
+    let labels = (0..args.number_count).map(|index| {
+        let step = i32::try_from(index)
+            .ok()
+            .and_then(|index| args.number_increment.checked_mul(index))
+            .and_then(|step| args.number_start.checked_add(step))
+            .ok_or_else(|| {
+                PtouchError::SendFailed("numbering sequence exceeds signed 32-bit range".into())
+            })?;
+        values.insert(variable.to_string(), step.to_string());
+        let mut numbered_doc = doc.clone();
+        numbered_doc.apply_values(&values);
+        let bitmap = render_layout(&numbered_doc, print_width, target_dpi)?;
+        Ok(ptouch_render::calibration::apply_calibration(
+            &bitmap,
+            target_dpi,
+            args.offset_mm,
+        )?)
+    });
+    let count = emit_batch(labels, args, max_px, device.as_mut())?;
+    if let Some(dev) = device {
+        dev.close()?;
+    }
+    println!("Processed {count} numbered label(s)");
     Ok(())
 }
 
@@ -1090,12 +1436,15 @@ fn resolve_layout_target(
             args.bluetooth.as_deref(),
             args.usb,
             args.usbprint.as_deref(),
+            args.tcp,
+            args.pid,
         )?;
         #[allow(irrefutable_let_patterns)]
-        if let CliDevice::Usb(usb) = &mut dev {
-            usb.set_job_timeout(std::time::Duration::from_secs(u64::from(args.timeout)))?;
+        if let CliDevice::Printer(printer) = &mut dev {
+            printer.set_job_timeout(std::time::Duration::from_secs(u64::from(args.timeout)))?;
         }
         dev.init()?;
+        dev.prepare_tcp_media(args.tape_width_mm)?;
         let printer_px = u32::from(dev.tape_width_px().ok_or_else(|| {
             PtouchError::StatusError("Could not determine tape width".to_string())
         })?);
@@ -1294,6 +1643,82 @@ mod tests {
     use super::*;
     use document::{ContentBox, LabelElement, LabelObject, ObjectContent, PositionMode, TextBox};
 
+    #[test]
+    fn convert_command_requires_an_explicit_target_printer() {
+        assert!(matches!(
+            Cli::try_parse_from([
+                "ptouch",
+                "convert",
+                "design.ptl",
+                "--output",
+                "design.lbx",
+                "--printer",
+                "pt-p900w"
+            ])
+            .unwrap()
+            .command,
+            Commands::Convert(ConvertArgs {
+                printer: LbxPrinterArg::PtP900w,
+                ..
+            })
+        ));
+        assert!(
+            Cli::try_parse_from(["ptouch", "convert", "design.ptl", "--output", "design.lbx"])
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn convert_command_writes_a_reimportable_lbx_archive() {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "ptouch-convert-test-{}-{unique}",
+            std::process::id()
+        ));
+        std::fs::create_dir(&directory).unwrap();
+        let input = directory.join("design.ptl");
+        let output = directory.join("design.lbx");
+        let source = LabelDocument {
+            version: document::DOCUMENT_VERSION,
+            tape_width_mm: 24,
+            dpi: 180,
+            font_name: "Arial".into(),
+            font_margin: 0,
+            flip_h: false,
+            flip_v: false,
+            elements: vec![LabelElement::Object(LabelObject::text(
+                "PORT-01",
+                TextBox {
+                    x_mm: 2.0,
+                    y_mm: 1.0,
+                    width_mm: 20.0,
+                    height_mm: 8.0,
+                    ..TextBox::default()
+                },
+            ))],
+        };
+        std::fs::write(&input, source.to_toml_string().unwrap()).unwrap();
+        execute_convert(ConvertArgs {
+            input,
+            output: output.clone(),
+            printer: LbxPrinterArg::PtE550w,
+        })
+        .unwrap();
+        let bytes = std::fs::read(output).unwrap();
+        let imported = ptouch_render::lbx::import(&bytes).unwrap();
+        assert!(matches!(
+            &imported.document.elements[0],
+            LabelElement::Object(LabelObject {
+                content: ObjectContent::Text { content, .. },
+                ..
+            }) if content == "PORT-01"
+        ));
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
     fn free_layout_fixture(dir: &Path, dpi: u16) -> LabelDocument {
         let image_path = dir.join("original.png");
         let mut image = LabelBitmap::new(16, 8);
@@ -1475,6 +1900,48 @@ mod tests {
                 std::fs::read_to_string(&layout)
                     .unwrap()
                     .contains("version = 6")
+            );
+        }
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn numbered_layout_exports_increment_placeholder_values_in_order() {
+        let dir = std::env::temp_dir().join(format!("ptouch-numbering-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let doc = free_layout_fixture(&dir, 180);
+        let layout = dir.join("source.ptl");
+        let output = dir.join("number-{n}.png");
+        std::fs::write(&layout, doc.to_toml_string().unwrap()).unwrap();
+        let args = batch_args(&[
+            "--layout",
+            layout.to_str().unwrap(),
+            "--number-var",
+            "port",
+            "--number-start",
+            "7",
+            "--number-increment",
+            "2",
+            "--number-count",
+            "3",
+            "--set",
+            "suffix=-A",
+            "--output",
+            output.to_str().unwrap(),
+        ]);
+        execute_print(&args, &[]).unwrap();
+
+        for (index, value) in ["7", "9", "11"].into_iter().enumerate() {
+            let mut expected_doc = doc.clone();
+            expected_doc.apply_values(&BTreeMap::from([
+                ("port".into(), value.into()),
+                ("suffix".into(), "-A".into()),
+            ]));
+            let expected = render_layout(&expected_doc, 76, 180).unwrap();
+            let actual = load_export(&dir.join(format!("number-{}.png", index + 1)));
+            assert_eq!(
+                (actual.width(), actual.height(), actual.data()),
+                (expected.width(), expected.height(), expected.data())
             );
         }
         std::fs::remove_dir_all(dir).unwrap();
@@ -1947,6 +2414,231 @@ mod tests {
         );
     }
 
+    #[test]
+    fn tcp_selection_requires_a_hex_product_id_for_info_and_print() {
+        let info = Cli::try_parse_from([
+            "ptouch",
+            "info",
+            "--tcp",
+            "127.0.0.1:9100",
+            "--pid",
+            "0x2085",
+        ])
+        .unwrap();
+        let Commands::Info(info) = info.command else {
+            panic!("expected info command");
+        };
+        assert_eq!(info.tcp.unwrap().to_string(), "127.0.0.1:9100");
+        assert_eq!(info.pid, Some(0x2085));
+
+        let print = Cli::try_parse_from([
+            "ptouch",
+            "print",
+            "--tcp",
+            "127.0.0.1:9100",
+            "--pid",
+            "2060",
+            "Label",
+        ])
+        .unwrap();
+        let Commands::Print(print) = print.command else {
+            panic!("expected print command");
+        };
+        assert_eq!(print.pid, Some(0x2060));
+        assert!(matches!(
+            validate_tcp_media_args(&print),
+            Err(PtouchError::UnsupportedOperation(_))
+        ));
+
+        let print_with_width = Cli::try_parse_from([
+            "ptouch",
+            "print",
+            "--tcp",
+            "127.0.0.1:9100",
+            "--pid",
+            "0x2060",
+            "--tape-width-mm",
+            "12",
+            "Label",
+        ])
+        .unwrap();
+        let Commands::Print(print_with_width) = print_with_width.command else {
+            panic!("expected print command");
+        };
+        assert_eq!(print_with_width.tape_width_mm, Some(12));
+        assert!(validate_tcp_media_args(&print_with_width).is_ok());
+
+        assert!(Cli::try_parse_from(["ptouch", "info", "--tcp", "127.0.0.1:9100"]).is_err());
+        assert!(Cli::try_parse_from(["ptouch", "print", "--pid", "2085", "Label"]).is_err());
+        assert!(
+            Cli::try_parse_from([
+                "ptouch",
+                "info",
+                "--tcp",
+                "127.0.0.1:9100",
+                "--pid",
+                "invalid"
+            ])
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn tcp_cli_device_prints_to_the_selected_model() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+        use std::thread;
+        use std::time::Duration;
+
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut init = [0; 102];
+            stream.read_exact(&mut init).unwrap();
+            let mut ready = [0; 32];
+            ready[0] = 0x80;
+            ready[1] = 0x20;
+
+            let mut print_job = Vec::new();
+            loop {
+                let mut byte = [0];
+                stream.read_exact(&mut byte).unwrap();
+                print_job.push(byte[0]);
+                if byte[0] == 0x1A {
+                    break;
+                }
+            }
+            let mut done = ready;
+            done[18] = 0x01;
+            stream.write_all(&done).unwrap();
+            let mut close_probe = [0; 1];
+            let _ = stream.read(&mut close_probe);
+            print_job
+        });
+
+        let mut printer = CliDevice::open(None, None, None, Some(address), Some(0x2060)).unwrap();
+        assert_eq!(printer.model_name(), "PT-E550W");
+        printer.init().unwrap();
+        assert!(matches!(
+            printer.prepare_tcp_media(None),
+            Err(PtouchError::UnsupportedOperation(_))
+        ));
+        printer.prepare_tcp_media(Some(12)).unwrap();
+        printer
+            .print_raster(&[vec![0xAA; 16]], false, false, PrintQuality::Standard)
+            .unwrap();
+        printer.close().unwrap();
+        let print_job = server.join().unwrap();
+        let mut expected = vec![
+            0x1B, 0x69, 0x61, 0x01, 0x1B, 0x69, 0x7A, 0x00, 0x00, 12, 0x00, 0x01, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x4D, 0x02, 0x47, 0x11, 0x00, 0x0F,
+        ];
+        expected.extend([0xAA; 16]);
+        expected.push(0x1A);
+        assert_eq!(print_job, expected);
+    }
+
+    #[test]
+    fn tcp_info_reports_unavailable_e550w_status_without_failing() {
+        use std::io::Read;
+        use std::net::TcpListener;
+        use std::thread;
+        use std::time::Duration;
+
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut request = [0; 1];
+            stream.read(&mut request).unwrap()
+        });
+
+        execute_info(&InfoArgs {
+            usb: None,
+            usbprint: None,
+            bluetooth: None,
+            tcp: Some(address),
+            pid: Some(0x2060),
+            debug: false,
+            timeout: 1,
+        })
+        .unwrap();
+
+        assert_eq!(server.join().unwrap(), 0);
+    }
+
+    #[test]
+    fn config_get_command_mode_requires_an_explicit_tcp_target() {
+        let cli = Cli::try_parse_from([
+            "ptouch",
+            "config",
+            "get",
+            "command-mode",
+            "--tcp",
+            "127.0.0.1:9100",
+            "--pid",
+            "0x2085",
+        ])
+        .unwrap();
+        assert!(matches!(
+            cli.command,
+            Commands::Config(ConfigArgs {
+                command: ConfigCommand::Get(ConfigGetArgs {
+                    setting: ConfigSetting::CommandMode,
+                    pid: 0x2085,
+                    ..
+                })
+            })
+        ));
+        assert!(Cli::try_parse_from(["ptouch", "config", "get", "command-mode"]).is_err());
+    }
+
+    #[test]
+    fn config_get_command_mode_sends_only_the_read_command() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+        use std::thread;
+        use std::time::Duration;
+
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut request = [0; 5];
+            stream.read_exact(&mut request).unwrap();
+            let mut reply = [0; 32];
+            reply[0] = 0x80;
+            reply[1] = 0x20;
+            reply[2] = 0x42;
+            reply[3] = 0x30;
+            reply[4] = 0x6F;
+            reply[30] = 0x01;
+            stream.write_all(&reply).unwrap();
+            let mut close_probe = [0; 1];
+            let _ = stream.read(&mut close_probe);
+            request
+        });
+        let args = ConfigGetArgs {
+            setting: ConfigSetting::CommandMode,
+            tcp: address,
+            pid: 0x2085,
+        };
+
+        execute_config_get(ConfigCommand::Get(args)).unwrap();
+
+        assert_eq!(server.join().unwrap(), [0x1B, 0x69, 0x55, 0x61, 0x01]);
+    }
+
     fn print_matches(argv: &[&str]) -> ArgMatches {
         Cli::command().get_matches_from(argv)
     }
@@ -2126,6 +2818,7 @@ mod tests {
             }
             let opts = ptouch_core::protocol::JobOptions {
                 media_width: 12,
+                margin_dots: 0,
                 chain_print,
                 precut,
                 quality,
