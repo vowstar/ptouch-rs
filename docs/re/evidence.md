@@ -497,3 +497,13 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | The libqrencode-style score is a complete Brother mask rule | disproven | It predicts mask 3 for `ABC123abc789` where Brother uses 0, and mask 2 for the 55-byte repetitive lowercase payload where Brother uses 1. The cause of these two differences remains unknown |
 | The implementation identifies Brother's internal QR library | unknown | Matching output is behavioral evidence only. Hopper did not identify a QR mask routine in the inspected Windows DLL |
 | The new rule establishes GUI or printed parity | unknown | Validation uses the in-memory `GetPrintingImage()` path. No GUI canvas or physical printing was tested |
+
+
+## Cycle 42 QR mask behavior across ECC levels
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother's selected mask follows the Cycle 41 scoring behavior across all ECC levels | observed in this sample | One 50-character lowercase byte payload was rendered at ECC L, M, Q, and H. The P900W runtime reported versions 3, 4, 5, and 6, respectively. Format bits in the captured BMPs identify masks 2, 2, 4, and 4 with zero BCH correction errors. The replayable extractor is `docs/re/windows-lbx-runtime/extract-qr-format-probes.py`. |
+| The version 6/ECC H mask can be read with the ordinary image decoder | disproven | The fixed-height 320-pixel P900W raster clips the 41-module symbol's bottom rows, so ZXing does not decode the full symbol. The intact top-left format bits identify H/mask 4 exactly. |
+| The Cycle 41 scoring match is a complete mask-selection rule | unknown | These four ECC cases provide cross-level observations, but do not characterize all versions, payload classes, tie behavior, or Brother's internal implementation. The two Cycle 41 exceptions remain unexplained. |
+| The captures establish GUI or printed parity | unknown | All captures came from the Windows Editor's in-memory `GetPrintingImage()` method. No GUI canvas or physical printing was tested. |

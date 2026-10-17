@@ -104,6 +104,20 @@ Editor GUI canvas behavior or physical print output. No printer handle was
 opened and no print or setting write was sent.
 
 
+Cycle 42 tested a single 50-character lowercase byte payload at all four ECC
+levels. The PTL fixtures and captured P900W BMPs are `qr-ecc-mask-probe-*.ptl`
+and `runtime-renders/editor-pt-p900w-qr-ecc-*-cycle42.bmp`. The runtime
+reported ECC L/M/Q/H and versions 3/4/5/6. ZXing decoded the L, M, and Q
+captures as masks 2, 2, and 4. The H/V6 image is 388x320 px, so the bottom
+rows are clipped and ZXing cannot decode the full symbol. Its intact top-left
+format information still identifies ECC H and mask 4 with no BCH errors. Run
+`uv run --with pillow python docs/re/windows-lbx-runtime/extract-qr-format-probes.py`
+from the repository root to read the format information from all four BMPs.
+This broadens the observed mask behavior across ECC levels, but does not
+resolve the two Cycle 41 exceptions or identify Brother's internal algorithm.
+No GUI canvas or physical print was tested.
+
+
 Cycle 25 reran the read-only object probe on Windows with the archived
 `pt-e550w-qr-export.lbx`. The additional scalar properties confirm the
 application's QR object selects mixed mode and automatic masking. The matching

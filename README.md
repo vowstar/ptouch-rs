@@ -81,8 +81,11 @@ It matches Brother's selected mask in 17 of 19 analyzed captures, including
 seven version 4 byte-only matrices that match every module. Two mask choices
 remain different: one short mixed-mode payload and one repetitive version 4
 byte payload. Unicode/MBCS, GUI canvas, and physical barcode rendering remain
-unverified. Symbol rendering requires an installed Brother font containing the
-requested glyph.
+unverified. Cycle 42 tested one 50-character byte payload at all four ECC
+levels. Brother selected masks 2, 2, 4, and 4 for ECC L, M, Q, and H at
+versions 3, 4, 5, and 6. The version 6 capture clips the symbol's bottom, but
+its QR format bits identify ECC H and mask 4. Symbol rendering requires an
+installed Brother font containing the requested glyph.
 
 The importer rejects files containing only unsupported objects. LBX conversion
 fidelity and P-touch Editor behavior remain under investigation. iPrint&Label
