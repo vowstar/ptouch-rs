@@ -88,13 +88,14 @@ confirmed editable QR payload and Code 39 data after load. The Code 39 raster
 decodes to the expected value. Rust's human-readable line now includes the
 Brother-observed start/stop delimiters. Brother and Rust QR rasters differ. ZXing-C++ reports version 3, ECC M, and
 data mask 7 for both decodes, while Brother reports mixed QR mode and automatic
-mask selection. The raw Brother capture needs rotation and
-quiet-zone padding; Rust decodes without that normalization. A second QR encoder matches Rust's exact
+mask selection. The raw Brother capture decodes with ZXing-C++ only after a 90-degree rotation
+that crops to the original canvas and adds white padding; expanding the rotated
+canvas fails, and Rust decodes without that transform. A second QR encoder matches Rust's exact
 byte-mode 29x29 matrix with mask 7. On Windows, changing the Brother QR mode
 property in memory did not change two returned raster hashes, while changing the
 payload did. The same mode result held for numeric and uppercase alphanumeric
 payloads. Changing cell size across XS/S/M/L/XL changed raster width from 66 to 198 px
-while height stayed 128 px; only M decoded under the tested normalization.
+while height stayed 128 px; only M decoded after the crop-preserving transform. Expanded rotations failed for all cell sizes.
 Forcing mask 0 produced a QR that decodes as mask 0. Measured widths equal
 33 times the CellSize enum values; this suggests 29 modules plus four cell units
 of horizontal margin, but that mapping remains an inference. The mode property's

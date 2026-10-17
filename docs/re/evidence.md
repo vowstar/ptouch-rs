@@ -374,7 +374,7 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 
 | Claim | Status | Evidence |
 |---|---|---|
-| Changing the QR cell-size property changes the in-memory raster width | observed | Windows probe changed the URL QR BMP width across XS/S/M/L/XL while height stayed 128 px: 66/99/132/165/198. Only M decoded under the rotation-plus-border normalization; hashes and captures for XS/S/L/XL are preserved in `docs/re/windows-lbx-runtime/runtime-renders/` |
+| Changing the QR cell-size property changes the in-memory raster width | observed | Windows probe changed the URL QR BMP width across XS/S/M/L/XL while height stayed 128 px: 66/99/132/165/198. Only M decoded under the crop-preserving rotation-plus-border transform; hashes and captures for XS/S/L/XL are preserved in `docs/re/windows-lbx-runtime/runtime-renders/` |
 | Changing the QR mask property from Auto to Mask0 changes the raster and decoded mask | observed | Mask0 BMP SHA-256 `4db8e3aed4c4c45136412a08dff4d0fc31574b936a8bfc2d668a87211e7bbaac`; ZXing-C++ recovers the expected URL and reports `DataMask=0` |
 | The default QR matrix difference is caused by the cell-size or mask property | not supported by current evidence | Brother's default reports `CellSize=M`, `Mask=Auto`; the normalized default and Rust symbols both decode as version 3, ECC M, data mask 7 |
 
@@ -385,12 +385,21 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 |---|---|---|
 | Brother cell-size output width is 33 px times the enum values XS=2 through XL=6 | observed | Captured widths: 66, 99, 132, 165, 198 px; each bitmap height is 128 px |
 | CellSize likely acts as pixels per QR module, with four cell units of horizontal margin | inferred | Version 3 has a 29-module side; observed width equals `(29 + 4) * cellSizeEnum`. The proprietary image API exposes no module coordinates, so this mapping is not independently verified |
-| CellSize L and XL exceed the 128 px raster height | inferred from observed bounds | Expected 29-module sides at enum values 5/6 are 145/174 px; captured black bounds reach the 128 px bitmap edge. The L/XL images do not decode under tested normalization; no physical print was performed |
+| CellSize L and XL exceed the 128 px raster height | inferred from observed bounds | Expected 29-module sides at enum values 5/6 are 145/174 px; captured black bounds reach the 128 px bitmap edge. The L/XL images do not decode under the crop-preserving transform; no physical print was performed |
 
 
 ## Cycle 31 QR cell-size decoder sweep
 
 | Claim | Status | Evidence |
 |---|---|---|
-| Only the CellSize M Brother capture decoded with the tested local decoders and raster normalizations | observed | ZXing-C++ tested rotations 0/90/180/270, nearest-neighbor scales 1x/2x/4x, and white borders 0/4/8/16/32/64 px (scaled with the image); only M decoded. zbar decoded none of XS/S/M/L/XL under the same transform families |
+| Only the CellSize M Brother capture decoded with the tested local decoders and raster normalizations | observed | ZXing-C++ tested rotations 0/90/180/270 with Pillow `expand=False`, nearest-neighbor scales 1x/2x/4x, and white borders 0/4/8/16/32/64 px (scaled with the image); only M decoded. With `expand=True`, retaining the full rotated rectangle, none decoded, including M. zbar decoded none of the five captures in either transform family |
 | XS/S/L/XL captures are malformed QR symbols | unknown | Decoder failure after bounded transforms does not establish invalid codewords; source matrix extraction and alternate decoder analysis remain open |
+
+
+## Cycle 32 QR rotation normalization correction
+
+| Claim | Status | Evidence |
+|---|---|---|
+| The saved Brother decoder derivative was created with a full, uncropped 90-degree rotation | corrected | Pillow `Image.rotate(90)` used its default `expand=False`, preserving the original rectangular canvas and cropping the rotated content; a 4 px border was then added |
+| Retaining the full rotated rectangle decodes the Brother QR capture | not observed | With Pillow `expand=True`, ZXing-C++ did not decode any CellSize raster, including M, even after scaling and borders. The earlier successful M decode depends on the fixed-canvas cropped transform |
+| The crop-preserving transform establishes the source image's inherent QR orientation | unknown | The transform itself rotates and crops the image, so scanner orientation from that derivative cannot establish source orientation |

@@ -60,7 +60,7 @@ barcode data/protocol and scalar settings, and capture the result of
 and decodes to `ABC-123W` with `zbarimg`. The raw QR output is 132x128 px; neither
 `zbarimg` nor ZXing-C++ decoded it directly, while the Rust 135x128 px output
 decoded to the expected URL. Cycle 23 found that ZXing-C++ decodes the Brother
-image after rotating it 90 degrees and adding a 4 px white border. zbarimg still
+image after a 90-degree Pillow rotation that retained the original canvas (and therefore cropped the rotated rectangle), plus a 4 px white border. zbarimg still
 does not decode that normalized image. The rotated and padded derivative is
 preserved as `runtime-renders/editor-pt-e550w-qr-decoder-normalized.png`
 (SHA-256 `069a79fa7063cf0ab6c5748b219ddc7e596a1fa3c6ee905838f3ae6db226c2bc`).
@@ -150,7 +150,7 @@ Cycle 29 added optional `PT_QR_CELLSIZE_OVERRIDE` and
 `PT_QR_MASK_OVERRIDE` properties to the probe. Changing `CellSize` from M changes
 the raster width while the height remains
 128 px: XS 66 px, S 99 px, M 132 px, L 165 px, and XL 198 px. The M default
-decodes under the rotation-plus-border normalization; the other tested sizes do
+decodes only under the crop-preserving rotation-plus-border transform; the other tested sizes do
 not.
 Changing `Mask` from Auto to Mask0 changed the 132x128 raster hash to
 `4db8e3aed4c4c45136412a08dff4d0fc31574b936a8bfc2d668a87211e7bbaac`; ZXing-C++
@@ -172,8 +172,12 @@ unknown. No physical print result is inferred.
 
 
 Cycle 31 repeated decode attempts for all five CellSize captures. ZXing-C++ was
-tested with all right-angle rotations, nearest-neighbor scaling at 1x/2x/4x, and
-white borders of 0/4/8/16/32/64 px (scaled with the image). Only M decoded.
-zbar also decoded none of the five captured BMPs in the corresponding transforms.
-This rules out those basic orientation, size, and border fixes for XS/S/L/XL,
-but does not establish whether those rasters contain a valid QR matrix.
+tested with all right-angle rotations using Pillow default `expand=False`,
+nearest-neighbor scaling at 1x/2x/4x, and white borders of 0/4/8/16/32/64 px
+(scaled with the image). Only M decoded. Those quarter-turn transforms preserve
+the old canvas and crop the rotated rectangle. A second sweep using
+`expand=True` retained the full rotated image, but none of the sizes decoded,
+including M. zbar decoded none of the five captures in either transform family.
+The successful M decode therefore depends on the crop-preserving transform; the
+role of that crop remains unexplained, and decoder failure does not establish
+that XS/S/L/XL contain invalid QR matrices.
