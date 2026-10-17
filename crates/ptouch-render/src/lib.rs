@@ -16,6 +16,7 @@ pub mod font;
 pub mod image_loader;
 pub mod layout;
 pub mod lbx;
+mod qr_mask;
 mod qr_segments;
 pub mod raster;
 pub mod styled_text;

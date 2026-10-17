@@ -76,14 +76,13 @@ Editor in-memory QR rasters match Rust matrices for the tested version 3 URL,
 version 1 numeric payload, and version 4 mixed byte/numeric payload. The QR
 segmenter now combines numeric, alphanumeric, and byte runs for automatic and
 fixed versions, and automatic QR encoding preserves the requested ECC level.
-Mask selection still differs for repetitive version 4 byte payloads and tested
-short version 1 mixed payloads. Cycle 40 adds seven version 4 lowercase-only
-probes whose Brother rasters match the Rust matrix exactly at Brother's selected
-mask. Across them, standard qrcodegen scoring predicts three selected masks,
-removing the finder-pattern penalty predicts two, and neither rule predicts two.
-This rules out a single N3 penalty-weight change as a complete explanation.
-GUI canvas and physical barcode rendering remain unverified. Symbol rendering
-requires an installed Brother font containing the requested glyph.
+Cycle 41 switches QR mask selection to a libqrencode-style finder-pattern scan.
+It matches Brother's selected mask in 17 of 19 analyzed captures, including
+seven version 4 byte-only matrices that match every module. Two mask choices
+remain different: one short mixed-mode payload and one repetitive version 4
+byte payload. Unicode/MBCS, GUI canvas, and physical barcode rendering remain
+unverified. Symbol rendering requires an installed Brother font containing the
+requested glyph.
 
 The importer rejects files containing only unsupported objects. LBX conversion
 fidelity and P-touch Editor behavior remain under investigation. iPrint&Label

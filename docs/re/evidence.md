@@ -485,3 +485,15 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | The seven captures differ because their byte segment layout is unknown | not supported | All seven payloads contain only lowercase ASCII, use version 4/ECC M, and each captured grid compares pixel-for-pixel against Rust's version 4 byte matrix at Brother's decoded mask |
 | The findings establish a global Brother mask rule | unknown | The tests cover seven lowercase-only version 4 payloads and do not cover other QR versions, ECC levels, Unicode/MBCS, or GUI canvas/physical output |
 | Native DLL analysis located the QR mask selector | not observed | Hopper opened the 32-bit native `lbxcore.Win32.dll` (SHA-256 `f69a0fa0fd2e37f825436170853e7efdbbe04b299011d8ec11b6c82668fcc704`). The `:qrcodeStyle` references resolve to settings serialization; no named mask-selection routine was identified |
+
+
+## Cycle 41 QR mask scoring implementation
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother uses qrcodegen's exact finder-pattern penalty scan | disproven | Standard qrcodegen scoring predicts Brother's selected mask in 5 of the 19 analyzed captures |
+| A libqrencode-style N3 scan better matches Brother | observed | A local implementation of the scan in libqrencode's public `mask.c` matches 17 of 19 Brother mask selections: all seven Cycle 40 version 4 byte-only probes, four of five Cycle 38 version 1 mixed probes, three of four repetitive version 4 byte probes, and the numeric version 1, URL version 3, and diverse mixed version 4 controls |
+| The new Rust QR renderer reproduces all seven Cycle 40 module grids | observed | The production encoder's seven version 4 ECC M outputs compare module-for-module with the checked-in matrices extracted from Brother's P900W in-memory BMPs; each earlier BMP comparison had zero mismatches across 69,696 module pixels |
+| The libqrencode-style score is a complete Brother mask rule | disproven | It predicts mask 3 for `ABC123abc789` where Brother uses 0, and mask 2 for the 55-byte repetitive lowercase payload where Brother uses 1. The cause of these two differences remains unknown |
+| The implementation identifies Brother's internal QR library | unknown | Matching output is behavioral evidence only. Hopper did not identify a QR mask routine in the inspected Windows DLL |
+| The new rule establishes GUI or printed parity | unknown | Validation uses the in-memory `GetPrintingImage()` path. No GUI canvas or physical printing was tested |

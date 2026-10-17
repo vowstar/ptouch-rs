@@ -29,7 +29,23 @@ uv run --with pillow python docs/re/windows-lbx-runtime/compare-qr-mask-score-pr
 The observed masks split across the hypotheses: standard scoring predicts
 three, omission of N3 predicts two, and neither predicts two. Probe 14 also
 cannot be explained by any nonnegative scalar weight on N3 while holding N1
-and N2 fixed. No production scoring change is justified by this sample.
+and N2 fixed.
+
+Cycle 41 compared the matrix results with
+[libqrencode's mask.c](https://github.com/fukuchi/libqrencode/blob/master/mask.c).
+Its scan applies one 40-point N3 penalty when either neighboring light run
+reaches four modules, using an else-if so both sides do not incur two penalties.
+Its N4 step rounds the dark-module percentage to an integer before applying
+the five-percent bands. A Rust implementation of this score matches Brother's
+selected mask in 17 of 19 analyzed cases across Cycles 37-41, including all
+seven probes above. It selects mask 3 instead of Brother's mask 0 for
+`ABC123abc789`, and mask 2 instead of Brother's mask 1 for the 55-character
+repetitive lowercase probe. Those exceptions prevent treating the score as a
+complete reconstruction.
+
+The production renderer now uses this score. Seven golden-grid checks and a
+19-case mask-selection test pass. No physical printer was opened and no print
+job or printer-setting change was made.
 
 The seven PTL sources and captured BMPs are preserved next to this report.
 They can be replayed through the read-only LbxProbe.exe using

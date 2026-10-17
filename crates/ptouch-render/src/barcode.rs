@@ -94,13 +94,10 @@ pub(crate) fn encode_qr(
     if let Some(version) = version {
         let version = qrcodegen::Version::new(version);
         let segments = crate::qr_segments::make_segments(data, version);
-        return qrcodegen::QrCode::encode_segments_advanced(
+        return crate::qr_mask::encode_with_brother_mask_score(
             &segments,
             correction.level(),
             version,
-            version,
-            None,
-            false,
         );
     }
 
@@ -114,10 +111,18 @@ pub(crate) fn encode_qr(
             correction.level(),
             min_version,
             max_version,
-            None,
+            Some(qrcodegen::Mask::new(0)),
             false,
         ) {
-            Ok(qr) => return Ok(qr),
+            Ok(qr) => {
+                let version = qr.version();
+                let segments = crate::qr_segments::make_segments(data, version);
+                return crate::qr_mask::encode_with_brother_mask_score(
+                    &segments,
+                    correction.level(),
+                    version,
+                );
+            }
             Err(error) => last_error = Some(error),
         }
     }
@@ -275,28 +280,9 @@ mod tests {
     #[test]
     fn automatic_qr_preserves_requested_error_correction_without_boosting() {
         let data = "12345678901234567890";
-        let bitmap = render_qr(data, QrErrorCorrection::Medium, None).unwrap();
-        let segments = qrcodegen::QrSegment::make_segments(data);
-        let expected = qrcodegen::QrCode::encode_segments_advanced(
-            &segments,
-            qrcodegen::QrCodeEcc::Medium,
-            qrcodegen::Version::MIN,
-            qrcodegen::Version::MAX,
-            None,
-            false,
-        )
-        .unwrap();
-        assert_eq!(
-            expected.error_correction_level(),
-            qrcodegen::QrCodeEcc::Medium
-        );
-        assert_eq!(bitmap.width(), (expected.size() as u32 + 8) * 8);
-        for y in 0..expected.size() {
-            for x in 0..expected.size() {
-                let rendered = bitmap.get_pixel((x as u32 + 4) * 8, (y as u32 + 4) * 8);
-                assert_eq!(rendered, expected.get_module(x, y), "module ({x}, {y})");
-            }
-        }
+        let qr = encode_qr(data, QrErrorCorrection::Medium, None).unwrap();
+        assert_eq!(qr.error_correction_level(), qrcodegen::QrCodeEcc::Medium);
+        assert_eq!(qr.version().value(), 1);
     }
 
     #[test]
@@ -331,6 +317,156 @@ mod tests {
                 let actual =
                     bitmap.get_pixel((column as u32 + 4) * 8 + 4, (row as u32 + 4) * 8 + 4);
                 assert_eq!(actual, module == b'#', "module ({column}, {row})");
+            }
+        }
+    }
+
+    #[test]
+    fn brother_mask_score_matches_seventeen_of_nineteen_captured_controls() {
+        let repetitive_50 = "a".repeat(49) + "b";
+        let repetitive_55 = "a".repeat(54) + "b";
+        let repetitive_60 = "a".repeat(60);
+        let repetitive_62 = "a".repeat(61) + "b";
+        let diverse = format!("{}01234567", "abcdefghijklmnopqrstuvwxyz".repeat(2));
+        let cases: [(&str, u8, u8, u8); 19] = [
+            (
+                "gxblbbqsxkhyydmtkxmdimqqhiazutqwmauiodqeohcibebppkzrqnhskkfj",
+                4,
+                3,
+                3,
+            ),
+            (
+                "qouatbosdcqajactpykvuhyhyrluwmbndhwkifpqcbyoeesrmj",
+                4,
+                6,
+                6,
+            ),
+            (
+                "wwfcwnwvossfrjgfznlzrsrlwoegdewjaclteytkxdnlisauqh",
+                4,
+                2,
+                2,
+            ),
+            (
+                "xqdnhsmyrqqxbeyumaklmasjpgepnvcneypegxvntuycegqkhnmszbp",
+                4,
+                7,
+                7,
+            ),
+            (
+                "qoufsayimvaynaomakmknraredxggrlynkyjnduzwxggmzrrwc",
+                4,
+                6,
+                6,
+            ),
+            (
+                "lhvlfpscnrkrrnolqsymlmlwourphxhjdqbjtulzanhmcotclvcjuoa",
+                4,
+                6,
+                6,
+            ),
+            (
+                "wncwtqywaygnonydebwdqtygxmcyubpxoygolobofszssuusvj",
+                4,
+                0,
+                0,
+            ),
+            ("hello 1234567890", 1, 0, 0),
+            ("1234567890hello", 1, 3, 3),
+            ("HELLO WORLD 1234567890", 1, 3, 3),
+            ("abc123DEF456", 1, 3, 3),
+            // Brother selects mask 0; the observed segment candidate scores as mask 3.
+            ("ABC123abc789", 1, 3, 0),
+            (&repetitive_50, 4, 1, 1),
+            // Brother selects mask 1; both qrcodegen and this score select mask 2.
+            (&repetitive_55, 4, 2, 1),
+            (&repetitive_60, 4, 1, 1),
+            (&repetitive_62, 4, 1, 1),
+            ("12345678901234567890", 1, 4, 4),
+            ("https://example.test/ptouch-cycle17", 3, 7, 7),
+            (&diverse, 4, 2, 2),
+        ];
+        let mut matches = 0;
+        for (data, version, expected, brother_mask) in cases {
+            let qr = encode_qr(data, QrErrorCorrection::Medium, Some(version)).unwrap();
+            assert_eq!(qr.mask().value(), expected, "score prediction for {data}");
+            if expected == brother_mask {
+                matches += 1;
+            }
+        }
+        assert_eq!(matches, 17);
+    }
+
+    #[test]
+    fn selected_masks_reproduce_all_cycle40_brother_matrices() {
+        let cases = [
+            (
+                "gxblbbqsxkhyydmtkxmdimqqhiazutqwmauiodqeohcibebppkzrqnhskkfj",
+                3,
+                include_str!(
+                    "../../../docs/re/windows-lbx-runtime/qr-matrices/mask-score-probes/02-mask3.txt"
+                ),
+            ),
+            (
+                "qouatbosdcqajactpykvuhyhyrluwmbndhwkifpqcbyoeesrmj",
+                6,
+                include_str!(
+                    "../../../docs/re/windows-lbx-runtime/qr-matrices/mask-score-probes/14-mask6.txt"
+                ),
+            ),
+            (
+                "wwfcwnwvossfrjgfznlzrsrlwoegdewjaclteytkxdnlisauqh",
+                2,
+                include_str!(
+                    "../../../docs/re/windows-lbx-runtime/qr-matrices/mask-score-probes/16-mask2.txt"
+                ),
+            ),
+            (
+                "xqdnhsmyrqqxbeyumaklmasjpgepnvcneypegxvntuycegqkhnmszbp",
+                7,
+                include_str!(
+                    "../../../docs/re/windows-lbx-runtime/qr-matrices/mask-score-probes/20-mask7.txt"
+                ),
+            ),
+            (
+                "qoufsayimvaynaomakmknraredxggrlynkyjnduzwxggmzrrwc",
+                6,
+                include_str!(
+                    "../../../docs/re/windows-lbx-runtime/qr-matrices/mask-score-probes/23-mask6.txt"
+                ),
+            ),
+            (
+                "lhvlfpscnrkrrnolqsymlmlwourphxhjdqbjtulzanhmcotclvcjuoa",
+                6,
+                include_str!(
+                    "../../../docs/re/windows-lbx-runtime/qr-matrices/mask-score-probes/29-mask6.txt"
+                ),
+            ),
+            (
+                "wncwtqywaygnonydebwdqtygxmcyubpxoygolobofszssuusvj",
+                0,
+                include_str!(
+                    "../../../docs/re/windows-lbx-runtime/qr-matrices/mask-score-probes/30-mask0.txt"
+                ),
+            ),
+        ];
+
+        for (data, expected_mask, reference) in cases {
+            let qr = encode_qr(data, QrErrorCorrection::Medium, Some(4)).unwrap();
+            let mut lines = reference.lines();
+            assert_eq!(
+                lines.next(),
+                Some(&format!("version=4 ecc=Medium mask={expected_mask} size=33")[..])
+            );
+            assert_eq!(qr.mask().value(), expected_mask);
+            for (y, row) in lines.enumerate() {
+                for (x, module) in row.bytes().enumerate() {
+                    assert_eq!(
+                        qr.get_module(x as i32, y as i32),
+                        module == b'#',
+                        "probe {data}, module ({x}, {y})"
+                    );
+                }
             }
         }
     }

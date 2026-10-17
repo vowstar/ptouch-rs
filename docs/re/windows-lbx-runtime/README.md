@@ -225,3 +225,12 @@ does not explain the data, so production scoring remains unchanged. The
 per-probe scores and comparison command are in qr-mask-score-probes.md.
 A Hopper inspection of the native lbxcore.Win32.dll identified QR style
 settings serialization but did not locate the mask selector.
+
+Cycle 41 compares alternative mask implementations with the exact captured
+matrices. A libqrencode-style score selects the Brother mask for 17 of 19
+analyzed captures and reproduces every module in the seven Cycle 40 version 4
+byte-only grids. Two cases remain different: `ABC123abc789` and the
+55-character repetitive lowercase payload. The Rust renderer now uses this
+score by default. Validation covers the library's in-memory raster only; it
+does not establish GUI canvas or physical print behavior. The scoring source
+comparison is recorded in qr-mask-score-probes.md.
