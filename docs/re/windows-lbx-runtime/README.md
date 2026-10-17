@@ -57,10 +57,16 @@ barcode data/protocol and scalar settings, and capture the result of
 3 automatic, MBCS 932, and ECC M. The Code 39 archive loads as one
 `LibLbx.BcdObj` with protocol `CODE39`, data `ABC-123`, `ShowCheckDigit=true`,
 `ShowChar=true`, and centered readable text. The Code 39 output is 482x128 px
-and decodes to `ABC-123W` with `zbarimg`. The QR output is 132x128 px; neither
-`zbarimg` nor ZXing-C++ decoded it, while the Rust 135x128 px output decoded to
-the expected URL. This is a rendering discrepancy that needs investigation,
-not proof by itself that the Brother output is malformed.
+and decodes to `ABC-123W` with `zbarimg`. The raw QR output is 132x128 px; neither
+`zbarimg` nor ZXing-C++ decoded it directly, while the Rust 135x128 px output
+decoded to the expected URL. Cycle 23 found that ZXing-C++ decodes the Brother
+image after rotating it 90 degrees and adding a 4 px white border. zbarimg still
+does not decode that normalized image. The rotated and padded derivative is
+preserved as `runtime-renders/editor-pt-e550w-qr-decoder-normalized.png`
+(SHA-256 `069a79fa7063cf0ab6c5748b219ddc7e596a1fa3c6ee905838f3ae6db226c2bc`).
+This confirms the payload can be recovered from the Brother raster but does not
+establish why the raw output needs normalization or whether the pattern matches
+Rust.
 
 Cycle 22 changed Rust readable Code 39 text to include the observed `*` start/stop sentinels. The rendered result is preserved as `runtime-renders/rust-pt-e550w-code39-cycle22.png` (581x128 px, SHA-256 `1738433fa446738390b2d40d58129eb748af0ab331d98bd4524d0ce2e36d179d`). It still decodes to `ABC-123W`. The rendered full-label dimensions are not directly comparable to Brother's object-only 482x128 image, so this does not settle geometry parity.
 

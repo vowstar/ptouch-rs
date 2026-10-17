@@ -317,3 +317,11 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 |---|---|---|
 | Rust Code 39 readable text includes visible start/stop delimiters observed in Brother's in-memory render | implemented, verified | `crates/ptouch-render/src/layout.rs`; CLI output from `docs/re/code39-probe.ptl` visually shows `*ABC-123W*` and `zbarimg` still decodes `ABC-123W`; PNG SHA-256 `1738433fa446738390b2d40d58129eb748af0ab331d98bd4524d0ce2e36d179d` |
 | Code 39 raster dimensions now match Brother's loaded-object raster | unknown | Brother `GetPrintingImage()` returned 482x128 object-only output; Rust CLI returned a 581x128 full-label raster, so dimensions are not directly comparable |
+
+
+## Cycle 23 QR raster diagnosis
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother's captured QR raster contains the expected URL payload when normalized for decoding | observed | ZXing-C++ decodes `https://example.test/ptouch-cycle17` from a grayscale 90-degree-rotated copy with 4 px white border; artifact `docs/re/windows-lbx-runtime/runtime-renders/editor-pt-e550w-qr-decoder-normalized.png`, SHA-256 `069a79fa7063cf0ab6c5748b219ddc7e596a1fa3c6ee905838f3ae6db226c2bc` |
+| Direct decoder failures establish the Brother QR raster is malformed | disproven | ZXing-C++ recovers the expected payload after rotation and padding; raw raster geometry/quiet-zone behavior and exact module-pattern parity remain unresolved; zbarimg does not decode the normalized derivative |
