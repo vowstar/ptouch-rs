@@ -89,7 +89,9 @@ decodes to the expected value. Rust's human-readable line now includes the
 Brother-observed start/stop delimiters. Brother and Rust QR rasters differ. ZXing-C++ reports version 3, ECC M, and
 data mask 7 for both decodes, while Brother reports mixed QR mode and automatic
 mask selection. The raw Brother capture needs rotation and
-quiet-zone padding; Rust decodes without that normalization. GUI canvas behavior and
+quiet-zone padding; Rust decodes without that normalization. A second QR encoder matches Rust's exact
+byte-mode 29x29 matrix with mask 7; the actual Brother segment boundaries remain
+unknown. GUI canvas behavior and
 physical print output remain unverified. The QR LBX fields follow a generic
 P-touch Editor 5.0.201 sample.
 

@@ -331,7 +331,7 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 
 | Claim | Status | Evidence |
 |---|---|---|
-| Brother and Rust QR outputs decode as version 3, ECC M, data mask 7, and the same URL | observed | ZXing-C++ `extra` reports `Version=3`, `ECLevel=M`, `DataMask=7` for both the normalized Brother BMP and the Rust PNG; Brother orientation reports -90 and Rust 0 |
+| Brother and Rust QR outputs decode as version 3, ECC M, data mask 7, and the same URL | observed | ZXing-C++ `extra` reports `Version=3`, `ECLevel=M`, `DataMask=7` for both the normalized Brother BMP and the Rust PNG. The Brother derivative was rotated before decode, so its reported orientation is not evidence of the source bitmap orientation |
 | QR mask choice explains the visible Brother/Rust matrix difference | ruled out as sole cause | Both decoded symbols report data mask 7; codeword/segment/charset details and pixel-level raster mapping remain unknown |
 
 
@@ -342,3 +342,12 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | The generated Brother QR object is configured for mixed data mode, automatic mask selection, and automatic medium cell size | observed in object property | Read-only Windows probe of `C:\Users\joshd\ptouch-probe\pt-e550w-qr-export.lbx` returned `QrcodeData.Mode=Mixed`, `Mask=Auto`, `CellSize=M`, with MBCS 932, Model2, auto version3, ECC M; output also retained PT-E550W ID 26160 |
 | Rust's current QR input for the Cycle 17 URL uses one byte segment | observed from dependency implementation | `qrcodegen::QrSegment::make_segments()` returns one whole-string mode: numeric, alphanumeric, or byte; lowercase URL makes the byte branch apply |
 | Brother's `Mixed` mode emits multiple segments for the Cycle 17 URL | unknown | The reflected mode setting does not reveal encoded segment boundaries or codewords |
+
+
+## Cycle 26 QR segment candidate comparison
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Rust's version 3 ECC M byte-mode matrix with mask 7 agrees with an independent QR implementation | observed | Python `qrcode` byte-only mode and `qrcodegen` forced to version 3, ECC M, mask 7 produced identical 29x29 matrices (0 differing modules) for `https://example.test/ptouch-cycle17` |
+| A four-segment byte/alphanumeric/byte/numeric encoding is equivalent to the Brother symbol | not supported by current evidence | Python `qrcode` with optimization threshold 2 selected four segments and automatic mask 5; Brother's decoded mask is 7. This rejects that exact candidate as a mask match, but other mixed segmentations remain possible |
+| Brother `Mode=Mixed` specifies the exact QR segment boundaries | unknown | The reflected setting does not expose segment metadata; no Brother-generated codeword stream or source-app QR fixture is available |

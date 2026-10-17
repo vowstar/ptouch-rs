@@ -112,3 +112,13 @@ source of the visible pattern difference. Rust's current QR path calls
 byte segment; the URL contains lowercase characters and is represented as one
 byte segment. Whether Brother's `Mixed` mode splits this payload into multiple
 segments remains to be established.
+
+
+Cycle 26 used a second QR implementation to compare data segmentation. With
+version 3, ECC M, and forced mask 7, Python `qrcode` in byte-only mode produced
+the exact same 29x29 module matrix as Rust's `qrcodegen` path. Splitting the
+URL into byte/alphanumeric/byte/numeric segments changed the matrix and selected
+mask 5 automatically. Brother reports `Mode=Mixed` and `Mask=Auto`, but its
+decoded mask is 7; this particular four-segment candidate therefore does not
+match the Brother mask metadata. The exact segment boundaries and original
+bitmap module mapping remain unknown.
