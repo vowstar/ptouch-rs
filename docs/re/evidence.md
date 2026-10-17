@@ -230,3 +230,13 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | GUI exposes each declared layout placeholder in a Template values section and applies values to preview and print rendering only when all placeholders have values | implemented, tested | `crates/ptouch-gui/src/panels/sidebar.rs`, `state.rs`, and `app.rs`; missing values keep the original tokens visible and disable Print |
 | Transient GUI values do not alter the saved layout document and are cleared when another layout is opened | implemented, tested | `AppState::preview_document` applies values to a clone; `toolbar::apply_layout` clears the transient map; regression test compares serialized source before and after preview resolution |
 | GUI supports CSV or multi-label numbered placeholder printing | no | GUI now supports single-label placeholder entry; CSV and numeric sequence batches remain CLI workflows |
+
+
+## Cycle 14 selected-character numbering evidence
+
+| Claim | Status | Evidence |
+|---|---|---|
+| iPrint&Label marks selected text ranges for numbering and stores count, start-from, and increment print parameters | observed in source | `reference/artifacts/android-iprintandlabel-5.3.17/jadx/sources/com/brother/ptouch/iprintandlabel/edit/EditLabelActivity.java:setTextNumber`; `module/numbering/NumberingAddEntity.java`; `object/PrintParameter.java` |
+| iPrint&Label generates each selected-range value, renders one LBX bitmap per value, restores the source value, and applies copies to the sequence | observed in source | `serialize/Counter.java:countUp`; `print/PrintTask.java:lambda$printNumberingLbx$0,printNumberingLbx` |
+| Recovered Counter accepts ASCII letters and digits and uses Java string offsets for selected ranges | observed in source | `serialize/Counter.java:enableCountUpRegex,countUp`; Java/Kotlin string range operations use UTF-16 code-unit indices |
+| Rust matches native selected-character numbering, including Unicode selection and carry behavior | open gap | No attached Android device/emulator, app-produced numbering LBX, or rendered baseline was available. The decompiled carry implementation has not been independently validated, so no native numbering semantics were inferred from it |

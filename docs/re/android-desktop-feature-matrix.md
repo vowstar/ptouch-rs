@@ -1,6 +1,6 @@
 # Android/Desktop feature matrix (Cycle 2 evidence pass)
 
-Status: Cycle 2 static inventory baseline with Cycle 5 implementation, Cycle 6 target-specific evidence, Cycle 7 text import, Cycle 8 embedded image import, Cycle 9 vector-outline import, Cycle 10 PT Dingbats symbol import, Cycle 11 QR import, Cycle 12 CLI numeric placeholder batches, and Cycle 13 GUI placeholder values. Android evidence includes manifest declarations and decompiled code paths. P-touch Editor and Printer Setting Tool evidence is limited to package/assembly inventories and packaged resources. Static evidence does not establish runtime execution or full feature parity. Unknowns below are not claims of feature absence.
+Status: Cycle 2 static inventory baseline with Cycle 5 implementation, Cycle 6 target-specific evidence, Cycle 7 text import, Cycle 8 embedded image import, Cycle 9 vector-outline import, Cycle 10 PT Dingbats symbol import, Cycle 11 QR import, Cycle 12 CLI numeric placeholder batches, Cycle 13 GUI placeholder values, and Cycle 14 numbering source analysis. Android evidence includes manifest declarations and decompiled code paths. P-touch Editor and Printer Setting Tool evidence is limited to package/assembly inventories and packaged resources. Static evidence does not establish runtime execution or full feature parity. Unknowns below are not claims of feature absence.
 
 | Feature area | Design&Print 2 2.8.1 | iPrint&Label 5.3.17 | P-touch Editor 6.12.10 | Printer Setting Tool 1.6.0142 | Integrated `ptouch-rs` current state after Cycle 10 |
 |---|---|---|---|---|---|
@@ -109,3 +109,9 @@ Status: Cycle 2 static inventory baseline with Cycle 5 implementation, Cycle 6 t
 - Values replace a declared text placeholder in a cloned layout for each render, leaving the saved source file unchanged. Exports require `{n}` in the output path.
 - iPrint&Label source confirms separate count/start/increment settings and per-label value progression, then renders a bitmap job list and applies copies across that sequence: `PrintParameter.java`, `EditLabelActivity.java:setTextNumber`, and `PrintTask.java:printNumberingLbx`.
 - This is a CLI placeholder sequence. Native LBX selected-character numbering, its serialization, GUI authoring, and database-assigned jobs remain open.
+
+## Cycle 14 selected-character numbering evidence
+
+- `EditLabelActivity.setTextNumber` stores selected text ranges in `NumberingAddEntity` entries and activates numbering on the selected text. `Counter.countUp` replaces each stored range for each generated label. `PrintTask.printNumberingLbx` applies the generated sequence to rendered bitmap jobs and restores the source value between jobs.
+- The decompiled Kotlin implementation uses Java string `substring` offsets, which count UTF-16 code units. The counter accepts only ASCII letters and digits. Its carry behavior is not independently verified, and non-ASCII selection/index behavior has not been compared with a running app.
+- No Android device or emulator was attached for a runtime probe, and no app-produced LBX numbering fixture or rendered baseline was found. Rust native selected-character numbering remains open; Cycle 12 placeholder sequences are not equivalent.
