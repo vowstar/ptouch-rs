@@ -215,3 +215,13 @@ Cycle 37 tests more P900W version 4/ECC M payloads. Three repetitive byte-only s
 Cycle 38 extends the mixed-mode probes with five short strings. P900W reports version 1/ECC M for each. Candidate segment layouts reproduce every pixel with these boundaries: bytes `hello ` then numeric `1234567890`; numeric `1234567890` then bytes `hello`; alphanumeric `HELLO WORLD ` then numeric `1234567890`; bytes `abc` then alphanumeric `123DEF456`; and alphanumeric `ABC123` then bytes `abc789`. Decoder masks are 0, 3, 3, 3, and 0. Rust's current whole-string path needs version 2 for the first three, and yields different version 1 grids for the last two. Run `uv run --with pillow python docs/re/windows-lbx-runtime/compare-qr-segment-probes.py` to compare the checked-in candidate matrices and captures. This evidence does not yet prove the segment optimizer for arbitrary inputs.
 
 Cycle 39 implements a shared version-aware segmenter for numeric, alphanumeric, and byte runs. It uses each QR version group's mode count widths when selecting segments, keeps the requested ECC level, and is used by both QR rendering and LBX import. Public renderer tests now select version 1 for the observed mixed strings, including fixed version 1; the LBX import/render test also accepts the fixed version 1 payload. A P900W-captured version 4/ECC M/mask 2 module grid is checked in as a renderer golden and matches the 60-character mixed byte/numeric payload exactly. The short version 1 payloads still use different Rust-selected masks from Brother, so their final matrices differ until mask parity is addressed.
+
+Cycle 40 tests whether the remaining mask mismatch comes from Brother omitting
+qrcodegen's N3 finder-pattern penalty. Seven lowercase-only version 4/ECC M
+captures match the Rust matrix exactly at Brother's decoded mask, holding byte
+encoding constant. Standard scoring predicts Brother's mask in three cases,
+omitting N3 predicts two, and neither predicts two. A single N3 weight change
+does not explain the data, so production scoring remains unchanged. The
+per-probe scores and comparison command are in qr-mask-score-probes.md.
+A Hopper inspection of the native lbxcore.Win32.dll identified QR style
+settings serialization but did not locate the mask selector.

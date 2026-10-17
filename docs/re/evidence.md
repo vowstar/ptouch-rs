@@ -473,3 +473,15 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | The production automatic segmenter reproduces the tested diverse version 4 Brother matrix | observed | The checked-in P900W module reference was extracted from an in-memory runtime raster. The renderer regression test compares every module and passes for the 60-character lowercase/digit payload at version 4, ECC M, mask 2 |
 | The implementation reproduces exact Brother matrices for all five short mixed payloads | not observed | Rust selects version 1 and its production matrices equal the manually segmented qrcodegen candidates, but qrcodegen selects masks 6, 4, 6, 2, and 2 while Brother reports 0, 3, 3, 3, and 0. Those candidate matrices match Brother when forced to Brother's masks; mask selection remains a separate gap |
 | The segmenter establishes Unicode/MBCS and GUI/physical-print parity | unknown | Cycle 39 covers ASCII numeric, alphanumeric, and byte segments through render and LBX import. Unicode/MBCS conversion, exact tie-breaking, GUI canvas behavior, and physical output remain unverified |
+
+
+## Cycle 40 QR mask-score probes
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother selects the lowest standard qrcodegen penalty for every version 4 byte payload | disproven | Seven P900W/ECC M/lowercase-only runtime captures decode at version 4 and masks 3, 6, 2, 7, 6, 6, and 0. Each full 33x33 Brother module grid matches the corresponding Rust fixed-mask matrix exactly. Standard N1+N2+N3+N4 scoring predicts masks 2, 2, 2, 2, 6, 6, and 2 |
+| Brother's mask difference is explained by omitting N3 | disproven | The same seven fixed-mask matrices without N3 predict masks 3, 3, 6, 7, 2, 2, and 3. This matches only probes 02 and 20; probes 14 and 30 select neither prediction |
+| A single alternate weight for N3 explains the seven masks | disproven | Probe 14's selected mask is not the minimum for any nonnegative N3 weight when the other qrcodegen components are held fixed |
+| The seven captures differ because their byte segment layout is unknown | not supported | All seven payloads contain only lowercase ASCII, use version 4/ECC M, and each captured grid compares pixel-for-pixel against Rust's version 4 byte matrix at Brother's decoded mask |
+| The findings establish a global Brother mask rule | unknown | The tests cover seven lowercase-only version 4 payloads and do not cover other QR versions, ECC levels, Unicode/MBCS, or GUI canvas/physical output |
+| Native DLL analysis located the QR mask selector | not observed | Hopper opened the 32-bit native `lbxcore.Win32.dll` (SHA-256 `f69a0fa0fd2e37f825436170853e7efdbbe04b299011d8ec11b6c82668fcc704`). The `:qrcodeStyle` references resolve to settings serialization; no named mask-selection routine was identified |
