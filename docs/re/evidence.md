@@ -564,3 +564,12 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | The score-discriminator captures use the same byte matrices as Rust | observed | QR format bits identify Version 4/ECC M. `compare-qr-score-discriminator-probes.py` compares each in-memory BMP with Rust at Brother's selected mask and reports zero mismatches across 69,696 module pixels per capture. |
 | The four probes prove a universal Brother mask rule | unknown | They support the current score over one sampled axis variant, but the two earlier exceptions remain and other scoring models or payload classes may differ. |
 | The captures establish physical printing behavior | unknown | They use only the Windows Editor's in-memory `GetPrintingImage()` method. No printer handle or print job was used. |
+
+
+## Cycle 49 N3 line-cap scoring domain
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Capping N3 to one 40-point penalty per row or column changes candidate scores | observed | `docs/re/windows-lbx-runtime/analyze-qr-n3-line-cap.py` reports changed score vectors for all 19 captured controls and all 24 deterministic generated Version 4/ECC M payloads. |
+| The line-cap variant changes the selected mask on tested controls or generated payloads | disproven in this sample | It changes no winning mask across the 19 controls or 24 generated payloads. Both baseline and capped models match 17/19 captured Brother choices, and the variant yields no payload that separates their selected masks. |
+| The line-cap sweep identifies Brother's complete mask rule | unknown | The score domain was tested on existing captures and one deterministic batch of lowercase byte-only candidates. Other payload classes, scoring rules, and tie behavior remain open. No runtime probe was needed because no candidate separated the models. |

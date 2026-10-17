@@ -312,3 +312,13 @@ compares pixel-for-pixel with Rust at Brother's mask: zero mismatches across
 `uv run --with pillow python docs/re/windows-lbx-runtime/compare-qr-score-discriminator-probes.py`.
 These four controls support the existing score over this sampled alternative,
 but do not resolve the two earlier exceptions. No printer was opened or used.
+
+
+Cycle 49 evaluated a distinct N3 score-domain variant that caps each row or
+column at one 40-point finder-pattern penalty. Replay with
+`python docs/re/windows-lbx-runtime/analyze-qr-n3-line-cap.py`. Candidate score
+vectors changed for all 19 captured controls and all 24 generated Version 4/ECC
+M payloads, but the selected mask did not change in any case. The variant
+therefore produced no discriminator for an in-memory Brother probe, and the
+production scorer remains unchanged. No Windows runtime call or printer
+operation was needed for this cycle.
