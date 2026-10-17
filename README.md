@@ -89,8 +89,10 @@ decodes to the expected value. Rust's human-readable line now includes the
 Brother-observed start/stop delimiters. Brother's QR raster first looked different from Rust's because its module
 pitch and placement differ. A pixel-level grid comparison found zero mismatches
 against Rust's exact version 3, ECC M, mask 7 matrix across every visible Brother
-cell for XS/S/M/L/XL. Brother clips the QR grid vertically in its fixed 128-pixel in-memory raster;
-the clipped extent varies with cell size. A crop-preserving 90-degree rotation
+cell for XS/S/M/L/XL. The E550W captures clip the QR grid vertically in their fixed 128-pixel raster.
+The P900W raster contains the full grid and decodes directly with zbar and
+ZXing-C++. Pixel comparison confirms zero mismatches across all visible E550W
+modules and the full P900W symbol. A crop-preserving 90-degree rotation
 and white padding lets ZXing-C++ recover the M payload, while an expanded
 lossless rotation does not decode because the raster still omits matrix rows. A second QR encoder also matches Rust's exact 29x29 matrix. On Windows,
 changing the Brother QR mode

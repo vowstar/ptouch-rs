@@ -184,7 +184,7 @@ role of that crop remains unexplained, and decoder failure does not establish
 that XS/S/L/XL contain invalid QR matrices.
 
 
-Cycle 33 adds `compare-qr-matrix.py` and `qr-v3-mask7.matrix`. The matrix is
+Cycles 33-34 add `compare-qr-matrix.py` and `qr-v3-mask7.matrix`. The matrix is
 the Rust `qrcodegen` output for the same URL at version 3, ECC M, mask 7. Run
 the comparison with Pillow installed:
 
@@ -192,11 +192,14 @@ the comparison with Pillow installed:
 uv run --with pillow python docs/re/windows-lbx-runtime/compare-qr-matrix.py
 ```
 
-It reports zero pixel mismatches across all visible matrix pixels in each
-Brother BMP. For cell size n=2..6, the measured grid origin is x=2n, y=2n-14.
-The visible module rows are XS 5-28, S 2-28, M 1-28, L 0-26, and XL 0-21.
-This maps the clipping directly: the smaller sizes lose more leading rows, while
-L/XL also lose trailing rows at the fixed 128 px raster edge. The expected
-module pixels outside those bounds are not present in the capture. This establishes
-in-memory raster matrix parity for the visible E550W QR region only; it does not
-establish GUI canvas or physical print behavior.
+It reports zero pixel mismatches across all visible E550W matrix pixels and
+across the entire P900W symbol. For E550W cell size n=2..6, the measured grid
+origin is x=2n, y=2n-14. The visible module rows are XS 5-28, S 2-28, M 1-28,
+L 0-26, and XL 0-21. The smaller sizes lose more leading rows, while L/XL also
+lose trailing rows at the fixed 128 px raster edge. The P900W raster is 292x320
+px with cell pitch 8 and grid origin (30,20), preserving all 29 rows. ZXing-C++
+and zbar decode the P900W BMP directly as the expected URL, version 3, ECC M,
+mask 7. Its BMP SHA-256 is
+`7c201ed7b3b0e85703e75ba75c929424ac8c0412103bc64f652cd976b3f4f0ed`. This
+establishes in-memory matrix parity for the tested E550W/P900W QR exports; GUI
+canvas and physical print behavior remain unverified.
