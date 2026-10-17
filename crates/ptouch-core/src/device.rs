@@ -44,6 +44,8 @@ bitflags! {
         const AUTO_STATUS_NOTIFICATION = 1 << 9;
         /// Device selects high-resolution printing through ESC i K.
         const ADVANCED_HIRES = 1 << 10;
+        /// Device exposes network status through the Brother SNMP status OID.
+        const SNMP_STATUS = 1 << 11;
     }
 }
 
@@ -263,7 +265,8 @@ static DEVICE_TABLE: &[DeviceInfo] = &[
         dpi: 360,
         flags: DeviceFlags::P700_INIT
             .union(DeviceFlags::USE_INFO_CMD)
-            .union(DeviceFlags::ADVANCED_HIRES),
+            .union(DeviceFlags::ADVANCED_HIRES)
+            .union(DeviceFlags::SNMP_STATUS),
     },
     DeviceInfo {
         vid: 0x04f9,
@@ -393,6 +396,7 @@ mod tests {
         assert!(e550w.flags.contains(DeviceFlags::P700_INIT));
         assert!(e550w.flags.contains(DeviceFlags::USE_INFO_CMD));
         assert!(e550w.flags.contains(DeviceFlags::RASTER_PACKBITS));
+        assert!(!e550w.flags.contains(DeviceFlags::SNMP_STATUS));
         assert!(!e550w.flags.contains(DeviceFlags::UNSUP_RASTER));
 
         let p900w = find_device(0x04f9, 0x2085).unwrap();
@@ -402,6 +406,7 @@ mod tests {
         assert!(p900w.flags.contains(DeviceFlags::P700_INIT));
         assert!(p900w.flags.contains(DeviceFlags::USE_INFO_CMD));
         assert!(!p900w.flags.contains(DeviceFlags::RASTER_PACKBITS));
+        assert!(p900w.flags.contains(DeviceFlags::SNMP_STATUS));
         assert!(!p900w.flags.contains(DeviceFlags::UNSUP_RASTER));
     }
 

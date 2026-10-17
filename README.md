@@ -18,6 +18,7 @@ Optional native macOS Bluetooth support is available in `ptouch-core` for the PT
 - Chain print and multi-copy support
 - Print quality modes on selected legacy and modern target models (draft remains legacy-only)
 - Explicit raw TCP printer selection in the CLI
+- Discover raw network printers in the GUI with DNS-SD
 - Read the PT-P900W Command Mode setting over raw TCP
 - GUI with live preview, zoom, and drag-and-drop element reordering
 - Export to image (PNG, JPEG, BMP, GIF, TIFF, WebP) without a printer connected
@@ -32,14 +33,21 @@ PT-P710BT, PT-E310BT, PT-E560BT and more.
 
 The CLI supports explicit raw TCP selection with `--tcp IP:PORT --pid HEX_PID`.
 For example, `ptouch info --tcp 192.168.1.50:9100 --pid 0x2085` queries a
-PT-P900W, and `ptouch print --tcp 192.168.1.50:9100 --pid 0x2060 "Hello"`
-prints to a PT-E550W. Brother network printers commonly listen on port 9100.
-The GUI supports USB, paired Bluetooth, and raw TCP printers. For TCP, enter the
-printer's IP address and port, select its model, then choose **Connect TCP**.
-Core, GUI, and CLI TCP routes are verified with loopback printer fixtures, not
-physical-device validation.
+PT-P900W, and `ptouch print --tcp 192.168.1.50:9100 --pid 0x2060
+--tape-width-mm 12 "Hello"` prints to a PT-E550W. The tape width code is
+required for TCP models without status reporting. Brother network printers
+commonly listen on port 9100.
+The GUI supports USB, paired Bluetooth, and discovered raw TCP printers; it also
+allows entering an address and model manually. Raw TCP does not use the USB
+status command. PT-E550W tape width must be selected manually in the GUI or with
+`--tape-width-mm` in the CLI. PT-P900W status
+uses Brother SNMP on UDP port 161, with community `public` by default; set
+`PTOUCH_SNMP_COMMUNITY` to override it. The GUI enables advanced high-resolution
+printing only when that status reports laminated tape and black text. Network
+routes and SNMP parsing are tested with loopback fixtures, not physical printers.
 
 Tape widths: 3.5mm, 6mm, 9mm, 12mm, 18mm, 24mm, 36mm.
+For `--tape-width-mm`, use Brother's width code; code `4` denotes 3.5mm tape.
 
 ## Building
 
@@ -213,7 +221,7 @@ ptouch info
 ptouch info --tcp 192.168.1.50:9100 --pid 0x2085
 
 # Print to a PT-E550W over the network
-ptouch print --tcp 192.168.1.50:9100 --pid 0x2060 "Hello"
+ptouch print --tcp 192.168.1.50:9100 --pid 0x2060 --tape-width-mm 12 "Hello"
 
 # Read the PT-P900W Command Mode setting without changing it
 ptouch config get command-mode --tcp 192.168.1.50:9100 --pid 0x2085

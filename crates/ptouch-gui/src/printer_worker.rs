@@ -5,20 +5,36 @@
 
 #[cfg(target_os = "macos")]
 use std::io::Write;
+use std::net::SocketAddr;
 #[cfg(target_os = "macos")]
 use std::process::{Command, Stdio};
 use std::sync::mpsc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use log::{error, info};
+use mdns_sd::{ServiceDaemon, ServiceEvent};
 use ptouch_core::device::DeviceFlags;
 use ptouch_core::protocol::PrintQuality;
 use ptouch_core::transport::PtouchDevice;
 
-use crate::state::{PrinterCommand, PrinterEvent, PrinterResponse, PrinterTarget};
+use crate::state::{
+    NetworkPrinterCandidate, PrinterCommand, PrinterEvent, PrinterResponse, PrinterTarget,
+};
 
 const POLL_INTERVAL: Duration = Duration::from_secs(3);
+const NETWORK_DISCOVERY_WINDOW: Duration = Duration::from_secs(3);
+const RAW_PRINTER_SERVICE: &str = "_pdl-datastream._tcp.local.";
 const HELPER_ARG: &str = "--ptouch-bluetooth-helper";
+
+struct PrintJob<'a> {
+    target: &'a PrinterTarget,
+    raster_lines: &'a [Vec<u8>],
+    chain_print: bool,
+    auto_cut: bool,
+    quality: PrintQuality,
+    tape_width_mm: u8,
+    cancellation: &'a ptouch_core::CancellationToken,
+}
 
 pub fn printer_worker(
     cmd_rx: mpsc::Receiver<PrinterCommand>,
@@ -32,10 +48,12 @@ pub fn printer_worker(
     let mut poll_enabled = true;
     discover_bluetooth(&resp_tx, &ctx);
     discover_usb(&resp_tx, &ctx);
+    discover_network(&resp_tx, &ctx);
 
     loop {
         match cmd_rx.recv_timeout(POLL_INTERVAL) {
             Ok(PrinterCommand::DiscoverBluetooth) => discover_bluetooth(&resp_tx, &ctx),
+            Ok(PrinterCommand::DiscoverNetwork) => discover_network(&resp_tx, &ctx),
             Ok(PrinterCommand::Poll(target)) => {
                 discover_usb(&resp_tx, &ctx);
                 current_target = target;
@@ -47,18 +65,22 @@ pub fn printer_worker(
                 chain_print,
                 auto_cut,
                 quality,
+                tape_width_mm,
                 target,
                 cancellation,
             }) => {
                 current_target = target;
                 poll_enabled = do_print(
-                    &current_target,
+                    PrintJob {
+                        target: &current_target,
+                        raster_lines: &raster_lines,
+                        chain_print,
+                        auto_cut,
+                        quality,
+                        tape_width_mm,
+                        cancellation: &cancellation,
+                    },
                     (&resp_tx, &ctx),
-                    &raster_lines,
-                    chain_print,
-                    auto_cut,
-                    quality,
-                    &cancellation,
                 );
             }
             Ok(PrinterCommand::FeedAndCut {
@@ -121,6 +143,84 @@ fn discover_bluetooth(resp_tx: &mpsc::Sender<PrinterEvent>, ctx: &egui::Context)
     ctx.request_repaint();
 }
 
+fn discover_network(tx: &mpsc::Sender<PrinterEvent>, ctx: &egui::Context) {
+    let devices = match browse_raw_printers() {
+        Ok(devices) => devices,
+        Err(message) => {
+            error!("Network printer discovery failed: {message}");
+            Vec::new()
+        }
+    };
+    let _ = tx.send(PrinterEvent {
+        target: None,
+        response: PrinterResponse::NetworkDevices(devices),
+    });
+    ctx.request_repaint();
+}
+
+fn browse_raw_printers() -> Result<Vec<NetworkPrinterCandidate>, String> {
+    let daemon = ServiceDaemon::new().map_err(|error| error.to_string())?;
+    let receiver = daemon
+        .browse(RAW_PRINTER_SERVICE)
+        .map_err(|error| error.to_string())?;
+    let started = Instant::now();
+    let mut candidates = Vec::new();
+
+    while let Some(remaining) = NETWORK_DISCOVERY_WINDOW.checked_sub(started.elapsed()) {
+        match receiver.recv_timeout(remaining) {
+            Ok(ServiceEvent::ServiceResolved(service))
+                if service.is_valid() && service.port > 0 =>
+            {
+                let name = service
+                    .fullname
+                    .strip_suffix("._pdl-datastream._tcp.local.")
+                    .unwrap_or(&service.fullname)
+                    .to_string();
+                let pid = ["usb_MDL", "ty", "product"]
+                    .into_iter()
+                    .filter_map(|key| service.get_property_val_str(key))
+                    .find_map(model_pid_from_service_text);
+                let mut addresses: Vec<_> = service.get_addresses_v4().into_iter().collect();
+                addresses.sort_unstable();
+                for ip in addresses {
+                    let candidate = NetworkPrinterCandidate {
+                        name: name.clone(),
+                        address: SocketAddr::from((ip, service.port)),
+                        pid,
+                    };
+                    if !candidates.iter().any(|existing: &NetworkPrinterCandidate| {
+                        existing.address == candidate.address
+                    }) {
+                        candidates.push(candidate);
+                    }
+                }
+            }
+            Ok(_) => {}
+            Err(_) => break,
+        }
+    }
+
+    let _ = daemon.stop_browse(RAW_PRINTER_SERVICE);
+    let _ = daemon.shutdown();
+    candidates.sort_by(|left, right| {
+        left.name
+            .cmp(&right.name)
+            .then_with(|| left.address.cmp(&right.address))
+    });
+    Ok(candidates)
+}
+
+fn model_pid_from_service_text(value: &str) -> Option<u16> {
+    let normalized = value.to_ascii_lowercase();
+    if normalized.contains("pt-p900w") {
+        Some(0x2085)
+    } else if normalized.contains("pt-e550w") {
+        Some(0x2060)
+    } else {
+        None
+    }
+}
+
 fn do_poll(target: &PrinterTarget, tx: &mpsc::Sender<PrinterEvent>, ctx: &egui::Context) {
     let response = match target {
         PrinterTarget::Usb | PrinterTarget::UsbAt(_) | PrinterTarget::Tcp { .. } => {
@@ -160,17 +260,32 @@ fn poll_printer(target: &PrinterTarget) -> Result<PrinterResponse, String> {
     let max_px = dev.max_px();
     let dpi = dev.device_info().dpi;
     let flags = dev.flags();
-    let quality_modes = flags.intersects(DeviceFlags::LEGACY_HIRES | DeviceFlags::ADVANCED_HIRES);
+    let status = if dev.is_tcp() && !flags.contains(DeviceFlags::SNMP_STATUS) {
+        None
+    } else {
+        Some(dev.query_status().map_err(|e| e.to_string())?.clone())
+    };
+    let media_status_available = status.is_some();
+    let media_detected = status.as_ref().is_some_and(|status| status.media_width > 0);
+    let quality_modes = flags.contains(DeviceFlags::LEGACY_HIRES)
+        || (flags.contains(DeviceFlags::ADVANCED_HIRES)
+            && status
+                .as_ref()
+                .is_some_and(|status| status.media_type == 0x01 && status.text_color == 0x08));
     let draft_quality_modes = flags.contains(DeviceFlags::LEGACY_HIRES);
     let model_name = dev.device_info().name.to_string();
-    let status = dev.query_status().map_err(|e| e.to_string())?;
-    let media_width = status.media_width;
-    let media_type = status.media_type_name().to_string();
+    let media_width = status.as_ref().map_or(0, |status| status.media_width);
+    let media_type = status.as_ref().map_or_else(
+        || "Status unavailable".to_string(),
+        |status| status.media_type_name().to_string(),
+    );
     let tape_width_px = dev.tape_width_px().unwrap_or(max_px);
     let response = PrinterResponse::Connected {
         model_name,
         media_width,
         media_type,
+        media_status_available,
+        media_detected,
         max_px,
         dpi,
         quality_modes,
@@ -219,6 +334,8 @@ fn parse_bluetooth_status(output: &str) -> Result<PrinterResponse, String> {
         model_name: fields[0].to_string(),
         media_width: fields[1].parse().map_err(|_| "Invalid media width")?,
         media_type: fields[2].to_string(),
+        media_status_available: true,
+        media_detected: true,
         max_px: fields[3].parse().map_err(|_| "Invalid raster width")?,
         dpi: fields[4].parse().map_err(|_| "Invalid resolution")?,
         quality_modes: false,
@@ -227,62 +344,48 @@ fn parse_bluetooth_status(output: &str) -> Result<PrinterResponse, String> {
     })
 }
 
-fn do_print(
-    target: &PrinterTarget,
-    response: (&mpsc::Sender<PrinterEvent>, &egui::Context),
-    raster_lines: &[Vec<u8>],
-    chain_print: bool,
-    auto_cut: bool,
-    quality: PrintQuality,
-    cancellation: &ptouch_core::CancellationToken,
-) -> bool {
+fn do_print(job: PrintJob<'_>, response: (&mpsc::Sender<PrinterEvent>, &egui::Context)) -> bool {
     let (tx, ctx) = response;
-    let result = match target {
-        PrinterTarget::Usb | PrinterTarget::UsbAt(_) | PrinterTarget::Tcp { .. } => print_printer(
-            raster_lines,
-            chain_print,
-            auto_cut,
-            quality,
-            target,
-            cancellation.clone(),
-        ),
+    let result = match job.target {
+        PrinterTarget::Usb | PrinterTarget::UsbAt(_) | PrinterTarget::Tcp { .. } => {
+            print_printer(&job)
+        }
         #[cfg(windows)]
-        PrinterTarget::UsbPrint { .. } => print_printer(
-            raster_lines,
-            chain_print,
-            auto_cut,
-            quality,
-            target,
-            cancellation.clone(),
-        ),
+        PrinterTarget::UsbPrint { .. } => print_printer(&job),
         #[cfg(any(target_os = "macos", test))]
-        PrinterTarget::Bluetooth { address, .. } => print_bluetooth(address, raster_lines),
+        PrinterTarget::Bluetooth { address, .. } => print_bluetooth(address, job.raster_lines),
     };
     let completed = result.is_ok();
     let response = result
         .map(|()| PrinterResponse::PrintDone)
         .unwrap_or_else(PrinterResponse::Error);
     let _ = tx.send(PrinterEvent {
-        target: Some(target.clone()),
+        target: Some(job.target.clone()),
         response,
     });
     ctx.request_repaint();
     completed
 }
 
-fn print_printer(
-    raster_lines: &[Vec<u8>],
-    chain_print: bool,
-    auto_cut: bool,
-    quality: PrintQuality,
-    target: &PrinterTarget,
-    cancellation: ptouch_core::CancellationToken,
-) -> Result<(), String> {
-    let mut dev = open_printer(target).map_err(|e| format!("Connect error: {e}"))?;
-    dev.set_cancellation_token(cancellation);
+fn print_printer(job: &PrintJob<'_>) -> Result<(), String> {
+    let mut dev = open_printer(job.target).map_err(|e| format!("Connect error: {e}"))?;
+    dev.set_cancellation_token(job.cancellation.clone());
     dev.init().map_err(|e| format!("Init error: {e}"))?;
+    if matches!(job.target, PrinterTarget::Tcp { .. }) {
+        if dev.flags().contains(DeviceFlags::SNMP_STATUS) {
+            let status = dev
+                .query_status()
+                .map_err(|e| format!("Status error: {e}"))?;
+            if status.media_width == 0 || status.media_width != job.tape_width_mm {
+                return Err("Detected tape changed; refresh printer status before printing".into());
+            }
+        } else {
+            dev.set_media_width_override(job.tape_width_mm)
+                .map_err(|e| format!("Tape width error: {e}"))?;
+        }
+    }
     let result = dev
-        .print_raster(raster_lines, chain_print, auto_cut, quality)
+        .print_raster(job.raster_lines, job.chain_print, job.auto_cut, job.quality)
         .map_err(|e| format!("Print error: {e}"));
     let _ = dev.close();
     result
@@ -486,6 +589,16 @@ mod tests {
     }
 
     #[test]
+    fn network_discovery_maps_supported_brother_model_names() {
+        assert_eq!(
+            model_pid_from_service_text("Brother PT-P900W"),
+            Some(0x2085)
+        );
+        assert_eq!(model_pid_from_service_text("PT-E550W"), Some(0x2060));
+        assert_eq!(model_pid_from_service_text("Brother QL-820NWB"), None);
+    }
+
+    #[test]
     fn tcp_target_polls_and_prints_without_blocking_the_ui_worker_contract() {
         let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
         let address = listener.local_addr().unwrap();
@@ -496,12 +609,6 @@ mod tests {
                 .unwrap();
             let mut init = [0; 102];
             stream.read_exact(&mut init).unwrap();
-            let mut request = [0; 3];
-            stream.read_exact(&mut request).unwrap();
-            let mut ready = status_packet(0);
-            ready[10] = 12;
-            stream.write_all(&ready).unwrap();
-
             let mut job = Vec::new();
             loop {
                 let mut byte = [0];
@@ -514,29 +621,33 @@ mod tests {
             stream.write_all(&status_packet(1)).unwrap();
             let mut close_probe = [0; 1];
             let _ = stream.read(&mut close_probe);
-            (request, job)
+            job
         });
 
         let target = PrinterTarget::Tcp {
             address,
-            pid: 0x2085,
+            pid: 0x2060,
         };
         let (tx, rx) = mpsc::channel();
+        let raster_lines = [vec![0xAA; 70]];
+        let cancellation = ptouch_core::CancellationToken::default();
         assert!(do_print(
-            &target,
+            PrintJob {
+                target: &target,
+                raster_lines: &raster_lines,
+                chain_print: false,
+                auto_cut: false,
+                quality: PrintQuality::Standard,
+                tape_width_mm: 12,
+                cancellation: &cancellation,
+            },
             (&tx, &egui::Context::default()),
-            &[vec![0xAA; 70]],
-            false,
-            false,
-            PrintQuality::Standard,
-            &ptouch_core::CancellationToken::default(),
         ));
         assert!(matches!(
             rx.recv().unwrap().response,
             PrinterResponse::PrintDone
         ));
-        let (request, job) = server.join().unwrap();
-        assert_eq!(request, [0x1B, 0x69, 0x53]);
+        let job = server.join().unwrap();
         assert!(job.starts_with(&[0x1B, 0x69, 0x61, 0x01]));
         assert_eq!(job.last(), Some(&0x1A));
     }
@@ -550,31 +661,27 @@ mod tests {
             stream
                 .set_read_timeout(Some(Duration::from_secs(2)))
                 .unwrap();
-            let mut request = [0; 3];
-            stream.read_exact(&mut request).unwrap();
-            let mut ready = status_packet(0);
-            ready[10] = 24;
-            stream.write_all(&ready).unwrap();
             let mut close_probe = [0; 1];
             let _ = stream.read(&mut close_probe);
-            request
         });
 
         let response = poll_printer(&PrinterTarget::Tcp {
             address,
-            pid: 0x2085,
+            pid: 0x2060,
         })
         .unwrap();
         assert!(matches!(
             response,
             PrinterResponse::Connected {
                 model_name,
-                quality_modes: true,
+                media_status_available: false,
+                media_detected: false,
+                quality_modes: false,
                 draft_quality_modes: false,
                 ..
-            } if model_name == "PT-P900W"
+            } if model_name == "PT-E550W"
         ));
-        assert_eq!(server.join().unwrap(), [0x1B, 0x69, 0x53]);
+        server.join().unwrap();
     }
 
     fn status_packet(status_type: u8) -> [u8; 32] {

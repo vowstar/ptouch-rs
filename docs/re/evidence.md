@@ -107,9 +107,30 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 
 | Claim | Status | Evidence |
 |---|---|---|
-| CLI `info` and `print` accept `--tcp IP:PORT --pid HEX_PID` and route to the selected supported model | implemented and tested | `crates/ptouch-cli/src/main.rs`; `tcp_selection_requires_a_hex_product_id_for_info_and_print`; `tcp_cli_device_prints_to_the_selected_model` |
+| CLI `info` and `print` accept `--tcp IP:PORT --pid HEX_PID`; status-capable models detect tape, while other TCP models require `--tape-width-mm WIDTH_CODE` | implemented and tested | `crates/ptouch-cli/src/main.rs`; `tcp_selection_requires_a_hex_product_id_for_info_and_print`; `tcp_cli_device_prints_to_the_selected_model` |
+| CLI `info` succeeds for raw TCP models without a verified status route and reports status/media as unavailable | tested through a loopback endpoint | `tcp_info_reports_unavailable_e550w_status_without_failing`; the fixture verifies the command sends no unsupported raw status request |
 | The CLI TCP path sends a complete PT-E550W print job and receives printer completion through a loopback endpoint | tested in a loopback fixture | `tcp_cli_device_prints_to_the_selected_model`; no physical printer was used |
 | GUI TCP model/address selection reaches the asynchronous printer worker and completes a target print | implemented and tested through a loopback endpoint | `crates/ptouch-gui/src/panels/sidebar.rs`, `printer_worker.rs`; `tcp_target_polls_and_prints_without_blocking_the_ui_worker_contract` |
+
+## Cycle 5 network discovery and media status
+
+| Claim | Status | Evidence |
+|---|---|---|
+| GUI browses `_pdl-datastream._tcp.local.` and presents resolved IPv4 printer endpoints for selection; recognized model text maps to supported product IDs | implemented; loopback printer flow tested, discovery advertisements not exercised | `crates/ptouch-gui/src/printer_worker.rs`; `crates/ptouch-gui/src/panels/sidebar.rs`; service resolution requires valid DNS-SD records |
+| Raw TCP initialization does not issue USB status requests; a tape width must be selected before raster printing when no network status route is available | implemented and tested | `crates/ptouch-core/src/session.rs`; `crates/ptouch-core/src/transport/virtual_printer_test.rs`; PT-E550W has no verified network media-status route |
+| PT-P900W network status is queried using Brother SNMP OID `1.3.6.1.4.1.2435.3.3.9.1.6.1.0`; community defaults to `public` and can be overridden with `PTOUCH_SNMP_COMMUNITY` | implemented and parser/request-tested with a loopback UDP responder | `crates/ptouch-core/src/network_status.rs`; `network_status::tests::parses_p900w_media_status_from_the_brother_snmp_oid`; no physical printer was used |
+| GUI locks PT-P900W tape width to the detected cassette, and enables advanced high-resolution mode only when status identifies laminated tape and black text; print refreshes and rechecks width/status before sending | implemented; parser, media gate, and print-session behavior covered separately | `crates/ptouch-gui/src/printer_worker.rs`, `state.rs`, `panels/sidebar.rs`; `crates/ptouch-core/src/session.rs`; no physical print validation |
+| PT-E550W GUI requires a user-selected tape width; CLI printing uses `--tape-width-mm WIDTH_CODE`, and widths wider than 24 mm or code 21 are rejected for its 128-pixel head | implemented and tested | `crates/ptouch-gui/src/state.rs`; `crates/ptouch-gui/src/panels/sidebar.rs`; `crates/ptouch-cli/src/main.rs`; `session::tests::advanced_high_resolution_rejects_media_without_black_text_before_writing` and CLI loopback tests |
+| When PT-P900W SNMP status is available but reports no cassette, the GUI blocks printing and does not offer the E550W manual fallback | implemented and tested | `crates/ptouch-gui/src/app.rs`; `app::tests::p900w_status_without_media_does_not_enable_manual_media_fallback` |
+| USB status initialization remains enabled for models also supported over TCP | regression fixed and workspace-tested | `crates/ptouch-core/src/session.rs`; model-level status suppression was removed; `cargo test --workspace` passes |
+
+## Cycle 5 verification (2026-10-17)
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Entire Rust workspace passes tests | observed | `cargo test --workspace`, exit 0; 367 tests passed across workspace targets |
+| Entire Rust workspace passes Clippy with warnings denied | observed | `cargo clippy --workspace --all-targets --all-features -- -D warnings`, exit 0 |
+| TCP discovery, status, and print behavior has been validated against physical Brother printers | unknown | Verification used loopback TCP/UDP fixtures only |
 
 ## Cycle 5 read-only Command Mode query
 

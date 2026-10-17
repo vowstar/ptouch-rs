@@ -54,7 +54,8 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &AppState) -> Option<ToolbarAction
             action = Some(ToolbarAction::Padding);
         }
         ui.separator();
-        let ready = state.printer_connected && !state.is_printer_busy();
+        let ready =
+            state.printer_connected && !state.is_printer_busy() && state.can_print_selected_media();
         let bitmap = state.preview_bitmap.is_some() && !state.needs_rerender;
         if ui
             .add_enabled(ready && bitmap, egui::Button::new("Print"))
@@ -152,6 +153,9 @@ pub fn execute_action(state: &mut AppState, action: ToolbarAction) {
                     chain_print: !state.auto_cut,
                     auto_cut: state.auto_cut,
                     quality: state.print_quality,
+                    tape_width_mm: state
+                        .manual_tcp_tape_width_mm
+                        .unwrap_or(state.tape_width_mm),
                     target: state.printer_target.clone(),
                     cancellation,
                 });

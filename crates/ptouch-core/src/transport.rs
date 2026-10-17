@@ -27,6 +27,7 @@ pub(crate) use usb::{BulkEndpoints, find_bulk_endpoints};
 #[cfg(test)]
 use usb::{USB_WRITE_POLL_TIMEOUT, only_candidate, select_bulk_endpoints, send_usb_bytes};
 
+use crate::model::{Dialect, ModelProfile};
 use crate::session::{PrinterSession, Transport};
 use crate::{
     CancellationToken,
@@ -43,6 +44,15 @@ pub const TCP_PRINTING_PORT: u16 = 9100;
 enum PrinterTransport {
     Usb(UsbBackend),
     Tcp(tcp::TcpTransport),
+}
+
+impl PrinterTransport {
+    fn tcp_address(&self) -> Option<SocketAddr> {
+        match self {
+            Self::Usb(_) => None,
+            Self::Tcp(transport) => Some(transport.address()),
+        }
+    }
 }
 
 impl Transport for PrinterTransport {
@@ -140,8 +150,10 @@ impl PtouchDevice {
             .clone();
         validate_device(&dev_info)?;
         let transport = tcp::TcpTransport::connect(address)?;
+        let mut profile = ModelProfile::from(&dev_info);
+        profile.dialect = Dialect::Tcp;
         Ok(Self {
-            session: PrinterSession::new(PrinterTransport::Tcp(transport), (&dev_info).into()),
+            session: PrinterSession::new(PrinterTransport::Tcp(transport), profile),
             dev_info,
         })
     }
@@ -229,6 +241,20 @@ impl PtouchDevice {
         self.session.is_initialized()
     }
 
+    pub fn is_tcp(&self) -> bool {
+        self.session.transport.tcp_address().is_some()
+    }
+
+    pub fn set_media_width_override(&mut self, width_code: u8) -> Result<()> {
+        self.session.set_media_width_override(width_code)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_media_details_for_test(&mut self, media_type: u8, text_color: u8) {
+        self.session
+            .set_media_details_for_test(media_type, text_color);
+    }
+
     /// Send raw bytes through the selected transport.
     pub fn send(&self, data: &[u8]) -> Result<()> {
         self.session.send(data)
@@ -246,12 +272,22 @@ impl PtouchDevice {
 
     /// Query status without resetting the printer.
     pub fn query_status(&mut self) -> Result<&PrinterStatus> {
+        if let Some(address) = self.session.transport.tcp_address() {
+            if !self.flags().contains(DeviceFlags::SNMP_STATUS) {
+                return Err(PtouchError::UnsupportedOperation(
+                    "Network status is unavailable for this model",
+                ));
+            }
+            let community = crate::network_status::community_from_environment();
+            let status = crate::network_status::query_p900w_status(address, &community)?;
+            return self.session.update_network_status(status);
+        }
         self.session.query_status()
     }
 
     /// Request and read the printer status.
     pub fn get_status(&mut self) -> Result<&PrinterStatus> {
-        self.session.get_status()
+        self.query_status()
     }
 
     /// Print raster lines with the selected printer's job options.

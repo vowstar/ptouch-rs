@@ -66,6 +66,9 @@ pub(crate) struct PrinterSession<T: Transport> {
     status_frames: StatusFrameBuffer,
     status: Option<PrinterStatus>,
     tape_width_px: Option<u16>,
+    media_width_override: Option<u8>,
+    media_type_override: Option<u8>,
+    text_color_override: Option<u8>,
     initialized: bool,
     pub(crate) cancellation: CancellationToken,
     pub(crate) job_timeout: Duration,
@@ -79,6 +82,9 @@ impl<T: Transport> PrinterSession<T> {
             status_frames: StatusFrameBuffer::new(),
             status: None,
             tape_width_px: None,
+            media_width_override: None,
+            media_type_override: None,
+            text_color_override: None,
             initialized: false,
             cancellation: CancellationToken::default(),
             job_timeout: Duration::from_secs(600),
@@ -97,6 +103,57 @@ impl<T: Transport> PrinterSession<T> {
     /// Get the tape width in pixels, if known.
     pub fn tape_width_px(&self) -> Option<u16> {
         self.tape_width_px
+    }
+
+    fn media_width(&self) -> Option<u8> {
+        self.media_width_override
+            .or_else(|| self.status.as_ref().map(|status| status.media_width))
+            .filter(|width| *width > 0)
+    }
+
+    fn requires_manual_media_width(&self) -> bool {
+        self.profile.dialect == Dialect::Tcp
+    }
+
+    pub(crate) fn set_media_width_override(&mut self, width_mm: u8) -> Result<()> {
+        if self.profile.raster_width_px <= 128 && (width_mm == 21 || width_mm > 24) {
+            return Err(PtouchError::UnknownTapeWidth(width_mm));
+        }
+        self.tape_width_px = self.profile.tape_width_px(width_mm);
+        if self.tape_width_px.is_none() {
+            return Err(PtouchError::UnknownTapeWidth(width_mm));
+        }
+        self.media_width_override = Some(width_mm);
+        Ok(())
+    }
+
+    pub(crate) fn update_network_status(
+        &mut self,
+        status: PrinterStatus,
+    ) -> Result<&PrinterStatus> {
+        self.tape_width_px = self.profile.tape_width_px(status.media_width);
+        self.status = Some(status);
+        self.status.as_ref().ok_or(PtouchError::NotInitialized)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_media_details_for_test(&mut self, media_type: u8, text_color: u8) {
+        self.media_type_override = Some(media_type);
+        self.text_color_override = Some(text_color);
+    }
+
+    fn advanced_quality_matches_media(&self) -> bool {
+        let media_type = self
+            .status
+            .as_ref()
+            .map(|status| status.media_type)
+            .or(self.media_type_override);
+        let text_color = self
+            .status
+            .as_ref()
+            .map(|status| status.text_color)
+            .or(self.text_color_override);
+        media_type == Some(0x01) && text_color == Some(0x08)
     }
 
     /// Get the raster transfer width, which may exceed the printable area.
@@ -142,18 +199,26 @@ impl<T: Transport> PrinterSession<T> {
     /// Raster start is sent per-job in `print_raster()`.
     pub fn init(&mut self) -> Result<()> {
         self.initialized = false;
-        // Flush any stale data from previous sessions
-        self.flush_input()?;
-
-        // Send the init command (100 zeros + ESC @)
         match self.profile.dialect {
-            Dialect::Usb => self.send(&protocol::cmd_init())?,
-            Dialect::P300Bt => self.send(&p300bt::cmd_init())?,
+            Dialect::Tcp => {
+                self.send(&protocol::cmd_init())?;
+                self.status = None;
+                self.tape_width_px = None;
+                self.media_width_override = None;
+                self.media_type_override = None;
+                self.text_color_override = None;
+            }
+            Dialect::Usb => {
+                self.flush_input()?;
+                self.send(&protocol::cmd_init())?;
+                print_status_is_ready(self.get_status()?)?;
+            }
+            Dialect::P300Bt => {
+                self.flush_input()?;
+                self.send(&p300bt::cmd_init())?;
+                print_status_is_ready(self.get_status()?)?;
+            }
         }
-
-        // Retain diagnostics, but do not initialize a device reporting an
-        // error or power-off notification for a new print job.
-        print_status_is_ready(self.get_status()?)?;
 
         if self
             .profile
@@ -181,6 +246,11 @@ impl<T: Transport> PrinterSession<T> {
     /// [`init`](Self::init), this does not send the 100-zero + ESC @
     /// reset sequence, so it will not disturb the printer.
     pub fn query_status(&mut self) -> Result<&PrinterStatus> {
+        if self.profile.dialect == Dialect::Tcp {
+            return Err(PtouchError::UnsupportedOperation(
+                "Status requests are unavailable for this transport/model",
+            ));
+        }
         self.flush_input()?;
         self.get_status()
     }
@@ -194,6 +264,11 @@ impl<T: Transport> PrinterSession<T> {
     pub fn get_status(&mut self) -> Result<&PrinterStatus> {
         if self.profile.dialect == Dialect::P300Bt {
             return self.get_p300bt_status();
+        }
+        if self.profile.dialect == Dialect::Tcp {
+            return Err(PtouchError::UnsupportedOperation(
+                "Status requests are unavailable for this transport/model",
+            ));
         }
         self.send(&protocol::cmd_status_request())?;
 
@@ -323,10 +398,13 @@ impl<T: Transport> PrinterSession<T> {
 
         let quality_supported = match quality {
             protocol::PrintQuality::Standard => true,
-            protocol::PrintQuality::HighRes => self
-                .profile
-                .flags
-                .intersects(DeviceFlags::LEGACY_HIRES | DeviceFlags::ADVANCED_HIRES),
+            protocol::PrintQuality::HighRes => {
+                self.profile
+                    .flags
+                    .intersects(DeviceFlags::LEGACY_HIRES | DeviceFlags::ADVANCED_HIRES)
+                    && (!self.profile.flags.contains(DeviceFlags::ADVANCED_HIRES)
+                        || self.advanced_quality_matches_media())
+            }
             protocol::PrintQuality::Draft => self.profile.flags.contains(DeviceFlags::LEGACY_HIRES),
         };
         if !quality_supported {
@@ -334,6 +412,11 @@ impl<T: Transport> PrinterSession<T> {
                 self.profile.name.to_string(),
             ));
         }
+
+        let media_width = self
+            .media_width()
+            .or_else(|| (!self.requires_manual_media_width()).then_some(0))
+            .ok_or(PtouchError::UnknownTapeWidth(0))?;
 
         if self.profile.dialect == Dialect::P300Bt {
             let status = self.status.as_ref().ok_or(PtouchError::NotInitialized)?;
@@ -348,7 +431,7 @@ impl<T: Transport> PrinterSession<T> {
         }
 
         let opts = protocol::JobOptions {
-            media_width: self.status.as_ref().map_or(0, |s| s.media_width),
+            media_width,
             margin_dots: ((u32::from(self.profile.dpi) * 10 + 63) / 127) as u16,
             chain_print,
             precut,
@@ -403,6 +486,11 @@ impl<T: Transport> PrinterSession<T> {
             return Err(PtouchError::NotInitialized);
         }
 
+        let media_width = self
+            .media_width()
+            .or_else(|| (!self.requires_manual_media_width()).then_some(0))
+            .ok_or(PtouchError::UnknownTapeWidth(0))?;
+
         if let Some(status) = &self.status {
             print_status_is_ready(status)?;
         }
@@ -410,7 +498,7 @@ impl<T: Transport> PrinterSession<T> {
         // One blank line makes the printer engage the feed mechanism.
         let lines = vec![protocol::rasterline_blank(self.profile.raster_width_px)];
         let opts = protocol::JobOptions {
-            media_width: self.status.as_ref().map_or(0, |s| s.media_width),
+            media_width,
             ..protocol::JobOptions::default()
         };
 
@@ -451,7 +539,7 @@ impl<T: Transport> PrinterSession<T> {
                 .filter(|duration| *duration >= PRINT_STATUS_MIN_POLL_TIMEOUT)
                 .ok_or(PtouchError::Timeout)?;
             let transfer_timeout = match self.profile.dialect {
-                Dialect::Usb => PRINT_TRANSFER_TIMEOUT,
+                Dialect::Usb | Dialect::Tcp => PRINT_TRANSFER_TIMEOUT,
                 Dialect::P300Bt => TRANSFER_TIMEOUT,
             };
             let command_started = Instant::now();
@@ -963,6 +1051,27 @@ mod tests {
             ));
             assert!(session.transport.writes.borrow().is_empty());
         }
+    }
+
+    #[test]
+    fn advanced_high_resolution_rejects_media_without_black_text_before_writing() {
+        let info = crate::device::find_device(crate::device::BROTHER_VENDOR_ID, 0x2085)
+            .expect("target model exists");
+        let mut session = PrinterSession::new(ScriptedTransport::new(), info.into());
+        session.initialized = true;
+        session.set_media_width_override(24).unwrap();
+        session.set_media_details_for_test(0x01, 0x07);
+
+        assert!(matches!(
+            session.print_raster(
+                &[vec![0xFF; usize::from(info.max_px).div_ceil(8)]],
+                false,
+                false,
+                protocol::PrintQuality::HighRes,
+            ),
+            Err(PtouchError::UnsupportedQuality(_))
+        ));
+        assert!(session.transport.writes.borrow().is_empty());
     }
 
     #[test]

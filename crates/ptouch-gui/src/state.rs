@@ -50,6 +50,26 @@ pub enum PrinterTarget {
     },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NetworkPrinterCandidate {
+    pub name: String,
+    pub address: SocketAddr,
+    pub pid: Option<u16>,
+}
+
+impl NetworkPrinterCandidate {
+    pub fn label(&self) -> String {
+        let model = self.pid.and_then(|pid| {
+            ptouch_core::device::find_device(ptouch_core::device::BROTHER_VENDOR_ID, pid)
+                .map(|device| device.name)
+        });
+        match model {
+            Some(model) => format!("{model} - {} ({})", self.name, self.address),
+            None => format!("{} ({})", self.name, self.address),
+        }
+    }
+}
+
 impl PrinterTarget {
     pub fn label(&self) -> String {
         match self {
@@ -85,6 +105,7 @@ impl PrinterTarget {
 pub enum PrinterCommand {
     /// Find paired Bluetooth printers supported by this application.
     DiscoverBluetooth,
+    DiscoverNetwork,
     /// Poll for a connected printer (query status only, no init).
     Poll(PrinterTarget),
     /// Print raster data.
@@ -93,6 +114,7 @@ pub enum PrinterCommand {
         chain_print: bool,
         auto_cut: bool,
         quality: PrintQuality,
+        tape_width_mm: u8,
         target: PrinterTarget,
         cancellation: ptouch_core::CancellationToken,
     },
@@ -115,11 +137,14 @@ pub enum PrinterResponse {
     BluetoothDevices(Vec<PrinterTarget>),
     /// Detected USB locations for explicit selection.
     UsbDevices(Vec<PrinterTarget>),
+    NetworkDevices(Vec<NetworkPrinterCandidate>),
     /// A printer was found and its status queried.
     Connected {
         model_name: String,
         media_width: u8,
         media_type: String,
+        media_status_available: bool,
+        media_detected: bool,
         max_px: u16,
         dpi: u16,
         quality_modes: bool,
@@ -203,10 +228,16 @@ pub struct AppState {
     pub auto_cut: bool,
     /// Whether a printer is currently connected (detected by background poll).
     pub printer_connected: bool,
+    /// Whether the installed cassette width came from printer status.
+    pub printer_media_detected: bool,
+    pub printer_media_status_available: bool,
+    pub printer_media_width_mm: Option<u8>,
+    pub manual_tcp_tape_width_mm: Option<u8>,
     /// Target selected for polling and printing.
     pub printer_target: PrinterTarget,
     /// Paired PT-P300BT targets discovered on macOS.
     pub bluetooth_targets: Vec<PrinterTarget>,
+    pub network_targets: Vec<NetworkPrinterCandidate>,
     /// Whether a printer operation (print, feed & cut) is in progress.
     pub operation_in_progress: bool,
     pub cancellation: Option<ptouch_core::CancellationToken>,
@@ -272,8 +303,13 @@ impl Default for AppState {
             calibration_profiles: Default::default(),
             auto_cut: true,
             printer_connected: false,
+            printer_media_detected: false,
+            printer_media_status_available: false,
+            printer_media_width_mm: None,
+            manual_tcp_tape_width_mm: None,
             printer_target: PrinterTarget::Usb,
             bluetooth_targets: Vec::new(),
+            network_targets: Vec::new(),
             operation_in_progress: false,
             cancellation: None,
             usb_targets: Vec::new(),
@@ -682,6 +718,27 @@ impl AppState {
         }
     }
 
+    pub fn can_print_selected_media(&self) -> bool {
+        let PrinterTarget::Tcp { pid, .. } = &self.printer_target else {
+            return true;
+        };
+        let Some(device) =
+            ptouch_core::device::find_device(ptouch_core::device::BROTHER_VENDOR_ID, *pid)
+        else {
+            return false;
+        };
+        if device
+            .flags
+            .contains(ptouch_core::device::DeviceFlags::SNMP_STATUS)
+        {
+            return self.printer_media_status_available
+                && self.printer_media_detected
+                && self.printer_media_width_mm == Some(self.tape_width_mm);
+        }
+        self.manual_tcp_tape_width_mm == Some(self.tape_width_mm)
+            && (device.max_px > 128 || (self.tape_width_mm != 21 && self.tape_width_mm <= 24))
+    }
+
     /// Mark the preview as needing re-render.
     pub fn mark_dirty(&mut self) {
         self.needs_rerender = true;
@@ -724,6 +781,47 @@ fn content_box_for_frame(frame: &TextBox) -> ContentBox {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tcp_media_selection_requires_a_supported_manual_width_or_detected_width() {
+        let mut state = AppState {
+            printer_connected: true,
+            printer_max_px: 128,
+            printer_target: PrinterTarget::Tcp {
+                address: "127.0.0.1:9100".parse().unwrap(),
+                pid: 0x2060,
+            },
+            ..AppState::default()
+        };
+        assert!(!state.can_print_selected_media());
+
+        state.manual_tcp_tape_width_mm = Some(12);
+        assert!(state.can_print_selected_media());
+
+        state.tape_width_mm = 36;
+        assert!(!state.can_print_selected_media());
+        state.tape_width_mm = 21;
+        state.manual_tcp_tape_width_mm = Some(21);
+        assert!(!state.can_print_selected_media());
+
+        state.printer_target = PrinterTarget::Tcp {
+            address: "127.0.0.1:9100".parse().unwrap(),
+            pid: 0x2085,
+        };
+        state.printer_max_px = 560;
+        state.tape_width_mm = 24;
+        state.printer_media_status_available = true;
+        state.printer_media_detected = true;
+        state.printer_media_width_mm = Some(24);
+        assert!(state.can_print_selected_media());
+
+        state.tape_width_mm = 12;
+        assert!(!state.can_print_selected_media());
+
+        state.printer_media_detected = false;
+        state.printer_media_width_mm = None;
+        assert!(!state.can_print_selected_media());
+    }
 
     #[test]
     fn selecting_and_hovering_targets_never_pin_or_change_the_saved_layout() {

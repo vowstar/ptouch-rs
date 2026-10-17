@@ -20,6 +20,7 @@ pub mod control;
 pub mod device;
 pub mod diagnostics;
 pub mod error;
+pub mod network_status;
 pub mod protocol;
 pub mod settings;
 pub mod status;

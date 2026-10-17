@@ -166,6 +166,10 @@ struct PrintArgs {
     #[arg(short = 'w', long)]
     tape_width: Option<u32>,
 
+    /// Tape-width code for raw TCP printers without network media detection
+    #[arg(long, value_name = "WIDTH_CODE")]
+    tape_width_mm: Option<u8>,
+
     /// Add a cut mark
     #[arg(short = 'c', long)]
     cut: bool,
@@ -376,6 +380,46 @@ impl CliDevice {
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.model_name(),
         }
+    }
+
+    fn is_tcp_without_status(&self) -> bool {
+        match self {
+            Self::Printer(device) => {
+                device.is_tcp() && !device.flags().contains(DeviceFlags::SNMP_STATUS)
+            }
+            #[cfg(target_os = "macos")]
+            Self::Bluetooth(_) => false,
+        }
+    }
+
+    fn prepare_tcp_media(&mut self, requested_width_mm: Option<u8>) -> Result<(), PtouchError> {
+        let device = match self {
+            Self::Printer(device) => device,
+            #[cfg(target_os = "macos")]
+            Self::Bluetooth(_) => return Ok(()),
+        };
+        if !device.is_tcp() {
+            return Ok(());
+        }
+        if device.flags().contains(DeviceFlags::SNMP_STATUS) {
+            let detected_width = device.query_status()?.media_width;
+            if detected_width == 0 {
+                return Err(PtouchError::UnsupportedOperation(
+                    "The network printer did not report a loaded tape",
+                ));
+            }
+            if requested_width_mm.is_some_and(|width| width != detected_width) {
+                return Err(PtouchError::UnsupportedOperation(
+                    "--tape-width-mm does not match the detected tape width",
+                ));
+            }
+        } else {
+            let width_mm = requested_width_mm.ok_or(PtouchError::UnsupportedOperation(
+                "TCP printer status is unavailable; specify --tape-width-mm",
+            ))?;
+            device.set_media_width_override(width_mm)?;
+        }
+        Ok(())
     }
 
     fn tape_width_px(&self) -> Option<u16> {
@@ -834,18 +878,28 @@ fn execute_info(args: &InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
     )?;
     // A read-only query preserves device errors for display without resetting
     // the printer or requiring it to be ready for a new print job.
-    let status = dev.query_status()?.clone();
+    let status_unavailable = dev.is_tcp_without_status();
+    let status = match dev.query_status() {
+        Ok(status) => Some(status.clone()),
+        Err(_) if status_unavailable => None,
+        Err(error) => return Err(error.into()),
+    };
 
     println!("Printer Information");
     println!("  Model:          {}", dev.model_name());
-    println!("  Status:         {}", status.status_type_name());
-    println!("  Media type:     {}", status.media_type_name());
-    println!("  Media width:    {} mm", status.media_width);
-    println!("  Tape color:     {}", status.tape_color_name());
-    println!("  Text color:     {}", status.text_color_name());
+    if let Some(status) = &status {
+        println!("  Status:         {}", status.status_type_name());
+        println!("  Media type:     {}", status.media_type_name());
+        println!("  Media width:    {} mm", status.media_width);
+        println!("  Tape color:     {}", status.tape_color_name());
+        println!("  Text color:     {}", status.text_color_name());
 
-    if status.has_error() {
-        println!("  Errors:         {}", status.error_description());
+        if status.has_error() {
+            println!("  Errors:         {}", status.error_description());
+        }
+    } else {
+        println!("  Status:         unavailable over raw TCP");
+        println!("  Media:          select manually before printing");
     }
 
     let tape_width_px = dev.tape_width_px();
@@ -870,6 +924,7 @@ fn execute_info(args: &InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
     // the transport is clamped to the head width, so it cannot be used as
     // a reverse lookup key.
     if !dev.is_bluetooth()
+        && let Some(status) = &status
         && let Some(t) = tape::find_tape(status.media_width, dpi)
     {
         println!("  Tape size:      {} mm", t.width_mm);
@@ -912,6 +967,8 @@ fn execute_print(args: &PrintArgs, ignored: &[String]) -> Result<(), Box<dyn std
         eprintln!("Error: --tape-width must be greater than 0");
         process::exit(1);
     }
+
+    validate_tcp_media_args(args)?;
 
     // Layout-only modifiers make no sense without a layout.
     if args.layout.is_none()
@@ -967,6 +1024,7 @@ fn execute_print(args: &PrintArgs, ignored: &[String]) -> Result<(), Box<dyn std
                 printer.set_job_timeout(std::time::Duration::from_secs(u64::from(args.timeout)))?;
             }
             dev.init()?;
+            dev.prepare_tcp_media(args.tape_width_mm)?;
             // init() already called get_status() internally
             let width = dev.tape_width_px().ok_or_else(|| {
                 PtouchError::StatusError("Could not determine tape width".to_string())
@@ -1025,6 +1083,28 @@ fn validate_bluetooth_print_options(args: &PrintArgs) -> Result<(), PtouchError>
         return Err(PtouchError::UnsupportedOperation(
             "PT-P300BT supports standard print quality only",
         ));
+    }
+    Ok(())
+}
+
+fn validate_tcp_media_args(args: &PrintArgs) -> Result<(), PtouchError> {
+    if args.tape_width_mm.is_some() && (args.tcp.is_none() || args.output.is_some()) {
+        return Err(PtouchError::UnsupportedOperation(
+            "--tape-width-mm requires a raw TCP print target",
+        ));
+    }
+    if args.tcp.is_some() && args.output.is_none() && args.tape_width_mm.is_none() {
+        let supports_network_status = args
+            .pid
+            .and_then(|pid| {
+                ptouch_core::device::find_device(ptouch_core::device::BROTHER_VENDOR_ID, pid)
+            })
+            .is_some_and(|device| device.flags.contains(DeviceFlags::SNMP_STATUS));
+        if !supports_network_status {
+            return Err(PtouchError::UnsupportedOperation(
+                "TCP printer status is unavailable; specify --tape-width-mm",
+            ));
+        }
     }
     Ok(())
 }
@@ -1220,6 +1300,7 @@ fn resolve_layout_target(
             printer.set_job_timeout(std::time::Duration::from_secs(u64::from(args.timeout)))?;
         }
         dev.init()?;
+        dev.prepare_tcp_media(args.tape_width_mm)?;
         let printer_px = u32::from(dev.tape_width_px().ok_or_else(|| {
             PtouchError::StatusError("Could not determine tape width".to_string())
         })?);
@@ -2100,6 +2181,29 @@ mod tests {
             panic!("expected print command");
         };
         assert_eq!(print.pid, Some(0x2060));
+        assert!(matches!(
+            validate_tcp_media_args(&print),
+            Err(PtouchError::UnsupportedOperation(_))
+        ));
+
+        let print_with_width = Cli::try_parse_from([
+            "ptouch",
+            "print",
+            "--tcp",
+            "127.0.0.1:9100",
+            "--pid",
+            "0x2060",
+            "--tape-width-mm",
+            "12",
+            "Label",
+        ])
+        .unwrap();
+        let Commands::Print(print_with_width) = print_with_width.command else {
+            panic!("expected print command");
+        };
+        assert_eq!(print_with_width.tape_width_mm, Some(12));
+        assert!(validate_tcp_media_args(&print_with_width).is_ok());
+
         assert!(Cli::try_parse_from(["ptouch", "info", "--tcp", "127.0.0.1:9100"]).is_err());
         assert!(Cli::try_parse_from(["ptouch", "print", "--pid", "2085", "Label"]).is_err());
         assert!(
@@ -2131,13 +2235,9 @@ mod tests {
                 .unwrap();
             let mut init = [0; 102];
             stream.read_exact(&mut init).unwrap();
-            let mut request = [0; 3];
-            stream.read_exact(&mut request).unwrap();
             let mut ready = [0; 32];
             ready[0] = 0x80;
             ready[1] = 0x20;
-            ready[10] = 12;
-            stream.write_all(&ready).unwrap();
 
             let mut print_job = Vec::new();
             loop {
@@ -2159,18 +2259,55 @@ mod tests {
         let mut printer = CliDevice::open(None, None, None, Some(address), Some(0x2060)).unwrap();
         assert_eq!(printer.model_name(), "PT-E550W");
         printer.init().unwrap();
+        assert!(matches!(
+            printer.prepare_tcp_media(None),
+            Err(PtouchError::UnsupportedOperation(_))
+        ));
+        printer.prepare_tcp_media(Some(12)).unwrap();
         printer
             .print_raster(&[vec![0xAA; 16]], false, false, PrintQuality::Standard)
             .unwrap();
         printer.close().unwrap();
-
+        let print_job = server.join().unwrap();
         let mut expected = vec![
             0x1B, 0x69, 0x61, 0x01, 0x1B, 0x69, 0x7A, 0x00, 0x00, 12, 0x00, 0x01, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x4D, 0x02, 0x47, 0x11, 0x00, 0x0F,
         ];
         expected.extend([0xAA; 16]);
         expected.push(0x1A);
-        assert_eq!(server.join().unwrap(), expected);
+        assert_eq!(print_job, expected);
+    }
+
+    #[test]
+    fn tcp_info_reports_unavailable_e550w_status_without_failing() {
+        use std::io::Read;
+        use std::net::TcpListener;
+        use std::thread;
+        use std::time::Duration;
+
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut request = [0; 1];
+            stream.read(&mut request).unwrap()
+        });
+
+        execute_info(&InfoArgs {
+            usb: None,
+            usbprint: None,
+            bluetooth: None,
+            tcp: Some(address),
+            pid: Some(0x2060),
+            debug: false,
+            timeout: 1,
+        })
+        .unwrap();
+
+        assert_eq!(server.join().unwrap(), 0);
     }
 
     #[test]

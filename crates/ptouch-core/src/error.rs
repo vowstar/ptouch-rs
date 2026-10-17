@@ -53,6 +53,10 @@ pub enum PtouchError {
     #[error("TCP error: {0}")]
     TcpError(#[source] std::io::Error),
 
+    /// SNMP network status query failed.
+    #[error("SNMP error: {0}")]
+    SnmpError(String),
+
     /// A model does not support the requested operation.
     #[error("Unsupported operation: {0}")]
     UnsupportedOperation(&'static str),

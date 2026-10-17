@@ -27,8 +27,12 @@ Status: Cycle 2 static inventory. Android evidence includes manifest declaration
 
 ## Cycle 5 branch updates
 
-- CLI and GUI can select a raw TCP endpoint and supported model for status and printing; network routes are verified with loopback fixtures.
+- CLI and GUI can select a raw TCP endpoint and supported model for printing. The CLI requires `--tape-width-mm` for models without network status. GUI browses `_pdl-datastream._tcp.local.` and maps recognized DNS-SD model text to supported product IDs; discovery advertisements themselves have not been exercised in tests.
+- Raw TCP does not send the USB `ESC i S` status request. PT-E550W tape width is selected in the GUI or passed as `--tape-width-mm WIDTH_CODE` in the CLI; widths incompatible with its 128-pixel head are rejected. PT-P900W media status uses Brother SNMP OID `1.3.6.1.4.1.2435.3.3.9.1.6.1.0`; the community defaults to `public` and can be set with `PTOUCH_SNMP_COMMUNITY`.
+- PT-P900W width selection follows the detected cassette, and advanced high-resolution is offered only when status confirms laminated tape and black text. Printing refreshes media status and refuses a changed or absent cassette. PT-E550W has no verified automatic tape-detection route. Discovery, SNMP decoding, and print routes use loopback fixtures; no physical printer was used.
+- CLI `info` reports raw-TCP status as unavailable for models without a verified network status route. A P900W SNMP response that reports no tape does not fall back to manual selection.
 - `ptouch config get command-mode` provides a read-only PT-P900W query over explicit TCP. Its GET bytes and reply-byte mapping come from the preserved `ptset` evidence; no physical TCP query or SET operation was performed.
+- Verification on 2026-10-17: `cargo fmt --all -- --check`, `cargo test --workspace` (367 passed), and `cargo clippy --workspace --all-targets --all-features -- -D warnings` all passed. TCP discovery advertisements and physical network behavior remain unverified.
 
 ## Evidence locations
 

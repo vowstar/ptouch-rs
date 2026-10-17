@@ -13,6 +13,7 @@ const IO_POLL_TIMEOUT: Duration = Duration::from_millis(250);
 
 pub(super) struct TcpTransport {
     stream: TcpStream,
+    address: SocketAddr,
     cancellation: CancellationToken,
 }
 
@@ -23,8 +24,13 @@ impl TcpTransport {
         stream.set_nodelay(true).map_err(map_tcp_error)?;
         Ok(Self {
             stream,
+            address,
             cancellation: CancellationToken::default(),
         })
+    }
+
+    pub(super) fn address(&self) -> SocketAddr {
+        self.address
     }
 
     pub(super) fn set_cancellation(&mut self, token: CancellationToken) {
@@ -206,6 +212,29 @@ mod tests {
         }
 
         assert_eq!(server.join().unwrap(), [[1, 2, 3, 4], [1, 2, 3, 4]]);
+    }
+
+    #[test]
+    fn tcp_initialization_does_not_wait_for_an_unsupported_raw_status_reply() {
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut init = [0; 102];
+            stream.read_exact(&mut init).unwrap();
+            let mut remainder = Vec::new();
+            stream.read_to_end(&mut remainder).unwrap();
+            (init, remainder)
+        });
+
+        let mut device = PtouchDevice::open_tcp(address, 0x2085).unwrap();
+        device.init().unwrap();
+        device.close().unwrap();
+
+        let (init, remainder) = server.join().unwrap();
+        assert!(init[..100].iter().all(|byte| *byte == 0));
+        assert_eq!(&init[100..], &[0x1B, 0x40]);
+        assert!(remainder.is_empty());
     }
 
     #[test]
