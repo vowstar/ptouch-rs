@@ -554,3 +554,13 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Horizontal-only N1 scanning with both N3 axes resolves both residual masks | observed in the 19-case sample | `docs/re/windows-lbx-runtime/analyze-qr-scan-domains.py` predicts Brother mask 1 for the 55-byte repetitive payload and mask 0 for `ABC123abc789`, while keeping N2/N4 and both N3 axes. |
 | That axis-specific scan is a better general rule | disproven | It matches 17/19, the same as the existing score. It shifts errors to Cycle 40 probe 20 (predicts 2, Brother 7) and Cycle 38's interleaved byte/alphanumeric payload (predicts 2, Brother 3). Horizontal-only and vertical-only N1/N3 each match 13/19. |
 | Horizontal and vertical scoring can be discarded for all payloads | unknown | The tested candidates are broad axis exclusions and one mixed variant. Payload-conditioned scans and other scoring domains remain untested. |
+
+
+## Cycle 48 scoring-model discriminator probes
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Horizontal-N1 scoring explains the residual choices better than the existing baseline | disproven for these controls | Four 50-byte lowercase Version 4/ECC M payloads were selected because the baseline and horizontal-N1 score models predict different masks. Brother selected masks 2, 2, 2, and 5, matching baseline predictions in all four and none of horizontal-N1 predictions 4, 5, 7, and 7. |
+| The score-discriminator captures use the same byte matrices as Rust | observed | QR format bits identify Version 4/ECC M. `compare-qr-score-discriminator-probes.py` compares each in-memory BMP with Rust at Brother's selected mask and reports zero mismatches across 69,696 module pixels per capture. |
+| The four probes prove a universal Brother mask rule | unknown | They support the current score over one sampled axis variant, but the two earlier exceptions remain and other scoring models or payload classes may differ. |
+| The captures establish physical printing behavior | unknown | They use only the Windows Editor's in-memory `GetPrintingImage()` method. No printer handle or print job was used. |

@@ -299,3 +299,16 @@ variant changes Cycle 40 probe 20 from mask 7 to 2 and the Cycle 38 interleaved
 payload from mask 3 to 2. Horizontal-only and vertical-only N1/N3 scans each
 match 13/19. This axis variant is another partial fit, not evidence for a
 complete rule, so production scoring remains unchanged.
+
+
+Cycle 48 searched randomized 50-byte lowercase payloads for cases where the
+current baseline and horizontal-N1 variant predict different masks. Four were
+rendered through the P900W in-memory runtime. Brother selected masks 2, 2, 2,
+and 5, matching baseline predictions in all four and rejecting horizontal-N1
+predictions 4, 5, 7, and 7. Each capture reports Version 4/ECC M format bits and
+compares pixel-for-pixel with Rust at Brother's mask: zero mismatches across
+69,696 pixels per grid. Inputs are `qr-mask-domain-probe-01.ptl` through
+`qr-mask-domain-probe-04.ptl`; replay with
+`uv run --with pillow python docs/re/windows-lbx-runtime/compare-qr-score-discriminator-probes.py`.
+These four controls support the existing score over this sampled alternative,
+but do not resolve the two earlier exceptions. No printer was opened or used.
