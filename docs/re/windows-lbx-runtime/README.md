@@ -142,5 +142,18 @@ reproducible inputs are `qr-numeric-mode-probe.ptl` and
 the numeric payload in memory to `9876543210987654` changed the returned BMP
 hash to `bf0af4fdcad756c1209eb24309a80f24e680d3f97070a7e9bee33c5c6efea1ba`.
 This validates that data changes reach the renderer while mode changes across
-three payload classes do not alter its raster. It does not establish whether the mode property affects
-other render paths or saved documents.
+three payload classes do not alter its raster. It does not establish whether
+the mode property affects other render paths or saved documents.
+
+
+Cycle 29 added optional `PT_QR_CELLSIZE_OVERRIDE` and
+`PT_QR_MASK_OVERRIDE` properties to the probe. Changing `CellSize` from M changes
+the raster width while the height remains
+128 px: XS 66 px, S 99 px, M 132 px, L 165 px, and XL 198 px. The M default
+decodes under the rotation-plus-border normalization; the other tested sizes do
+not.
+Changing `Mask` from Auto to Mask0 changed the 132x128 raster hash to
+`4db8e3aed4c4c45136412a08dff4d0fc31574b936a8bfc2d668a87211e7bbaac`; ZXing-C++
+decoded the expected URL and reported data mask 0. The cell-size and mask variant BMPs are preserved in `runtime-renders/`.
+This demonstrates that data, mask, and cell-size changes reach the raster path,
+while tested mode changes do not.

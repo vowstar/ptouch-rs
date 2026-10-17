@@ -56,6 +56,8 @@ try
                     {
                         var modeOverride = Environment.GetEnvironmentVariable("PT_QR_MODE_OVERRIDE");
                         var dataOverride = Environment.GetEnvironmentVariable("PT_QR_DATA_OVERRIDE");
+                        var cellSizeOverride = Environment.GetEnvironmentVariable("PT_QR_CELLSIZE_OVERRIDE");
+                        var maskOverride = Environment.GetEnvironmentVariable("PT_QR_MASK_OVERRIDE");
                         var protocol = barcode.GetType().GetProperty("Protocol")?.GetValue(barcode)?.ToString();
                         var qrData = string.Equals(protocol, "QRCODE", StringComparison.OrdinalIgnoreCase)
                             ? barcode.GetType().GetProperty("QrcodeData")?.GetValue(barcode)
@@ -78,6 +80,20 @@ try
                                 Console.WriteLine($"    RuntimeDataOverride={dataOverride}");
                                 changed = true;
                             }
+                        }
+                        foreach (var (propertyName, value) in new[]
+                        {
+                            ("CellSize", cellSizeOverride),
+                            ("Mask", maskOverride),
+                        })
+                        {
+                            if (qrData is null || string.IsNullOrWhiteSpace(value)) continue;
+                            var property = qrData.GetType().GetProperty(propertyName);
+                            if (property?.CanWrite != true) continue;
+                            var parsed = Enum.Parse(property.PropertyType, value, ignoreCase: true);
+                            property.SetValue(qrData, parsed);
+                            Console.WriteLine($"    Runtime{propertyName}Override={parsed}");
+                            changed = true;
                         }
                         if (changed)
                             item.GetType().GetMethod("SetBarcodeProperty")?.Invoke(item, new[] { barcode });
@@ -115,7 +131,7 @@ try
                     var output = Path.Combine(
                         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                         "ptouch-object-probe",
-                        $"rendered-{Environment.GetEnvironmentVariable("PT_QR_DATA_OVERRIDE") ?? Environment.GetEnvironmentVariable("PT_QR_MODE_OVERRIDE") ?? "original"}-{Path.GetFileNameWithoutExtension(path)}.bin");
+                        $"rendered-{Environment.GetEnvironmentVariable("PT_QR_DATA_OVERRIDE") ?? Environment.GetEnvironmentVariable("PT_QR_CELLSIZE_OVERRIDE") ?? Environment.GetEnvironmentVariable("PT_QR_MASK_OVERRIDE") ?? Environment.GetEnvironmentVariable("PT_QR_MODE_OVERRIDE") ?? "original"}-{Path.GetFileNameWithoutExtension(path)}.bin");
                     File.WriteAllBytes(output, bytes);
                     Console.WriteLine($"  RenderedImage={output}; bytes={bytes.Length}; signature={Convert.ToHexString(bytes.Take(8).ToArray())}");
                 }

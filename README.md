@@ -93,7 +93,10 @@ quiet-zone padding; Rust decodes without that normalization. A second QR encoder
 byte-mode 29x29 matrix with mask 7. On Windows, changing the Brother QR mode
 property in memory did not change two returned raster hashes, while changing the
 payload did. The same mode result held for numeric and uppercase alphanumeric
-payloads. The mode property's effect on other render or save paths remains unknown. GUI canvas behavior and
+payloads. Changing cell size across XS/S/M/L/XL changed raster width from 66 to 198 px
+while height stayed 128 px; only M decoded under the tested normalization.
+Forcing mask 0 produced a QR that decodes as mask 0. The mode property's effect on other
+render or save paths remains unknown. GUI canvas behavior and
 physical print output remain unverified. The QR LBX fields follow a generic
 P-touch Editor 5.0.201 sample.
 

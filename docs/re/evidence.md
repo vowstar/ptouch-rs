@@ -358,8 +358,8 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Claim | Status | Evidence |
 |---|---|---|
 | Changing the loaded QR payload in memory changes Brother `GetPrintingImage()` output | observed | On numeric QR `1234567890123456`, setting `Barcode.Data=9876543210987654` before `GetPrintingImage()` changed the BMP hash from `f1da64b34aaf93b125d1872b9164b1617dae6087b58dff06dca19074ac61fcb3` to `bf0af4fdcad756c1209eb24309a80f24e680d3f97070a7e9bee33c5c6efea1ba` |
-| Changing the loaded QR `Mode` property changes `GetPrintingImage()` output for the tested URL and numeric payloads | not observed | URL Mixed vs Binary output had identical SHA-256 `8e75634c3f299c9abbad78759d79e6e8279714766640c42a2d77008ede69530a`; numeric Mixed, Number, and Binary outputs shared SHA-256 `f1da64b34aaf93b125d1872b9164b1617dae6087b58dff06dca19074ac61fcb3`; uppercase alphanumeric Mixed, Binary, and AlphabetAndNumber outputs shared SHA-256 `4b6b2066148279fe5ea366aea7b8d119c88f333cada4a11a874f09070f54e2ea` |
-| The QR `Mode` property is ignored across all Brother render/save paths | unknown | The probe only tested `GetPrintingImage()` on two payloads; no modified LBX was saved and no physical print was made |
+| Changing the loaded QR `Mode` property changes `GetPrintingImage()` output for tested URL, numeric, and uppercase alphanumeric payloads | not observed | URL Mixed vs Binary output had identical SHA-256 `8e75634c3f299c9abbad78759d79e6e8279714766640c42a2d77008ede69530a`; numeric Mixed, Number, and Binary outputs shared SHA-256 `f1da64b34aaf93b125d1872b9164b1617dae6087b58dff06dca19074ac61fcb3`; uppercase alphanumeric Mixed, Binary, and AlphabetAndNumber outputs shared SHA-256 `4b6b2066148279fe5ea366aea7b8d119c88f333cada4a11a874f09070f54e2ea` |
+| The QR `Mode` property is ignored across all Brother render/save paths | unknown | The probe only tested `GetPrintingImage()` on three payload classes; no modified LBX was saved and no physical print was made |
 
 
 ## Cycle 28 QR mode scope
@@ -368,3 +368,12 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 |---|---|---|
 | Brother `GetPrintingImage()` output is unchanged when the in-memory QR mode changes among Mixed, Binary, Number, and AlphabetAndNumber for tested payload classes | observed | Windows probe on URL, numeric, and uppercase alphanumeric LBX fixtures; archived inputs are `qr-numeric-mode-probe.ptl` and `qr-alphanumeric-mode-probe.ptl`; unchanged hashes are listed in the Cycle 27/28 property-probe evidence above |
 | Brother's mode property has no effect on GUI previews, saved LBX files, or physical print output | unknown | Only the in-memory `GetPrintingImage()` path was exercised; no modified LBX was saved and no print operation was performed |
+
+
+## Cycle 29 QR raster property effects
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Changing the QR cell-size property changes the in-memory raster width | observed | Windows probe changed the URL QR BMP width across XS/S/M/L/XL while height stayed 128 px: 66/99/132/165/198. Only M decoded under the rotation-plus-border normalization; hashes and captures for XS/S/L/XL are preserved in `docs/re/windows-lbx-runtime/runtime-renders/` |
+| Changing the QR mask property from Auto to Mask0 changes the raster and decoded mask | observed | Mask0 BMP SHA-256 `4db8e3aed4c4c45136412a08dff4d0fc31574b936a8bfc2d668a87211e7bbaac`; ZXing-C++ recovers the expected URL and reports `DataMask=0` |
+| The default QR matrix difference is caused by the cell-size or mask property | not supported by current evidence | Brother's default reports `CellSize=M`, `Mask=Auto`; the normalized default and Rust symbols both decode as version 3, ECC M, data mask 7 |
