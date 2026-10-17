@@ -82,10 +82,13 @@ text, symbol, image, barcode, date/time, frame, rectangle, and polygon objects.
 P-touch Editor ships LBX libraries and CIV LBX templates. Two hash-verified
 Windows runtime runs returned the intended PT-E550W and PT-P900W metadata for
 the archived text and QR exports. This contradicts a Cycle 17 report of the
-default MW-170 model; the earlier result's cause is unresolved. The runtime
-probe reads metadata only. GUI rendering, preservation of editable QR payload
-after load, and print behavior remain unverified. The QR LBX fields follow a
-generic P-touch Editor 5.0.201 sample.
+default MW-170 model; the earlier result's cause is unresolved. The Windows runtime probe now reads loaded object types and barcode properties,
+and captures the in-memory raster returned by Brother's LBX library. It
+confirmed editable QR payload and Code 39 data after load. The Code 39 raster
+decodes to the expected value, while Brother and Rust QR rasters differ and only
+the Rust raster decoded with the tested local tools. GUI canvas behavior and
+physical print output remain unverified. The QR LBX fields follow a generic
+P-touch Editor 5.0.201 sample.
 
 The CLI and GUI support placeholder substitution and CSV batches. The CLI can
 also generate a numeric sequence through a named layout placeholder. This does

@@ -2,8 +2,9 @@
 
 This probe loads LBX archives with the `LibLbx.DotNet.dll` shipped with Brother
 P-touch Editor. It calls the same `LibLbx.Initialize` overload as the Editor,
-then reads document metadata through `LbxFactory.CreateFromPath`. It does not
-save files, open a printer handle, or print.
+then reads document metadata and objects through `LbxFactory.CreateFromPath`.
+It calls `GetPrintingImage()` to capture the library's in-memory rendering. The
+probe does not save an LBX, open a printer handle, or send a print job.
 
 The tested machine was Windows 11 `ryzen`, with P-touch Editor 6.12.10 and
 .NET SDK 8.0.426. The Editor's startup supplied `P-touch Editor 6.12.1.0
@@ -49,6 +50,33 @@ cause cannot be recovered from the preserved logs. This establishes metadata
 returned by `LbxFactory.CreateFromPath`; it does not verify GUI rendering,
 editable QR payload after load, or print behavior.
 
+Cycle 21 extended the reflection probe to enumerate `GetPtObjects()`, read
+barcode data/protocol and scalar settings, and capture the result of
+`GetPrintingImage()` as a BMP. The generated QR archives load as one
+`LibLbx.BcdObj` each with protocol `QRCODE`, the expected URL, Model 2, version
+3 automatic, MBCS 932, and ECC M. The Code 39 archive loads as one
+`LibLbx.BcdObj` with protocol `CODE39`, data `ABC-123`, `ShowCheckDigit=true`,
+`ShowChar=true`, and centered readable text. The Code 39 output is 482x128 px
+and decodes to `ABC-123W` with `zbarimg`. The QR output is 132x128 px; neither
+`zbarimg` nor ZXing-C++ decoded it, while the Rust 135x128 px output decoded to
+the expected URL. This is a rendering discrepancy that needs investigation,
+not proof by itself that the Brother output is malformed.
+
+The saved BMP/PNG comparisons are in `runtime-renders/`. In the Code 39
+comparison, Brother's raster visibly includes the `*` start/stop delimiters in
+human-readable text and fills nearly the full raster width with bars; Rust's
+current raster omits those delimiters and keeps quiet zones. Both output
+rasters decode to the same payload and check character. QR module patterns
+also differ even though the runtime reports matching data, model, version, and
+ECC fields.
+
+| Runtime or Rust image | Dimensions | SHA-256 |
+|---|---:|---|
+| `runtime-renders/editor-pt-e550w-qr.bmp` | 132x128 | `8e75634c3f299c9abbad78759d79e6e8279714766640c42a2d77008ede69530a` |
+| `runtime-renders/rust-pt-e550w-qr.png` | 135x128 | `ebc7d77dc7541268898495147624fef2da35e396c3673348ca857d9a5e601bc1` |
+| `runtime-renders/editor-pt-e550w-code39.bmp` | 482x128 | `db8d8720d1d6c381aea5a1848479993c5f4bde9d21879196bff8f7fca26ba55a` |
+| `runtime-renders/rust-pt-e550w-code39.png` | 581x128 | `b625c475baf97e121a2fd8ef7d9863942500aee7607167b2ac79472fdfe0470d` |
+
 The archived file hashes are:
 
 | File | SHA-256 |
@@ -59,6 +87,7 @@ The archived file hashes are:
 | `pt-e550w-qr-export.lbx` | `4b4b8e2d276695c64ccac063571c145ff783d6384685a9893bcc0ef7cc9ca708` |
 | `pt-p900w-qr-export.lbx` | `2230fb5b8d343c3067374e670ee23cc4bd0c83b442dffc36d1eb08d8c510fbd1` |
 
-The probe only records metadata returned by `LbxFactory.CreateFromPath`. It does
-not establish visual rendering parity, broader object support, or print
-behavior. No printer handle was opened and no print or setting write was sent.
+The probe records metadata, supported public object properties, and the
+in-memory raster returned by `GetPrintingImage()`. It does not establish the
+Editor GUI canvas behavior or physical print output. No printer handle was
+opened and no print or setting write was sent.

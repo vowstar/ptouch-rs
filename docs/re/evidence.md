@@ -280,6 +280,17 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Cycle 18 LBX import/export preserves the archived QR export byte-for-byte | confirmed | `ptouch convert` imported and re-exported both target QR archives. Each output SHA-256 exactly matched its input (`4b4b8e2d...9ca708` for E550W; `2230fb5b...10fbd1` for P900W), and the Windows runtime returned the intended model metadata for both output files |
 | The Cycle 17 report of MW-170, stored ID `0`, and media ID `138` can be reproduced for the same archived files | not reproduced; cause unknown | Two Cycle 19 probe runs using the exact archived hashes returned intended target metadata. The original Cycle 17 invocation details sufficient to identify the discrepancy were not preserved |
 
+## Cycle 21 Windows loaded-object and render inspection
+
+| Claim | Status | Evidence |
+|---|---|---|
+| P-touch Editor's `GetPtObjects()` returns a native Barcode object for generated QR and Code 39 LBX archives | observed | `docs/re/windows-lbx-runtime/Program.cs`; the exact archived QR files returned `LibLbx.BcdObj` / `ClassName=Barcode`, and the generated Code 39 archive returned the same object class |
+| The Brother runtime reads the generated QR payload, Model 2, version 3 auto mode, MBCS 932, and Medium ECC | observed in object property | `GetBarcodeProperty()` returned the exact QR URL and `QrcodeData` fields `Model=Model2`, `Version=3`, `VerAuto=True`, `MBCS=932`, `EccLevel=M` |
+| The Brother runtime reads the generated Code 39 payload and display/check-digit options | observed in object property | `GetBarcodeProperty()` returned `Data=ABC-123`, `ShowCheckDigit=True`, `ShowChar=True`, and `CharAlign=Center` for SHA-256 `0cc382b3150075152e3c29ff4eab4fbfe99327a146fb94518440e5c1e3c40214` |
+| The in-memory Brother Code 39 raster is scannable and agrees with the Rust payload/check character | observed | `GetPrintingImage()` returned 482x128 BMP; `zbarimg` decoded `ABC-123W`. The Brother raster includes visible `*` start/stop delimiters and no external quiet zones, unlike the current Rust raster |
+| The in-memory Brother QR raster is scannable and matches the Rust QR matrix | discrepancy observed | `GetPrintingImage()` returned 132x128 BMP. Neither `zbarimg` nor ZXing-C++ decoded it, while Rust's 135x128 PNG decoded to `https://example.test/ptouch-cycle17`; their module patterns visibly differ despite matching runtime payload/model/version/ECC properties |
+| `GetPrintingImage()` output proves physical print output or the P-touch Editor GUI canvas is equivalent | unknown | The API returned an in-memory BMP without opening a printer handle. No physical print or GUI canvas inspection was performed |
+
 ## Cycle 20 Code 39 support
 
 | Claim | Status | Evidence |
