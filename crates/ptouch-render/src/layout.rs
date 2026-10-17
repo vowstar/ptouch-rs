@@ -888,8 +888,11 @@ fn render_object(
             let (bars, readable_value) =
                 crate::barcode::render_code39(data, *check_digit, narrow_width)?;
             let source = if *human_readable {
+                // Brother's in-memory rendering includes Code 39 start/stop
+                // sentinels in the human-readable line.
+                let readable_with_sentinels = format!("*{readable_value}*");
                 let caption = renderer.render_text(
-                    &[&readable_value],
+                    &[&readable_with_sentinels],
                     22,
                     &doc.font_name,
                     None,

@@ -62,6 +62,8 @@ and decodes to `ABC-123W` with `zbarimg`. The QR output is 132x128 px; neither
 the expected URL. This is a rendering discrepancy that needs investigation,
 not proof by itself that the Brother output is malformed.
 
+Cycle 22 changed Rust readable Code 39 text to include the observed `*` start/stop sentinels. The rendered result is preserved as `runtime-renders/rust-pt-e550w-code39-cycle22.png` (581x128 px, SHA-256 `1738433fa446738390b2d40d58129eb748af0ab331d98bd4524d0ce2e36d179d`). It still decodes to `ABC-123W`. The rendered full-label dimensions are not directly comparable to Brother's object-only 482x128 image, so this does not settle geometry parity.
+
 The saved BMP/PNG comparisons are in `runtime-renders/`. In the Code 39
 comparison, Brother's raster visibly includes the `*` start/stop delimiters in
 human-readable text and fills nearly the full raster width with bars; Rust's
