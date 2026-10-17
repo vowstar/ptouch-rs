@@ -74,7 +74,9 @@ text, symbol, image, barcode, date/time, frame, rectangle, and polygon objects.
 P-touch Editor ships LBX libraries and CIV LBX templates, but its exact
 import/export and print behavior remains unverified. An external P-touch Editor
 5.0.201 sample establishes the generic QR XML fields, while target-model
-rendering parity remains unknown.
+rendering parity remains unknown. The CLI can export a bounded subset of
+layouts as target-specific LBX archives. P-touch Editor/iPrint&Label acceptance
+of generated files has not been runtime-verified.
 
 The CLI and GUI support placeholder substitution and CSV batches. The CLI can
 also generate a numeric sequence through a named layout placeholder. This does
@@ -462,6 +464,19 @@ label. Start, increment, and count default to 1. Copies repeat each resulting
 label through the standard batch path. This numeric placeholder workflow is
 separate from iPrint&Label's numbering of selected characters inside an LBX
 text object.
+
+Convert a `.ptl` layout or supported LBX import to a target-specific LBX file:
+
+```sh
+ptouch convert design.ptl --output design.lbx --printer pt-e550w
+```
+
+LBX export currently accepts absolute text and PNG, JPEG, BMP, GIF, or TIFF
+objects on standard media widths supported by the selected target. It rejects
+relative positioning, inline text styles, mirroring, vector-only image sources,
+cut marks, and padding instead of dropping them. Generated archives use
+recovered Brother namespace, model-ID, and media-map values; opening or printing
+them in Brother software or on a physical printer remains unverified.
 
 By default, USB CSV batches print as one continuous strip, including all
 `--copies`, with final feed/cut only after the last row. `--chain` skips that final step. Printers

@@ -3,7 +3,7 @@
 
 //! Bounded importer for supported Brother LBX label objects.
 
-use std::io::{Cursor, Read};
+use std::io::{Cursor, Read, Write};
 use std::path::{Component, Path, PathBuf};
 
 use zip::ZipArchive;
@@ -19,6 +19,261 @@ const PT_TO_MM: f64 = 25.4 / 72.0;
 pub const MAX_ARCHIVE_BYTES: usize = 64 * 1024 * 1024;
 const MAX_XML_BYTES: u64 = 8 * 1024 * 1024;
 const MAX_IMAGE_BYTES: u64 = 32 * 1024 * 1024;
+
+/// Printer identity written into a generated LBX paper definition.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LbxPrinter {
+    /// PT-E550W uses the PT7 paper map and 180 dpi LBX profile.
+    PtE550w,
+    /// PT-P900W uses the PT9 paper map and 360 dpi LBX profile.
+    PtP900w,
+}
+
+/// Export supported absolute text and raster-image objects as a Brother LBX archive.
+///
+/// The output uses the Brother LBX XML namespaces and archive layout. Imported
+/// template wrappers, inline text styles, relative objects, vector-only image
+/// sources, mirroring, and non-object layout elements are rejected rather than
+/// silently discarded. Opening the output in a Brother application remains to
+/// be verified against that application's runtime.
+pub fn export(document: &LabelDocument, printer: LbxPrinter) -> Result<Vec<u8>> {
+    if document.flip_h || document.flip_v {
+        return Err(RenderError::Layout(
+            "LBX export does not support whole-label mirroring".into(),
+        ));
+    }
+    let media = lbx_media(document.tape_width_mm, printer).ok_or_else(|| {
+        RenderError::Layout(format!(
+            "tape width {} mm has no verified LBX media mapping for {printer:?}",
+            document.tape_width_mm
+        ))
+    })?;
+    let mut objects = String::new();
+    let mut assets = Vec::<(String, Vec<u8>)>::new();
+    let mut resource_bytes = 0usize;
+    let mut max_length_mm = 4.0_f64;
+    for (index, element) in document.elements.iter().enumerate() {
+        let LabelElement::Object(object) = element else {
+            return Err(RenderError::Layout(format!(
+                "LBX export does not support non-object layout element {index}"
+            )));
+        };
+        if object.frame.position != PositionMode::Absolute
+            || object.content_box.is_some()
+            || object.flip_h
+            || object.flip_v
+        {
+            return Err(RenderError::Layout(format!(
+                "LBX export does not support relative positioning, independent content boxes, or mirroring on object {index}"
+            )));
+        }
+        if !object.frame.x_mm.is_finite()
+            || !object.frame.y_mm.is_finite()
+            || object.frame.x_mm < 0.0
+            || object.frame.y_mm < 0.0
+            || !object.frame.width_mm.is_finite()
+            || !object.frame.height_mm.is_finite()
+            || object.frame.width_mm <= 0.0
+            || object.frame.height_mm <= 0.0
+            || !object.rotation.is_finite()
+        {
+            return Err(RenderError::Layout(format!(
+                "LBX object {index} has invalid geometry"
+            )));
+        }
+        if object.frame.y_mm + object.frame.height_mm > f64::from(document.tape_width_mm) {
+            return Err(RenderError::Layout(format!(
+                "LBX object {index} extends beyond the selected tape width"
+            )));
+        }
+        max_length_mm = max_length_mm.max(object.frame.x_mm + object.frame.width_mm);
+        match &object.content {
+            ObjectContent::Text {
+                content,
+                font_size,
+                align,
+                line_spacing,
+                styles,
+            } => {
+                if !styles.is_empty() {
+                    return Err(RenderError::Layout(format!(
+                        "LBX export does not support inline text styles on object {index}"
+                    )));
+                }
+                if *line_spacing != crate::text::DEFAULT_LINE_SPACING {
+                    return Err(RenderError::Layout(format!(
+                        "LBX export does not support custom line spacing on object {index}"
+                    )));
+                }
+                let font_size = font_size.unwrap_or(10.0);
+                if !font_size.is_finite() || font_size <= 0.0 {
+                    return Err(RenderError::Layout(format!(
+                        "LBX text object {index} has an invalid font size"
+                    )));
+                }
+                let (x, y, width, height) = style_geometry(object);
+                let alignment = match align {
+                    TextAlign::Left => "LEFT",
+                    TextAlign::Center => "CENTER",
+                    TextAlign::Right => "RIGHT",
+                };
+                let vertical_alignment = match object.frame.vertical_align {
+                    VerticalAlign::Top => "TOP",
+                    VerticalAlign::Center => "CENTER",
+                    VerticalAlign::Bottom => "BOTTOM",
+                };
+                objects.push_str(&format!(
+                    "<text:text><pt:objectStyle x=\"{x}pt\" y=\"{y}pt\" width=\"{width}pt\" height=\"{height}pt\" angle=\"{}\" anchor=\"TOPLEFT\" flip=\"NONE\"><pt:pen style=\"NULL\" widthX=\"0.5pt\" widthY=\"0.5pt\" color=\"#000000\" printColorNumber=\"1\"/><pt:brush style=\"NULL\" color=\"#000000\" printColorNumber=\"1\" id=\"0\"/></pt:objectStyle><text:ptFontInfo><text:logFont name=\"{}\" width=\"0\" italic=\"false\" weight=\"400\" charSet=\"0\" pitchAndFamily=\"34\"/><text:fontExt effect=\"NOEFFECT\" underline=\"0\" strikeout=\"0\" size=\"{font_size}pt\" orgSize=\"{font_size}pt\" textColor=\"#000000\" textPrintColorNumber=\"1\"/></text:ptFontInfo><text:textControl control=\"FIXEDFRAME\" clipFrame=\"false\" aspectNormal=\"true\" shrink=\"true\" autoLF=\"false\" avoidImage=\"false\"/><text:textAlign horizontalAlignment=\"{alignment}\" verticalAlignment=\"{vertical_alignment}\" inLineAlignment=\"BASELINE\"/><pt:data>{}</pt:data></text:text>",
+                    object.rotation,
+                    xml_escape(&document.font_name)?,
+                    xml_escape(content)?,
+                ));
+            }
+            ObjectContent::Image { image_data, .. } => {
+                if image_data.len() as u64 > MAX_IMAGE_BYTES {
+                    return Err(RenderError::Layout(format!(
+                        "LBX image object {index} exceeds the 32 MiB resource limit"
+                    )));
+                }
+                resource_bytes = resource_bytes
+                    .checked_add(image_data.len())
+                    .filter(|total| *total <= MAX_ARCHIVE_BYTES)
+                    .ok_or_else(|| {
+                        RenderError::Layout(
+                            "LBX image resources exceed the 64 MiB archive limit".into(),
+                        )
+                    })?;
+                let extension = image::guess_format(image_data)
+                    .ok()
+                    .and_then(image_extension)
+                    .ok_or_else(|| {
+                        RenderError::Layout(format!(
+                            "LBX export supports PNG, JPEG, BMP, GIF, and TIFF images; object {index} has an unsupported or vector-only image"
+                        ))
+                    })?;
+                let name = format!("assets/object-{index}.{extension}");
+                let (x, y, width, height) = style_geometry(object);
+                objects.push_str(&format!(
+                    "<image:image><pt:objectStyle x=\"{x}pt\" y=\"{y}pt\" width=\"{width}pt\" height=\"{height}pt\" angle=\"{}\" anchor=\"TOPLEFT\" flip=\"NONE\"><pt:pen style=\"NULL\" widthX=\"0pt\" widthY=\"0pt\" color=\"#000000\"/><pt:brush style=\"NULL\" color=\"#000000\"/></pt:objectStyle><image:imageStyle fileName=\"{name}\"/><image:trimming flag=\"false\"/></image:image>",
+                    object.rotation
+                ));
+                assets.push((name, image_data.clone()));
+            }
+            ObjectContent::CutMark | ObjectContent::Padding => {
+                return Err(RenderError::Layout(format!(
+                    "LBX export does not support cut marks or padding objects (object {index})"
+                )));
+            }
+        }
+    }
+    if objects.is_empty() {
+        return Err(RenderError::Layout(
+            "LBX export requires at least one text or image object".into(),
+        ));
+    }
+    let length_pt = max_length_mm * 72.0 / 25.4;
+    let tape_width_pt = f64::from(document.tape_width_mm) * 72.0 / 25.4;
+    let (printer_id, printer_name) = match printer {
+        LbxPrinter::PtE550w => ("26160", "PT_E550W"),
+        LbxPrinter::PtP900w => ("28464", "PT_P900W"),
+    };
+    let xml = format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?><pt:document xmlns:pt=\"http://schemas.brother.info/ptouch/2007/lbx/main\" xmlns:style=\"http://schemas.brother.info/ptouch/2007/lbx/style\" xmlns:text=\"http://schemas.brother.info/ptouch/2007/lbx/text\" xmlns:draw=\"http://schemas.brother.info/ptouch/2007/lbx/draw\" xmlns:image=\"http://schemas.brother.info/ptouch/2007/lbx/image\" xmlns:barcode=\"http://schemas.brother.info/ptouch/2007/lbx/barcode\" xmlns:database=\"http://schemas.brother.info/ptouch/2007/lbx/database\" xmlns:table=\"http://schemas.brother.info/ptouch/2007/lbx/table\" xmlns:cable=\"http://schemas.brother.info/ptouch/2007/lbx/cable\" version=\"1.8\" generator=\"ptouch-rs\"><pt:body currentSheet=\"Sheet1\" direction=\"LTR\"><style:sheet name=\"Sheet1\"><style:paper media=\"0\" width=\"{tape_width_pt:.2}pt\" height=\"{length_pt:.2}pt\" marginLeft=\"0pt\" marginTop=\"0pt\" marginRight=\"0pt\" marginBottom=\"0pt\" orientation=\"landscape\" autoLength=\"true\" monochromeDisplay=\"true\" printColorDisplay=\"false\" printColorsID=\"0\" paperColor=\"#FFFFFF\" paperInk=\"#000000\" split=\"1\" format=\"{media}\" backgroundTheme=\"0\" printerID=\"{printer_id}\" printerName=\"{printer_name}\"/><style:cutLine regularCut=\"0pt\" freeCut=\"\"/><pt:objects>{objects}</pt:objects></style:sheet></pt:body></pt:document>"
+    );
+    if xml.len() > MAX_XML_BYTES as usize
+        || resource_bytes.saturating_add(xml.len()) > MAX_ARCHIVE_BYTES
+    {
+        return Err(RenderError::Layout(
+            "generated LBX exceeds the 64 MiB archive or 8 MiB XML limit".into(),
+        ));
+    }
+    let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    let options = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
+    writer.start_file("label.xml", options).map_err(zip_error)?;
+    writer.write_all(xml.as_bytes())?;
+    for (name, data) in assets {
+        writer.start_file(name, options).map_err(zip_error)?;
+        writer.write_all(&data)?;
+    }
+    writer.start_file("prop.xml", options).map_err(zip_error)?;
+    writer.write_all(
+        b"<?xml version=\"1.0\" encoding=\"UTF-8\"?><meta:properties xmlns:meta=\"http://schemas.brother.info/ptouch/2007/lbx/meta\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:dcterms=\"http://purl.org/dc/terms/\"><meta:appName>ptouch-rs</meta:appName><dc:title></dc:title><dc:subject></dc:subject><dc:creator>ptouch-rs</dc:creator><meta:keyword></meta:keyword><dc:description></dc:description><meta:template></meta:template><dcterms:created>2026-10-17T00:00:00Z</dcterms:created><dcterms:modified>2026-10-17T00:00:00Z</dcterms:modified><meta:lastPrinted></meta:lastPrinted><meta:modifiedBy>ptouch-rs</meta:modifiedBy><meta:revision>1</meta:revision><meta:editTime>0</meta:editTime><meta:numPages>1</meta:numPages><meta:numWords>0</meta:numWords><meta:numChars>0</meta:numChars><meta:security>0</meta:security></meta:properties>",
+    )?;
+    let cursor = writer.finish().map_err(zip_error)?;
+    let output = cursor.into_inner();
+    if output.len() > MAX_ARCHIVE_BYTES {
+        return Err(RenderError::Layout(
+            "generated LBX exceeds the 64 MiB archive limit".into(),
+        ));
+    }
+    Ok(output)
+}
+
+fn lbx_media(width_mm: u8, printer: LbxPrinter) -> Option<u16> {
+    let media: &[(u8, u16)] = match printer {
+        LbxPrinter::PtE550w => &[(6, 257), (9, 258), (12, 259), (18, 260), (24, 261)],
+        LbxPrinter::PtP900w => &[
+            (6, 257),
+            (9, 258),
+            (12, 259),
+            (18, 260),
+            (24, 261),
+            (36, 262),
+        ],
+    };
+    media
+        .iter()
+        .find_map(|(width, code)| (*width == width_mm).then_some(*code))
+}
+
+fn style_geometry(object: &LabelObject) -> (String, String, String, String) {
+    let to_points = |mm: f64| format!("{:.3}", mm * 72.0 / 25.4);
+    (
+        to_points(object.frame.x_mm),
+        to_points(object.frame.y_mm),
+        to_points(object.frame.width_mm),
+        to_points(object.frame.height_mm),
+    )
+}
+
+fn image_extension(format: image::ImageFormat) -> Option<&'static str> {
+    match format {
+        image::ImageFormat::Png => Some("png"),
+        image::ImageFormat::Jpeg => Some("jpg"),
+        image::ImageFormat::Bmp => Some("bmp"),
+        image::ImageFormat::Gif => Some("gif"),
+        image::ImageFormat::Tiff => Some("tif"),
+        _ => None,
+    }
+}
+
+fn xml_escape(value: &str) -> Result<String> {
+    let mut escaped = String::with_capacity(value.len());
+    for character in value.chars() {
+        match character {
+            '&' => escaped.push_str("&amp;"),
+            '<' => escaped.push_str("&lt;"),
+            '>' => escaped.push_str("&gt;"),
+            '\"' => escaped.push_str("&quot;"),
+            '\'' => escaped.push_str("&apos;"),
+            '\u{9}' | '\u{a}' | '\u{d}' => escaped.push(character),
+            c if c >= '\u{20}' && ((c as u32) <= 0xD7FF || (c as u32) >= 0xE000) => {
+                escaped.push(character)
+            }
+            _ => {
+                return Err(RenderError::Layout(
+                    "text contains a character forbidden by XML 1.0".into(),
+                ));
+            }
+        }
+    }
+    Ok(escaped)
+}
+
+fn zip_error(error: zip::result::ZipError) -> RenderError {
+    RenderError::Layout(format!("failed to write LBX archive: {error}"))
+}
 
 /// An imported LBX document and any structures that were skipped.
 #[derive(Debug)]
@@ -875,6 +1130,126 @@ mod tests {
 
     const PREFIX: &str = r#"<document xmlns:pt="urn:pt" xmlns:style="urn:style" xmlns:text="urn:text" xmlns:image="urn:image" xmlns:draw="urn:draw" xmlns:barcode="urn:barcode"><style:paper width="68pt"/><pt:objects>"#;
     const SUFFIX: &str = "</pt:objects></document>";
+
+    fn text_document(width: u8, text: &str) -> LabelDocument {
+        LabelDocument {
+            version: crate::document::DOCUMENT_VERSION,
+            tape_width_mm: width,
+            dpi: 180,
+            font_name: "Arial & Sans".into(),
+            font_margin: 0,
+            flip_h: false,
+            flip_v: false,
+            elements: vec![LabelElement::Object(LabelObject::text(
+                text,
+                TextBox {
+                    width_mm: 20.0,
+                    height_mm: 8.0,
+                    position: PositionMode::Absolute,
+                    x_mm: 3.0,
+                    y_mm: 2.0,
+                    gap_mm: 0.0,
+                    vertical_align: VerticalAlign::Center,
+                },
+            ))],
+        }
+    }
+
+    #[test]
+    fn exports_and_reimports_plain_text_with_target_media_and_geometry() {
+        let source = text_document(24, "A&B <wire>");
+        let bytes = export(&source, LbxPrinter::PtE550w).unwrap();
+        let mut zip = ZipArchive::new(Cursor::new(&bytes)).unwrap();
+        assert!(zip.by_name("prop.xml").is_ok());
+        let mut xml = String::new();
+        zip.by_name("label.xml")
+            .unwrap()
+            .read_to_string(&mut xml)
+            .unwrap();
+        let parsed = roxmltree::Document::parse(&xml).unwrap();
+        let paper = parsed
+            .descendants()
+            .find(|node| node.is_element() && node.tag_name().name() == "paper")
+            .unwrap();
+        assert_eq!(paper.attribute("printerID"), Some("26160"));
+        assert_eq!(paper.attribute("format"), Some("261"));
+        let imported = import(&bytes).unwrap();
+        let object = imported.document.elements[0].as_object().unwrap();
+        assert!((object.frame.x_mm - 3.0).abs() < 0.0002);
+        assert!((object.frame.y_mm - 2.0).abs() < 0.0002);
+        assert!((object.frame.width_mm - 20.0).abs() < 0.0002);
+        let ObjectContent::Text { content, .. } = &object.content else {
+            panic!("expected exported text object");
+        };
+        assert_eq!(content, "A&B <wire>");
+    }
+
+    #[test]
+    fn export_rejects_media_not_mapped_for_the_selected_target() {
+        assert!(export(&text_document(36, "wide"), LbxPrinter::PtE550w).is_err());
+        let bytes = export(&text_document(36, "wide"), LbxPrinter::PtP900w).unwrap();
+        let imported = import(&bytes).unwrap();
+        assert_eq!(imported.document.tape_width_mm, 36);
+    }
+
+    #[test]
+    fn exports_raster_images_as_embedded_archive_resources() {
+        let mut png = Cursor::new(Vec::new());
+        image::DynamicImage::ImageRgba8(crate::bitmap::LabelBitmap::new(4, 4).to_rgba_image())
+            .write_to(&mut png, image::ImageFormat::Png)
+            .unwrap();
+        let png_bytes = png.into_inner();
+        let frame = TextBox {
+            width_mm: 12.0,
+            height_mm: 8.0,
+            position: PositionMode::Absolute,
+            x_mm: 0.0,
+            y_mm: 0.0,
+            gap_mm: 0.0,
+            vertical_align: VerticalAlign::Center,
+        };
+        let mut document = text_document(24, "placeholder");
+        document.elements = vec![LabelElement::Object(LabelObject::image_from_bytes(
+            None,
+            png_bytes.clone(),
+            frame,
+        ))];
+        let bytes = export(&document, LbxPrinter::PtE550w).unwrap();
+        let mut archive = ZipArchive::new(Cursor::new(&bytes)).unwrap();
+        assert!(archive.by_name("assets/object-0.png").is_ok());
+        let imported = import(&bytes).unwrap();
+        assert!(matches!(
+            &imported.document.elements[0],
+            LabelElement::Object(LabelObject {
+                content: ObjectContent::Image { image_data, .. },
+                ..
+            }) if image_data == &png_bytes
+        ));
+    }
+
+    #[test]
+    fn export_rejects_content_that_would_be_silently_lost() {
+        let mut document = text_document(24, "rich");
+        let LabelElement::Object(object) = &mut document.elements[0] else {
+            unreachable!();
+        };
+        if let ObjectContent::Text { styles, .. } = &mut object.content {
+            styles.push(StyleSpan {
+                start: 0,
+                end: 4,
+                style: TextStyle {
+                    bold: true,
+                    ..TextStyle::default()
+                },
+            });
+        }
+        assert!(
+            export(&document, LbxPrinter::PtE550w)
+                .unwrap_err()
+                .to_string()
+                .contains("inline text styles")
+        );
+    }
 
     #[test]
     fn imports_ordinary_text_geometry_and_alignment() {

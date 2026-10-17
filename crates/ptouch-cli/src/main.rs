@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::{self, Read};
 use std::net::SocketAddr;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process;
 
 use clap::parser::ValueSource;
@@ -51,6 +51,8 @@ struct Cli {
 enum Commands {
     /// Print labels with text, images, or both
     Print(PrintArgs),
+    /// Convert a supported layout to an LBX archive
+    Convert(ConvertArgs),
     /// Show printer and tape information
     Info(InfoArgs),
     /// Read supported printer settings
@@ -70,6 +72,34 @@ enum Commands {
     BluetoothList,
     /// Launch GUI mode
     Gui,
+}
+
+#[derive(clap::Args)]
+struct ConvertArgs {
+    /// Source .ptl layout or supported .lbx archive
+    #[arg(value_name = "INPUT")]
+    input: PathBuf,
+    /// Destination .lbx archive
+    #[arg(short, long, value_name = "FILE")]
+    output: PathBuf,
+    /// Target printer whose LBX model and media map will be written
+    #[arg(long, value_enum)]
+    printer: LbxPrinterArg,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum LbxPrinterArg {
+    PtE550w,
+    PtP900w,
+}
+
+impl From<LbxPrinterArg> for ptouch_render::lbx::LbxPrinter {
+    fn from(value: LbxPrinterArg) -> Self {
+        match value {
+            LbxPrinterArg::PtE550w => Self::PtE550w,
+            LbxPrinterArg::PtP900w => Self::PtP900w,
+        }
+    }
 }
 
 #[derive(clap::Args, Clone)]
@@ -596,6 +626,12 @@ fn main() {
 
     match cli.command {
         Commands::List => execute_list(),
+        Commands::Convert(args) => {
+            if let Err(error) = execute_convert(args) {
+                eprintln!("Error: {error}");
+                process::exit(1);
+            }
+        }
         Commands::Doctor { json, probe } => {
             let report = ptouch_core::diagnostics::doctor(probe);
             if json {
@@ -696,6 +732,23 @@ fn main() {
             }
         }
     }
+}
+
+fn execute_convert(args: ConvertArgs) -> Result<(), Box<dyn std::error::Error>> {
+    if args
+        .output
+        .extension()
+        .is_none_or(|extension| !extension.eq_ignore_ascii_case("lbx"))
+    {
+        return Err("convert output must use the .lbx extension".into());
+    }
+    let (document, warnings) = LabelDocument::from_path(&args.input)?;
+    for warning in warnings {
+        eprintln!("warning: {warning}");
+    }
+    let archive = ptouch_render::lbx::export(&document, args.printer.into())?;
+    std::fs::write(&args.output, archive)?;
+    Ok(())
 }
 
 /// Ad-hoc content flags overridden when `--layout` is set. Keep in sync with
@@ -1589,6 +1642,82 @@ fn print_to_device(
 mod tests {
     use super::*;
     use document::{ContentBox, LabelElement, LabelObject, ObjectContent, PositionMode, TextBox};
+
+    #[test]
+    fn convert_command_requires_an_explicit_target_printer() {
+        assert!(matches!(
+            Cli::try_parse_from([
+                "ptouch",
+                "convert",
+                "design.ptl",
+                "--output",
+                "design.lbx",
+                "--printer",
+                "pt-p900w"
+            ])
+            .unwrap()
+            .command,
+            Commands::Convert(ConvertArgs {
+                printer: LbxPrinterArg::PtP900w,
+                ..
+            })
+        ));
+        assert!(
+            Cli::try_parse_from(["ptouch", "convert", "design.ptl", "--output", "design.lbx"])
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn convert_command_writes_a_reimportable_lbx_archive() {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "ptouch-convert-test-{}-{unique}",
+            std::process::id()
+        ));
+        std::fs::create_dir(&directory).unwrap();
+        let input = directory.join("design.ptl");
+        let output = directory.join("design.lbx");
+        let source = LabelDocument {
+            version: document::DOCUMENT_VERSION,
+            tape_width_mm: 24,
+            dpi: 180,
+            font_name: "Arial".into(),
+            font_margin: 0,
+            flip_h: false,
+            flip_v: false,
+            elements: vec![LabelElement::Object(LabelObject::text(
+                "PORT-01",
+                TextBox {
+                    x_mm: 2.0,
+                    y_mm: 1.0,
+                    width_mm: 20.0,
+                    height_mm: 8.0,
+                    ..TextBox::default()
+                },
+            ))],
+        };
+        std::fs::write(&input, source.to_toml_string().unwrap()).unwrap();
+        execute_convert(ConvertArgs {
+            input,
+            output: output.clone(),
+            printer: LbxPrinterArg::PtE550w,
+        })
+        .unwrap();
+        let bytes = std::fs::read(output).unwrap();
+        let imported = ptouch_render::lbx::import(&bytes).unwrap();
+        assert!(matches!(
+            &imported.document.elements[0],
+            LabelElement::Object(LabelObject {
+                content: ObjectContent::Text { content, .. },
+                ..
+            }) if content == "PORT-01"
+        ));
+        std::fs::remove_dir_all(directory).unwrap();
+    }
 
     fn free_layout_fixture(dir: &Path, dpi: u16) -> LabelDocument {
         let image_path = dir.join("original.png");

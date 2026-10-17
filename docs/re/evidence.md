@@ -85,7 +85,7 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 
 | Gap | Current evidence | Scope limit |
 |---|---|---|
-| Rust reads/writes its versioned TOML `.ptl` layout and imports a bounded subset of LBX text, PT Dingbats symbols, untrimmed embedded images, and selected unfilled vector outlines; it has no LBX export | `crates/ptouch-render/src/document.rs`, `crates/ptouch-render/src/lbx.rs`, CLI and GUI path loading; compared with `LBXTagWriter.java` above | Specialized objects and full Brother LBX conversion fidelity remain unsupported or unknown |
+| Rust reads/writes versioned TOML `.ptl`, imports a bounded LBX subset, and exports absolute text plus supported raster-image objects to target-specific LBX archives through the CLI | `crates/ptouch-render/src/document.rs`, `crates/ptouch-render/src/lbx.rs`, `crates/ptouch-cli/src/main.rs`; target maps from `LBXTagWriter.java` above | Export rejects unsupported layouts; generated-file acceptance and full Brother LBX conversion fidelity remain unknown |
 | Rust's `ObjectContent` supports text, image, cut mark, and padding; it has no barcode/QR object | `crates/ptouch-render/src/document.rs`; compared with iPrint&Label `Barcode.java` and editor creation paths above | Barcode generation rules and exact Brother raster appearance are not established by the decompile |
 | Rust implements placeholder CSV batches but does not match iPrint&Label LBX numbering or database-assigned bitmap job paths | `crates/ptouch-cli/src/main.rs`; iPrint&Label `PrintTask.java` and `PrinterOptionDialogFragment.java` above | iPrint&Label CSV/schema runtime behavior is only partly established |
 | Current Rust TCP media handling covers standard width codes and does not model SL, FL, or HS media types | `crates/ptouch-core/src/tape.rs`, `session.rs`, `ptouch-gui/src/panels/sidebar.rs`; compare the target media configuration row above | App UI lists do not prove physical media compatibility or wire protocol behavior |
@@ -240,3 +240,14 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | iPrint&Label generates each selected-range value, renders one LBX bitmap per value, restores the source value, and applies copies to the sequence | observed in source | `serialize/Counter.java:countUp`; `print/PrintTask.java:lambda$printNumberingLbx$0,printNumberingLbx` |
 | Recovered Counter accepts ASCII letters and digits and uses Java string offsets for selected ranges | observed in source | `serialize/Counter.java:enableCountUpRegex,countUp`; Java/Kotlin string range operations use UTF-16 code-unit indices |
 | Rust matches native selected-character numbering, including Unicode selection and carry behavior | open gap | No attached Android device/emulator, app-produced numbering LBX, or rendered baseline was available. The decompiled carry implementation has not been independently validated, so no native numbering semantics were inferred from it |
+
+
+## Cycle 15 bounded LBX export
+
+| Claim | Status | Evidence |
+|---|---|---|
+| P-touch Editor LBX templates use `label.xml` and `prop.xml` entries and the Brother `pt`, `style`, `text`, and `image` namespace families | observed in preserved app package | Ten CIV archives under `reference/artifacts/ptouch-editor-6.12.10/6/Resources/Templates/CIV/`; `10_NewTerminalBlock.lbx` and `1_NewSelfLaminating.lbx` contain both entries and establish namespaced document, sheet, paper, and object structures |
+| iPrint&Label maps PT-E550W to printer ID `26160` and PT-P900W to `28464`; their LBX paths use PT7/PT9 media maps and 180/360 dpi respectively | observed in source | `reference/artifacts/android-iprintandlabel-5.3.17/jadx/sources/com/brother/ptouch/iprintandlabel/compatible/LBXTagWriter.java:180-184, 263-268, 342-375` |
+| Rust CLI creates target-specific LBX ZIPs containing `label.xml`, `prop.xml`, text and embedded raster image resources; supported objects round-trip through the Rust LBX importer | implemented, tested | `crates/ptouch-render/src/lbx.rs::export`; `crates/ptouch-cli/src/main.rs::execute_convert`; export tests verify target media IDs, escaped text, geometry, image resources, explicit rejection, and CLI convert/reimport behavior |
+| Generated Rust LBX archives open and render equivalently in P-touch Editor or iPrint&Label | unknown | Archive structure and target/media IDs are based on preserved sample/source evidence, but no Brother application runtime or physical printer was used to validate generated output |
+| LBX export preserves unsupported layout semantics such as inline styles, relative positions, mirroring, and native template wrappers | not implemented | Export returns explicit errors for these structures rather than silently dropping them |
