@@ -211,3 +211,13 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | The preserved target-app inventories contain no local barcode fixture | verified artifact inventory | APK SHA-256 `cd22e32e2b594931a4365fe1fbb8a5581a93a386c007e83b2dd648b44196f0ee`; ZIP entry inventory; ten P-touch Editor CIV files scanned under `reference/artifacts/ptouch-editor-6.12.10/6/Resources/Templates/CIV/` |
 | Rust imports ASCII Model 2 QR objects with supported ECC/version settings as SVG-backed images | implemented, unit tested | `crates/ptouch-render/src/lbx.rs`; importer test checks generated vector content and rendered pixels; manual CLI output decoded to `http://alecto.ca` with `zbarimg` |
 | Native barcode editing, other barcode protocols, source MBCS conversion for non-ASCII payloads, and exact Brother rendering on PT-P900W/PT-E550W | open gaps | Import preserves QR appearance through generated SVG only; sample targets QL-700, and no source-app render comparison or physical print was performed |
+
+
+## Cycle 12 numeric placeholder batches
+
+| Claim | Status | Evidence |
+|---|---|---|
+| iPrint&Label numbering configuration includes count, start-from, and increment; selected text ranges are marked as numbering-enabled | observed in source | `reference/artifacts/android-iprintandlabel-5.3.17/jadx/sources/com/brother/ptouch/iprintandlabel/edit/EditLabelActivity.java:setTextNumber`; `object/PrintParameter.java` |
+| iPrint&Label creates one rendered LBX bitmap per sequence value, restores the source number after rendering each bitmap, then repeats the sequence for configured copies | observed in source | `reference/artifacts/android-iprintandlabel-5.3.17/jadx/sources/com/brother/ptouch/iprintandlabel/print/PrintTask.java:lambda$printNumberingLbx$0,printNumberingLbx` |
+| Rust CLI creates numbered layout output by replacing a declared placeholder with start/increment/count values and routes labels through existing batch output/printing | implemented, tested | `crates/ptouch-cli/src/main.rs`; regression compares all three exported images at values 7, 9, and 11 against independently rendered layouts |
+| Rust reproduces iPrint&Label selected-character numbering inside native LBX text objects or its database-assigned jobs | open gaps | Current numbering is an explicit CLI placeholder workflow. Native LBX character-range encoding and database file/job schemas are not implemented |

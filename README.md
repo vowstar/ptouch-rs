@@ -14,9 +14,11 @@ Optional native macOS Bluetooth support is available in `ptouch-core` for the PT
   after the previous box; preview with a millimeter ruler
 - Save and reload designs as self-contained `.ptl` layout files (images
   embedded), then print them from the GUI or CLI. Open supported text, PT
-  Dingbats symbols, untrimmed images, and selected vector outlines from `.lbx`
-  files
+  Dingbats symbols, QR codes, untrimmed images, and selected vector outlines
+  from `.lbx` files
 - Template layouts with `{{name}}` placeholders and batch-print from a CSV
+- Numbered layout batches by placeholder, with configurable start, increment,
+  and label count
 - Chain print and multi-copy support
 - Print quality modes on selected legacy and modern target models (draft remains legacy-only)
 - Explicit raw TCP printer selection in the CLI
@@ -61,8 +63,9 @@ text glyphs and vector
 outlines to embedded SVG-backed image objects, and skips unsupported shapes,
 barcodes other than Model 2 QR, trimmed images, and image effects with warnings.
 QR codes import as SVG-backed images, so native barcode editing and exact Brother
-rendering are not retained; other barcode protocols remain unsupported. Symbol
-rendering requires an installed Brother font containing the requested glyph.
+rendering are not retained; other barcode protocols remain unsupported. The GUI
+does not yet create or edit native barcode objects. Symbol rendering requires
+an installed Brother font containing the requested glyph.
 The importer rejects files containing only unsupported objects. LBX conversion
 fidelity and P-touch Editor behavior remain under investigation. The editor has
 no barcode or QR object yet. iPrint&Label
@@ -73,8 +76,10 @@ import/export and print behavior remains unverified. An external P-touch Editor
 5.0.201 sample establishes the generic QR XML fields, while target-model
 rendering parity remains unknown.
 
-The CLI and GUI support placeholder substitution and CSV batches. They do not
-yet match iPrint&Label's LBX numbering and database-assigned print workflows.
+The CLI and GUI support placeholder substitution and CSV batches. The CLI can
+also generate a numeric sequence through a named layout placeholder. This does
+not reproduce iPrint&Label's selected-character numbering inside native LBX
+text objects or its database-assigned print workflow.
 Network media selection currently covers standard tape-width codes. iPrint&Label
 also lists SL and heat-shrink media for PT-E550W and a broader shared media list
 for PT-P900W; media-specific print semantics and acceptance for each listed
@@ -451,6 +456,12 @@ but does not have a variable-value form; its preview shows the literal tokens.
 CLI substitution changes only text content, preserving slots, independent
 object dimensions, offsets, and rotation.
 
+For sequential labels, `--number-var` fills one declared placeholder for each
+label. Start, increment, and count default to 1. Copies repeat each resulting
+label through the standard batch path. This numeric placeholder workflow is
+separate from iPrint&Label's numbering of selected characters inside an LBX
+text object.
+
 By default, USB CSV batches print as one continuous strip, including all
 `--copies`, with final feed/cut only after the last row. `--chain` skips that final step. Printers
 with manual cutters, such as PT-1230PC, still need manual cutting after feeding.
@@ -471,8 +482,16 @@ ptouch print --layout badge.ptl --set name=Alice --set id=A001
 # One label per CSV row; the header row names the placeholders
 ptouch print --layout badge.ptl --csv people.csv
 
+# Values 100, 105, 110 through the id placeholder
+ptouch print --layout badge.ptl --number-var id --number-start 100 \
+  --number-increment 5 --number-count 3
+
 # Batch to image files instead of a printer ({n} is the row number)
 ptouch print --layout badge.ptl --csv people.csv -o 'badge-{n}.png'
+
+# Numbered output to individual image files
+ptouch print --layout badge.ptl --number-var id --number-count 3 \
+  -o 'badge-{n}.png'
 
 # CSV from stdin, with a constant value applied to every row
 cat people.csv | ptouch print --layout badge.ptl --csv - --set dept=Eng
@@ -486,6 +505,8 @@ cat people.csv | ptouch print --layout badge.ptl --csv - --set dept=Eng
 | `-l` | `--layout` | Print a saved .ptl layout or import supported .lbx content; overrides content flags |
 | | `--set` | Set a layout placeholder, `KEY=VALUE` (repeatable) |
 | | `--csv` | Batch-print one label per CSV row (`-` for stdin) |
+| | `--number-var` | Generate a numeric sequence through a layout placeholder |
+| | `--number-start`, `--number-increment`, `--number-count` | Configure the numeric placeholder sequence |
 | | `--list-vars` | List the placeholders a layout declares, then exit |
 | | `--allow-missing` | Render placeholders with no value as blank |
 | `-i` | `--image` | Image file path |

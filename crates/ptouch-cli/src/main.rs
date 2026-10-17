@@ -126,6 +126,22 @@ struct PrintArgs {
     #[arg(long, value_name = "FILE")]
     csv: Option<String>,
 
+    /// Generate one label for each value of a layout placeholder.
+    #[arg(long, value_name = "NAME", conflicts_with = "csv")]
+    number_var: Option<String>,
+
+    /// First value for --number-var (default: 1).
+    #[arg(long, requires = "number_var", default_value_t = 1)]
+    number_start: i32,
+
+    /// Value added between labels for --number-var (default: 1).
+    #[arg(long, requires = "number_var", default_value_t = 1)]
+    number_increment: i32,
+
+    /// Number of distinct labels for --number-var (default: 1).
+    #[arg(long, requires = "number_var", default_value_t = 1)]
+    number_count: u32,
+
     /// List the placeholders a layout declares, then exit
     #[arg(long)]
     list_vars: bool,
@@ -972,9 +988,15 @@ fn execute_print(args: &PrintArgs, ignored: &[String]) -> Result<(), Box<dyn std
 
     // Layout-only modifiers make no sense without a layout.
     if args.layout.is_none()
-        && (!args.set.is_empty() || args.csv.is_some() || args.list_vars || args.allow_missing)
+        && (!args.set.is_empty()
+            || args.csv.is_some()
+            || args.number_var.is_some()
+            || args.list_vars
+            || args.allow_missing)
     {
-        eprintln!("Error: --set, --csv, --list-vars, and --allow-missing require --layout");
+        eprintln!(
+            "Error: --set, --csv, --number-var, --list-vars, and --allow-missing require --layout"
+        );
         process::exit(1);
     }
 
@@ -1127,6 +1149,10 @@ fn print_layout(args: &PrintArgs, layout_path: &str) -> Result<(), Box<dyn std::
         return print_layout_batch(args, doc, csv_path);
     }
 
+    if let Some(variable) = args.number_var.as_deref() {
+        return print_layout_numbering(args, doc, variable);
+    }
+
     // Fill placeholders from --set values, rejecting missing ones by default.
     let values = parse_set_args(&args.set)?;
     let provided: BTreeSet<String> = values.keys().cloned().collect();
@@ -1142,6 +1168,69 @@ fn print_layout(args: &PrintArgs, layout_path: &str) -> Result<(), Box<dyn std::
         dev.close()?;
     }
 
+    Ok(())
+}
+
+/// Generate a numeric sequence through one declared layout placeholder.
+/// This mirrors the count/start/increment workflow, while keeping LBX's
+/// selected-character numbering semantics out of the generic layout model.
+fn print_layout_numbering(
+    args: &PrintArgs,
+    doc: LabelDocument,
+    variable: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if !doc.placeholders().iter().any(|name| name == variable) {
+        return Err(format!("layout has no placeholder named '{variable}'").into());
+    }
+    if args.number_count == 0 {
+        return Err("--number-count must be greater than zero".into());
+    }
+    if let Some(output) = &args.output
+        && !output.contains("{n}")
+    {
+        return Err(
+            "with --number-var, --output must contain '{n}' (for example label-{n}.png)".into(),
+        );
+    }
+    let mut values = parse_set_args(&args.set)?;
+    if values.contains_key(variable) {
+        return Err(format!("--set already provides numbered placeholder '{variable}'").into());
+    }
+    let mut provided: BTreeSet<String> = values.keys().cloned().collect();
+    provided.insert(variable.to_string());
+    validate_vars(&doc.placeholders(), &provided, args.allow_missing)?;
+    let last_index = i32::try_from(args.number_count - 1)
+        .map_err(|_| "numbering sequence exceeds signed 32-bit range")?;
+    args.number_increment
+        .checked_mul(last_index)
+        .and_then(|step| args.number_start.checked_add(step))
+        .ok_or("numbering sequence exceeds signed 32-bit range")?;
+
+    let (print_width, max_px, mut device) = resolve_layout_target(args, &doc)?;
+    let target_dpi = device.as_ref().map_or(doc.dpi, |dev| dev.dpi());
+    let labels = (0..args.number_count).map(|index| {
+        let step = i32::try_from(index)
+            .ok()
+            .and_then(|index| args.number_increment.checked_mul(index))
+            .and_then(|step| args.number_start.checked_add(step))
+            .ok_or_else(|| {
+                PtouchError::SendFailed("numbering sequence exceeds signed 32-bit range".into())
+            })?;
+        values.insert(variable.to_string(), step.to_string());
+        let mut numbered_doc = doc.clone();
+        numbered_doc.apply_values(&values);
+        let bitmap = render_layout(&numbered_doc, print_width, target_dpi)?;
+        Ok(ptouch_render::calibration::apply_calibration(
+            &bitmap,
+            target_dpi,
+            args.offset_mm,
+        )?)
+    });
+    let count = emit_batch(labels, args, max_px, device.as_mut())?;
+    if let Some(dev) = device {
+        dev.close()?;
+    }
+    println!("Processed {count} numbered label(s)");
     Ok(())
 }
 
@@ -1680,6 +1769,48 @@ mod tests {
                 std::fs::read_to_string(&layout)
                     .unwrap()
                     .contains("version = 6")
+            );
+        }
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn numbered_layout_exports_increment_placeholder_values_in_order() {
+        let dir = std::env::temp_dir().join(format!("ptouch-numbering-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let doc = free_layout_fixture(&dir, 180);
+        let layout = dir.join("source.ptl");
+        let output = dir.join("number-{n}.png");
+        std::fs::write(&layout, doc.to_toml_string().unwrap()).unwrap();
+        let args = batch_args(&[
+            "--layout",
+            layout.to_str().unwrap(),
+            "--number-var",
+            "port",
+            "--number-start",
+            "7",
+            "--number-increment",
+            "2",
+            "--number-count",
+            "3",
+            "--set",
+            "suffix=-A",
+            "--output",
+            output.to_str().unwrap(),
+        ]);
+        execute_print(&args, &[]).unwrap();
+
+        for (index, value) in ["7", "9", "11"].into_iter().enumerate() {
+            let mut expected_doc = doc.clone();
+            expected_doc.apply_values(&BTreeMap::from([
+                ("port".into(), value.into()),
+                ("suffix".into(), "-A".into()),
+            ]));
+            let expected = render_layout(&expected_doc, 76, 180).unwrap();
+            let actual = load_export(&dir.join(format!("number-{}.png", index + 1)));
+            assert_eq!(
+                (actual.width(), actual.height(), actual.data()),
+                (expected.width(), expected.height(), expected.data())
             );
         }
         std::fs::remove_dir_all(dir).unwrap();
