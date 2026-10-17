@@ -527,3 +527,12 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Payload segmentation, version, or ECC explains the two automatic mask differences | disproven for these controls | The mixed payload matches at all eight masks using the Cycle 38 alphanumeric-prefix/byte-suffix segmentation. The repetitive payload matches at all eight as one byte segment. Runtime metadata reports the same versions and ECC as Rust. |
 | Brother's automatic mask selector is the only remaining source of these two matrix differences | observed | With encoded matrices held constant across all forced masks, Brother still automatically selects mask 0 instead of the libqrencode-style mask 3 for the mixed payload, and mask 1 instead of mask 2 for the repetitive payload. |
 | The evidence establishes physical print parity | unknown | Tests used in-memory `GetPrintingImage()` captures only. No printer handle, settings write, or print job was used. |
+
+
+## Cycle 45 N2 penalty weight sweep
+
+| Claim | Status | Evidence |
+|---|---|---|
+| A higher integer N2 weight resolves the two residual Brother mask choices | disproven | `docs/re/windows-lbx-runtime/analyze-qr-n2-weights.py` regenerated all eight candidates for 19 controls and swept N2 weights 1-8 while leaving N1/N3/N4 unchanged. The residual choices remain mismatched at every tested weight. |
+| Raising N2 improves agreement with the 19 captures | disproven | Weight 1 matches 17/19. Weights 2-8 match 16, 13, 13, 12, 12, 10, and 10, respectively. |
+| The sweep identifies the complete Brother mask rule | unknown | Only one component's integer weight was varied. Other scan definitions, score domains, tie-breaks, and payload families remain open. |

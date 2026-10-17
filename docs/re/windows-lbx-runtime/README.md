@@ -142,6 +142,15 @@ selection remains different. These are in-memory renders, with no printer
 handle, settings write, or print job.
 
 
+Cycle 45 tests whether a different weight on the 2x2-block penalty N2 explains
+the two residual mask choices. `analyze-qr-n2-weights.py` regenerates all eight
+fixed-mask matrices for 19 captured controls and sweeps integer N2 weights 1-8
+while holding N1, N3, and N4 fixed. The baseline 1x score matches 17 of 19
+Brother selections; weights 2-8 match 16, 13, 13, 12, 12, 10, and 10. Neither
+residual case matches at any tested weight. This rejects a simple integer N2
+rescaling, not other scoring algorithms.
+
+
 Cycle 25 reran the read-only object probe on Windows with the archived
 `pt-e550w-qr-export.lbx`. The additional scalar properties confirm the
 application's QR object selects mixed mode and automatic masking. The matching

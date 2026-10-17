@@ -92,6 +92,9 @@ from seven to six; the production score remains unchanged. Cycle 44 rendered all
 eight forced masks for both remaining exceptions. Every Brother in-memory
 module grid matches Rust's fixed-mask matrix, confirming the gaps come from
 automatic mask selection rather than payload encoding or raster construction.
+Cycle 45 swept integer N2 block-penalty weights 1-8 across 19 captured Brother
+mask choices. The current 1x weight matches 17/19; higher weights match fewer
+and do not resolve either remaining case.
 
 The importer rejects files containing only unsupported objects. LBX conversion
 fidelity and P-touch Editor behavior remain under investigation. iPrint&Label
