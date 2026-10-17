@@ -442,3 +442,14 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Rust's automatic QR path preserves the requested ECC level | corrected | `render_qr` and LBX QR import now use the automatic version range with ECC boosting disabled. Regression coverage compares a 20-digit payload against explicit Medium-level modules. Before the fix qrcodegen selected Quartile for this payload while Brother reports Medium |
 | Brother's 60-character lowercase payload uses Rust's automatic mask | disproven | Both use ECC Medium and version 4, but Rust auto selects mask 2 while the P900W decode reports mask 1. Forcing Rust mask 1 matches all pixels in both models' rasters |
 | These in-memory comparisons establish GUI or printed behavior | unknown | No GUI canvas or physical print was tested |
+
+
+## Cycle 37 QR byte-mask and mixed-segment probes
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother mask 1 on the original 60-byte lowercase payload is a one-payload anomaly | not supported | Three further P900W byte-only version 4/ECC M payloads of 50, 55, and 62 bytes also decode as mask 1. Rust automatic mask selection returns masks 2, 2, and 0 respectively. Forcing Rust mask 1 matches every pixel in all three 324x320 rasters at 8 px/module, origin (30,20) |
+| Brother always selects mask 1 for version 4/ECC M byte payloads | disproven | A diverse 60-character lowercase-plus-digit payload decodes as mask 2. Rust's default whole-byte segmentation also selects mask 2 but does not match the matrix. Encoding the lowercase prefix as bytes and the trailing digits as numeric at version 4/mask 2 matches every raster pixel |
+| Rust's current default QR segmenter reproduces Brother Mixed-mode segmentation for lower-case text followed by digits | disproven | The diverse fixture's default one-byte-segment matrix differs from the Brother BMP even though version, ECC, and mask agree; the byte-prefix/numeric-suffix candidate matches exactly |
+| The mask difference proves a particular alternate penalty formula | unknown | Runtime captures establish selected masks, but the exact Brother mask scoring/tie-break implementation has not been recovered |
+| These in-memory comparisons establish GUI or printed behavior | unknown | No GUI canvas or physical print was tested |

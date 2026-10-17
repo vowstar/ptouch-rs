@@ -14,6 +14,17 @@ fn main() {
             QrSegment::make_alphanumeric(&data[..split]),
             QrSegment::make_numeric(&data[split..]),
         ]
+    } else if args
+        .get(1)
+        .is_some_and(|mode| mode == "split-trailing-numeric-byte")
+    {
+        let split = data
+            .rfind(|character: char| !character.is_ascii_digit())
+            .map_or(0, |index| index + 1);
+        vec![
+            QrSegment::make_bytes(&data.as_bytes()[..split]),
+            QrSegment::make_numeric(&data[split..]),
+        ]
     } else {
         QrSegment::make_segments(data)
     };
