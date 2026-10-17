@@ -86,20 +86,23 @@ default MW-170 model; the earlier result's cause is unresolved. The Windows runt
 can test in-memory QR property changes, and captures the in-memory raster returned by Brother's LBX library. It
 confirmed editable QR payload and Code 39 data after load. The Code 39 raster
 decodes to the expected value. Rust's human-readable line now includes the
-Brother-observed start/stop delimiters. Brother and Rust QR rasters differ. ZXing-C++ reports version 3, ECC M, and
-data mask 7 for both decodes, while Brother reports mixed QR mode and automatic
-mask selection. The raw Brother capture decodes with ZXing-C++ only after a 90-degree rotation
-that crops to the original canvas and adds white padding; expanding the rotated
-canvas fails, and Rust decodes without that transform. A second QR encoder matches Rust's exact
-byte-mode 29x29 matrix with mask 7. On Windows, changing the Brother QR mode
+Brother-observed start/stop delimiters. Brother's QR raster first looked different from Rust's because its module
+pitch and placement differ. A pixel-level grid comparison found zero mismatches
+against Rust's exact version 3, ECC M, mask 7 matrix across every visible Brother
+cell for XS/S/M/L/XL. Brother clips the QR grid vertically in its fixed 128-pixel in-memory raster;
+the clipped extent varies with cell size. A crop-preserving 90-degree rotation
+and white padding lets ZXing-C++ recover the M payload, while an expanded
+lossless rotation does not decode because the raster still omits matrix rows. A second QR encoder also matches Rust's exact 29x29 matrix. On Windows,
+changing the Brother QR mode
 property in memory did not change two returned raster hashes, while changing the
 payload did. The same mode result held for numeric and uppercase alphanumeric
 payloads. Changing cell size across XS/S/M/L/XL changed raster width from 66 to 198 px
 while height stayed 128 px; only M decoded after the crop-preserving transform. Expanded rotations failed for all cell sizes.
 Forcing mask 0 produced a QR that decodes as mask 0. Measured widths equal
-33 times the CellSize enum values; this suggests 29 modules plus four cell units
-of horizontal margin, but that mapping remains an inference. The mode property's
-effect on other render or save paths remains unknown. GUI canvas behavior and
+33 times the CellSize enum values; the pixel mapping confirms a 29-module grid
+with two cell units of horizontal margin on each side. Brother's visible QR cells use the exact Rust byte-mode grid; the matrix rows
+cut off by the captured bitmap remain unobserved. The mode property's effect on
+other render or save paths remains unknown. GUI canvas behavior and
 physical print output remain unverified. The QR LBX fields follow a generic
 P-touch Editor 5.0.201 sample.
 

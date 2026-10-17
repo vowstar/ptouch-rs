@@ -288,7 +288,7 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | The Brother runtime reads the generated QR payload, Model 2, version 3 auto mode, MBCS 932, and Medium ECC | observed in object property | `GetBarcodeProperty()` returned the exact QR URL and `QrcodeData` fields `Model=Model2`, `Version=3`, `VerAuto=True`, `MBCS=932`, `EccLevel=M` |
 | The Brother runtime reads the generated Code 39 payload and display/check-digit options | observed in object property | `GetBarcodeProperty()` returned `Data=ABC-123`, `ShowCheckDigit=True`, `ShowChar=True`, and `CharAlign=Center` for SHA-256 `0cc382b3150075152e3c29ff4eab4fbfe99327a146fb94518440e5c1e3c40214` |
 | The in-memory Brother Code 39 raster is scannable and agrees with the Rust payload/check character | observed | `GetPrintingImage()` returned 482x128 BMP; `zbarimg` decoded `ABC-123W`. The Brother raster includes visible `*` start/stop delimiters and no external quiet zones. Cycle 22 aligned Rust human-readable text to include those delimiters; raster geometry remains incomparable because Brother returns object-only output while Rust currently captures the full label |
-| The in-memory Brother QR raster is scannable and matches the Rust QR matrix | discrepancy observed | `GetPrintingImage()` returned 132x128 BMP. Neither `zbarimg` nor ZXing-C++ decoded it, while Rust's 135x128 PNG decoded to `https://example.test/ptouch-cycle17`; their module patterns visibly differ despite matching runtime payload/model/version/ECC properties |
+| Brother and Rust QR rasters looked different at native size | historical observation, resolved for visible pixels | `GetPrintingImage()` returned 132x128 BMP; Cycle 33 aligned its visible module pixels to the exact Rust version 3 ECC M mask 7 matrix with zero mismatches. The Brother raster clips rows at the top in a fixed 128 px capture |
 | `GetPrintingImage()` output proves physical print output or the P-touch Editor GUI canvas is equivalent | unknown | The API returned an in-memory BMP without opening a printer handle. No physical print or GUI canvas inspection was performed |
 
 ## Cycle 20 Code 39 support
@@ -308,7 +308,7 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 |---|---|---|
 | Supported ASCII Model 2 QR objects import as native editable `.ptl` QR objects rather than SVG-backed images | implemented, tested | `crates/ptouch-render/src/lbx.rs::import_barcode`; `lbx::tests::imports_model_2_qr_from_editor_barcode_tags` asserts native payload, correction, geometry, no flattening warning, and visible rendered pixels |
 | LBX QR error correction, automatic or fixed version, and physical symbol size survive import into `.ptl` and export back to LBX | implemented, tested | `lbx::tests::imports_fixed_qr_version_and_correction_as_native_fields`; `document::tests::fixed_qr_version_requires_layout_version_8`; tests assert ECC, v5, content-box size, `.ptl` v8, and exported `version="5"` / `cellSize="1.250pt"` |
-| Imported LBX QR templates render equivalently to the source Brother application on PT-E550W/PT-P900W | unknown | No target-app QR fixture or visual/physical print comparison is available; existing QR schema evidence is an external P-touch Editor 5.0.201 QL-700 sample |
+| Imported LBX QR templates render equivalently to the source Brother application on PT-E550W/PT-P900W | partial in-memory evidence | A generated E550W QR archive now has exact visible matrix parity with Rust after aligning the clipped bitmap; P900W, GUI canvas, and physical print behavior remain unverified |
 
 
 ## Cycle 22 Code 39 readable-text parity
@@ -324,7 +324,7 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Claim | Status | Evidence |
 |---|---|---|
 | Brother's captured QR raster contains the expected URL payload when normalized for decoding | observed | ZXing-C++ decodes `https://example.test/ptouch-cycle17` from a grayscale 90-degree-rotated copy with 4 px white border; artifact `docs/re/windows-lbx-runtime/runtime-renders/editor-pt-e550w-qr-decoder-normalized.png`, SHA-256 `069a79fa7063cf0ab6c5748b219ddc7e596a1fa3c6ee905838f3ae6db226c2bc` |
-| Direct decoder failures establish the Brother QR raster is malformed | disproven | ZXing-C++ recovers the expected payload after rotation and padding; raw raster geometry/quiet-zone behavior and exact module-pattern parity remain unresolved; zbarimg does not decode the normalized derivative |
+| Direct decoder failures establish the Brother QR raster is malformed | disproven | ZXing-C++ recovers the expected payload after the crop-preserving rotation and padding; Cycle 33 later matched every visible matrix pixel to Rust. zbarimg still does not decode the derivative |
 
 
 ## Cycle 24 QR mask and symbol metadata
@@ -376,7 +376,7 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 |---|---|---|
 | Changing the QR cell-size property changes the in-memory raster width | observed | Windows probe changed the URL QR BMP width across XS/S/M/L/XL while height stayed 128 px: 66/99/132/165/198. Only M decoded under the crop-preserving rotation-plus-border transform; hashes and captures for XS/S/L/XL are preserved in `docs/re/windows-lbx-runtime/runtime-renders/` |
 | Changing the QR mask property from Auto to Mask0 changes the raster and decoded mask | observed | Mask0 BMP SHA-256 `4db8e3aed4c4c45136412a08dff4d0fc31574b936a8bfc2d668a87211e7bbaac`; ZXing-C++ recovers the expected URL and reports `DataMask=0` |
-| The default QR matrix difference is caused by the cell-size or mask property | not supported by current evidence | Brother's default reports `CellSize=M`, `Mask=Auto`; the normalized default and Rust symbols both decode as version 3, ECC M, data mask 7 |
+| The default QR raster appearance difference is caused by a different module matrix | resolved for visible pixels | Cycle 33 found zero pixel mismatches after mapping the captured Brother grid to the Rust version 3 ECC M mask 7 matrix; the Brother bitmap has vertical clipping |
 
 
 ## Cycle 30 QR cell-size geometry
@@ -384,8 +384,8 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Claim | Status | Evidence |
 |---|---|---|
 | Brother cell-size output width is 33 px times the enum values XS=2 through XL=6 | observed | Captured widths: 66, 99, 132, 165, 198 px; each bitmap height is 128 px |
-| CellSize likely acts as pixels per QR module, with four cell units of horizontal margin | inferred | Version 3 has a 29-module side; observed width equals `(29 + 4) * cellSizeEnum`. The proprietary image API exposes no module coordinates, so this mapping is not independently verified |
-| CellSize L and XL exceed the 128 px raster height | inferred from observed bounds | Expected 29-module sides at enum values 5/6 are 145/174 px; captured black bounds reach the 128 px bitmap edge. The L/XL images do not decode under the crop-preserving transform; no physical print was performed |
+| CellSize acts as pixels per module with two cell units of horizontal margin on each side | observed for visible pixels | Cycle 33 pixel comparison found zero mismatches on a 29-module grid with cell pitch n, origin x=2n, y=2n-14; output width is `(29 + 4) * n` |
+| CellSize variants clip the same QR matrix vertically in the fixed 128 px raster | observed | Cycle 33 matched all captured pixels to the Rust matrix with zero differences; XS/S/M clip leading rows, L/XL clip leading and trailing rows. No physical print was performed |
 
 
 ## Cycle 31 QR cell-size decoder sweep
@@ -393,7 +393,7 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Claim | Status | Evidence |
 |---|---|---|
 | Only the CellSize M Brother capture decoded with the tested local decoders and raster normalizations | observed | ZXing-C++ tested rotations 0/90/180/270 with Pillow `expand=False`, nearest-neighbor scales 1x/2x/4x, and white borders 0/4/8/16/32/64 px (scaled with the image); only M decoded. With `expand=True`, retaining the full rotated rectangle, none decoded, including M. zbar decoded none of the five captures in either transform family |
-| XS/S/L/XL captures are malformed QR symbols | unknown | Decoder failure after bounded transforms does not establish invalid codewords; source matrix extraction and alternate decoder analysis remain open |
+| XS/S/L/XL captures contain a different or malformed visible QR matrix | disproven for visible pixels | Cycle 33 found zero pixel mismatches against the Rust version 3 ECC M mask 7 matrix across every visible module pixel; the captures are truncated at the bitmap edges |
 
 
 ## Cycle 32 QR rotation normalization correction
@@ -403,3 +403,12 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | The saved Brother decoder derivative was created with a full, uncropped 90-degree rotation | corrected | Pillow `Image.rotate(90)` used its default `expand=False`, preserving the original rectangular canvas and cropping the rotated content; a 4 px border was then added |
 | Retaining the full rotated rectangle decodes the Brother QR capture | not observed | With Pillow `expand=True`, ZXing-C++ did not decode any CellSize raster, including M, even after scaling and borders. The earlier successful M decode depends on the fixed-canvas cropped transform |
 | The crop-preserving transform establishes the source image's inherent QR orientation | unknown | The transform itself rotates and crops the image, so scanner orientation from that derivative cannot establish source orientation |
+
+
+## Cycle 33 Brother/Rust QR module-grid alignment
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Every visible Brother E550W QR matrix pixel matches Rust's version 3 ECC M mask 7 output | observed | `compare-qr-matrix.py` reports zero pixel mismatches for XS/S/M/L/XL BMPs against `qr-v3-mask7.matrix`, generated by the Rust qrcodegen path for `https://example.test/ptouch-cycle17` |
+| The E550W capture clips the QR module grid vertically at its 128 px raster edges | observed | Grid origin `(x,y)=(2n,2n-14)` for cell pitch `n=2..6`; visible matrix rows are XS 5-28, S 2-28, M 1-28, L 0-26, XL 0-21 |
+| The visible raster parity result establishes full symbol parity or physical print behavior | unknown | Cropped matrix rows are absent from the BMP; only the in-memory `GetPrintingImage()` E550W capture was compared. No GUI canvas or physical print validation occurred |

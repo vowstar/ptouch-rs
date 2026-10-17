@@ -65,10 +65,10 @@ does not decode that normalized image. The rotated and padded derivative is
 preserved as `runtime-renders/editor-pt-e550w-qr-decoder-normalized.png`
 (SHA-256 `069a79fa7063cf0ab6c5748b219ddc7e596a1fa3c6ee905838f3ae6db226c2bc`).
 ZXing-C++ reports version 3, ECC M, and data mask 7 for both the normalized
-Brother raster and Rust raster. The payload is recoverable from both, but the
-matching mask does not explain their visible pattern differences. Data
-segmentation/charset behavior and raster orientation/scaling remain under
-investigation.
+Brother raster and Rust raster. The payload is recoverable from both. The visible matrix match shows the
+native-size appearance difference comes
+from pixel scale and vertical cropping. Brother reports `Mode=Mixed`; the exact
+mode-setting semantics and physical print behavior remain open.
 
 Cycle 22 changed Rust readable Code 39 text to include the observed `*` start/stop sentinels. The rendered result is preserved as `runtime-renders/rust-pt-e550w-code39-cycle22.png` (581x128 px, SHA-256 `1738433fa446738390b2d40d58129eb748af0ab331d98bd4524d0ce2e36d179d`). It still decodes to `ABC-123W`. The rendered full-label dimensions are not directly comparable to Brother's object-only 482x128 image, so this does not settle geometry parity.
 
@@ -76,9 +76,10 @@ The saved BMP/PNG comparisons are in `runtime-renders/`. In the Code 39
 comparison, Brother's raster visibly includes the `*` start/stop delimiters in
 human-readable text and fills nearly the full raster width with bars; Rust's
 current raster omits those delimiters and keeps quiet zones. Both output
-rasters decode to the same payload and check character. QR module patterns
-also differ even though the runtime reports matching data, model, version, and
-ECC fields.
+rasters decode to the same payload and check character. The QR pattern appeared different at native size. Cycle 33 aligned each Brother
+cell size to Rust's exact version 3, ECC M, mask 7 matrix: every visible QR pixel
+matched. The raster is vertically offset and clipped inside the fixed 128 px
+bitmap, with the clipped rows varying by cell size.
 
 | Runtime or Rust image | Dimensions | SHA-256 |
 |---|---:|---|
@@ -181,3 +182,21 @@ including M. zbar decoded none of the five captures in either transform family.
 The successful M decode therefore depends on the crop-preserving transform; the
 role of that crop remains unexplained, and decoder failure does not establish
 that XS/S/L/XL contain invalid QR matrices.
+
+
+Cycle 33 adds `compare-qr-matrix.py` and `qr-v3-mask7.matrix`. The matrix is
+the Rust `qrcodegen` output for the same URL at version 3, ECC M, mask 7. Run
+the comparison with Pillow installed:
+
+```sh
+uv run --with pillow python docs/re/windows-lbx-runtime/compare-qr-matrix.py
+```
+
+It reports zero pixel mismatches across all visible matrix pixels in each
+Brother BMP. For cell size n=2..6, the measured grid origin is x=2n, y=2n-14.
+The visible module rows are XS 5-28, S 2-28, M 1-28, L 0-26, and XL 0-21.
+This maps the clipping directly: the smaller sizes lose more leading rows, while
+L/XL also lose trailing rows at the fixed 128 px raster edge. The expected
+module pixels outside those bounds are not present in the capture. This establishes
+in-memory raster matrix parity for the visible E550W QR region only; it does not
+establish GUI canvas or physical print behavior.
