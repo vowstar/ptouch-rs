@@ -37,14 +37,17 @@ dotnet publish -c Release -r win-x86 --self-contained true
   .\pt-e550w-qr-export.lbx .\pt-p900w-qr-export.lbx
 ```
 
-The first Cycle 16 run recorded target IDs and media metadata for the simple
-text pair. Repeating the probe on the same machine and the same archived text
-files in Cycle 17 returned the Editor's default Brother MW-170 model, stored
-printer ID `0`, and media ID `138`. The QR pair returned the same fallback.
-The current run also reported LBX version `1.10` and generator
-`P-touch Editor 6.12.1.0 Windows` for all four files. This does not prove target
-metadata acceptance or QR-object preservation. The discrepancy between the
-two runs is unresolved.
+Cycle 19 copied the four archived files to `C:\Users\joshd\ptouch-probe`,
+verified their SHA-256 hashes, and loaded them twice with the probe. Both runs
+returned PT-E550W / ID `26160` for the E550W files and PT-P900W / ID `28464`
+for the P900W files, with media ID `261`, LBX version `1.8`, and generator
+`ptouch-rs`. The runtime also returned those same values for files converted
+from the QR archives by Cycle 18; both converted QR archives were byte-for-byte
+identical to the archived originals. The Cycle 17 report of MW-170 / ID `0` /
+media `138` is contradicted by these repeated hash-verified runs. Its exact
+cause cannot be recovered from the preserved logs. This establishes metadata
+returned by `LbxFactory.CreateFromPath`; it does not verify GUI rendering,
+editable QR payload after load, or print behavior.
 
 The archived file hashes are:
 

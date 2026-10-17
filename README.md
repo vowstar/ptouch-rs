@@ -74,12 +74,13 @@ The importer rejects files containing only unsupported objects. LBX conversion
 fidelity and P-touch Editor behavior remain under investigation. iPrint&Label
 evidence confirms LBX editing and print paths for both target models, including
 text, symbol, image, barcode, date/time, frame, rectangle, and polygon objects.
-P-touch Editor ships LBX libraries and CIV LBX templates. A prior Windows probe
-recorded target IDs for simple text exports, but a repeat run in Cycle 17 loaded
-those same files as the Editor's default MW-170 document with `StoredPrinterID`
-zero. Target-model metadata preservation is therefore unconfirmed. The QR LBX
-fields follow a generic P-touch Editor 5.0.201 sample; target-model QR rendering
-and runtime loading remain unverified.
+P-touch Editor ships LBX libraries and CIV LBX templates. Two hash-verified
+Windows runtime runs returned the intended PT-E550W and PT-P900W metadata for
+the archived text and QR exports. This contradicts a Cycle 17 report of the
+default MW-170 model; the earlier result's cause is unresolved. The runtime
+probe reads metadata only. GUI rendering, preservation of editable QR payload
+after load, and print behavior remain unverified. The QR LBX fields follow a
+generic P-touch Editor 5.0.201 sample.
 
 The CLI and GUI support placeholder substitution and CSV batches. The CLI can
 also generate a numeric sequence through a named layout placeholder. This does
