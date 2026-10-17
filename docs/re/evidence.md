@@ -517,3 +517,13 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Border scoring improves agreement across the nine exact-mask captures | disproven | Plain libqrencode-style scoring matches seven of nine Brother selections. Border scoring matches six of nine because it also changes Cycle 40 probes 14 and 20 from their correct masks 6 and 7 to masks 2 and 2. |
 | The residual score gaps are large | disproven | Without a border, the selected Brother masks are 10 points from the winner for `ABC123abc789` and 16 points for the 55-byte case. The script records all N1/N2/N3/N4 components and top-two margins for each candidate. |
 | The findings identify Brother's scoring domain | unknown | The border hypothesis is not a general explanation. No production scoring change is justified by these nine controls, and Brother's internal implementation remains unidentified. |
+
+
+## Cycle 44 forced-mask matrix comparison
+
+| Claim | Status | Evidence |
+|---|---|---|
+| The residual cases use different encoded data at masks other than Brother's automatic choice | disproven | The Windows P900W runtime was set in memory to each mask 0-7 for `ABC123abc789` (version 1/ECC M) and the 55-byte repetitive lowercase payload (version 4/ECC M). All 16 resulting full module grids match Rust fixed-mask matrices with zero pixel mismatches. |
+| Payload segmentation, version, or ECC explains the two automatic mask differences | disproven for these controls | The mixed payload matches at all eight masks using the Cycle 38 alphanumeric-prefix/byte-suffix segmentation. The repetitive payload matches at all eight as one byte segment. Runtime metadata reports the same versions and ECC as Rust. |
+| Brother's automatic mask selector is the only remaining source of these two matrix differences | observed | With encoded matrices held constant across all forced masks, Brother still automatically selects mask 0 instead of the libqrencode-style mask 3 for the mixed payload, and mask 1 instead of mask 2 for the repetitive payload. |
+| The evidence establishes physical print parity | unknown | Tests used in-memory `GetPrintingImage()` captures only. No printer handle, settings write, or print job was used. |

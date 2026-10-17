@@ -88,7 +88,10 @@ its QR format bits identify ECC H and mask 4. Symbol rendering requires an
 installed Brother font containing the requested glyph. Cycle 43 tested adding
 a one-module white margin to the mask-scoring matrix. It explains the 55-byte
 mask exception in isolation, but lowers agreement across nine exact-mask cases
-from seven to six; the production score remains unchanged.
+from seven to six; the production score remains unchanged. Cycle 44 rendered all
+eight forced masks for both remaining exceptions. Every Brother in-memory
+module grid matches Rust's fixed-mask matrix, confirming the gaps come from
+automatic mask selection rather than payload encoding or raster construction.
 
 The importer rejects files containing only unsupported objects. LBX conversion
 fidelity and P-touch Editor behavior remain under investigation. iPrint&Label

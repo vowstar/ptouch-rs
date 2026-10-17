@@ -130,6 +130,18 @@ N1/N2/N3/N4 component scores for both residuals. This does not support changing
 the production scorer.
 
 
+Cycle 44 uses the `PT_QR_MASK_OVERRIDE` in-memory control to render masks 0-7
+for `ABC123abc789` (version 1/ECC M) and the 55-byte repetitive lowercase
+payload (version 4/ECC M). The BMP captures are named
+`runtime-renders/editor-pt-p900w-qr-mask-override-*-cycle44.bmp`. Run
+`uv run --with pillow python docs/re/windows-lbx-runtime/compare-qr-all-mask-candidates.py`
+to compare each image with Rust's fixed-mask matrix. All 16 captures have zero
+pixel mismatches across their complete symbol grids. The payload, segmentation,
+version, and ECC therefore match for every forced mask; only automatic mask
+selection remains different. These are in-memory renders, with no printer
+handle, settings write, or print job.
+
+
 Cycle 25 reran the read-only object probe on Windows with the archived
 `pt-e550w-qr-export.lbx`. The additional scalar properties confirm the
 application's QR object selects mixed mode and automatic masking. The matching
