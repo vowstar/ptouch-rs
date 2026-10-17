@@ -545,3 +545,12 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Increasing the integer N1 run-penalty weight resolves the residual masks | disproven | `docs/re/windows-lbx-runtime/analyze-qr-n1-n4-variants.py` sweeps N1 weights 1-8 across the same 19 controls. Weight 1 matches 17/19; weights 2-8 match 16, 13, 12, 12, 12, 11, and 11. Neither residual choice changes to Brother's selected mask. |
 | Alternative N4 dark-ratio rounding improves agreement | disproven | Nearest, floor, and ceiling integer-percent bands, and qrcodegen's exact-ratio calculation all retain the same 17/19 matches and the same two residual winners. |
 | N1 weights and N4 rounding determine Brother's complete mask rule | unknown | This sweep varies only simple integer weights and ratio formulas. More general pattern scans, scoring domains, and payload families remain untested. |
+
+
+## Cycle 47 horizontal and vertical scan domains
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Horizontal-only N1 scanning with both N3 axes resolves both residual masks | observed in the 19-case sample | `docs/re/windows-lbx-runtime/analyze-qr-scan-domains.py` predicts Brother mask 1 for the 55-byte repetitive payload and mask 0 for `ABC123abc789`, while keeping N2/N4 and both N3 axes. |
+| That axis-specific scan is a better general rule | disproven | It matches 17/19, the same as the existing score. It shifts errors to Cycle 40 probe 20 (predicts 2, Brother 7) and Cycle 38's interleaved byte/alphanumeric payload (predicts 2, Brother 3). Horizontal-only and vertical-only N1/N3 each match 13/19. |
+| Horizontal and vertical scoring can be discarded for all payloads | unknown | The tested candidates are broad axis exclusions and one mixed variant. Payload-conditioned scans and other scoring domains remain untested. |

@@ -96,7 +96,10 @@ Cycle 45 swept integer N2 block-penalty weights 1-8 across 19 captured Brother
 mask choices. The current 1x weight matches 17/19; higher weights match fewer
 and do not resolve either remaining case. Cycle 46 found the same result when
 sweeping N1 weights 1-8 and four N4 rounding formulas: no variant improves on
-17/19, and neither residual mask is resolved.
+17/19, and neither residual mask is resolved. Cycle 47 found that horizontal
+N1 scanning with both N3 axes also reaches 17/19 and predicts both residual
+masks correctly, but shifts the mismatches to two other controls. The production
+scorer remains unchanged.
 
 The importer rejects files containing only unsupported objects. LBX conversion
 fidelity and P-touch Editor behavior remain under investigation. iPrint&Label

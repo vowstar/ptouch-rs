@@ -290,3 +290,12 @@ byte-only grids. Two cases remain different: `ABC123abc789` and the
 score by default. Validation covers the library's in-memory raster only; it
 does not establish GUI canvas or physical print behavior. The scoring source
 comparison is recorded in qr-mask-score-probes.md.
+
+
+Cycle 47 compares horizontal-only, vertical-only, and mixed axis variants with
+`analyze-qr-scan-domains.py`. Horizontal N1 with both N3 axes selects the
+Brother mask for both residual cases, but the total stays 17/19 because the
+variant changes Cycle 40 probe 20 from mask 7 to 2 and the Cycle 38 interleaved
+payload from mask 3 to 2. Horizontal-only and vertical-only N1/N3 scans each
+match 13/19. This axis variant is another partial fit, not evidence for a
+complete rule, so production scoring remains unchanged.
