@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 
-use log::{error, info};
+use log::{error, info, warn};
 
 use ptouch_render::document::LabelDocument;
 use ptouch_render::raster;
@@ -237,21 +237,25 @@ fn do_open_layout(state: &mut AppState) {
         return;
     };
 
-    let text = match std::fs::read_to_string(&path) {
-        Ok(text) => text,
-        Err(e) => {
-            state.status_message = format!("Open error: {}", e);
-            error!("Layout read error: {}", e);
-            return;
-        }
-    };
-
-    match LabelDocument::from_toml_str(&text)
+    match LabelDocument::from_path(&path)
         .map_err(|error| error.to_string())
-        .and_then(|document| apply_layout(state, document))
-    {
-        Ok(()) => {
-            state.status_message = format!("Opened {}", path.display());
+        .and_then(|(document, warnings)| {
+            apply_layout(state, document)?;
+            Ok(warnings)
+        }) {
+        Ok(warnings) => {
+            state.status_message = if warnings.is_empty() {
+                format!("Opened {}", path.display())
+            } else {
+                format!(
+                    "Opened {} with {} unsupported item warning(s)",
+                    path.display(),
+                    warnings.len()
+                )
+            };
+            for warning in warnings {
+                warn!("LBX import: {}", warning);
+            }
             info!("Opened layout: {}", path.display());
         }
         Err(e) => {

@@ -51,10 +51,14 @@ For `--tape-width-mm`, use Brother's width code; code `4` denotes 3.5mm tape.
 
 ## Current parity limits
 
-The Rust layout format is TOML `.ptl`; it does not import or export Brother
-`.lbx` files. The editor has no barcode or QR object yet. iPrint&Label evidence
-confirms LBX editing and print paths for both target models, including text,
-symbol, image, barcode, date/time, frame, rectangle, and polygon objects.
+The Rust layout format is TOML `.ptl`. The CLI and GUI can import ordinary-text
+objects from `.lbx` archives, but cannot export LBX. This bounded importer skips
+specialized cable, table, barcode, drawing, and image objects with warnings, and
+rejects files containing only unsupported objects. LBX conversion fidelity and
+P-touch Editor behavior remain under investigation. The editor has no barcode
+or QR object yet. iPrint&Label evidence confirms LBX editing and print paths for
+both target models, including text, symbol, image, barcode, date/time, frame,
+rectangle, and polygon objects.
 P-touch Editor ships LBX libraries and CIV LBX templates, but its exact
 import/export and print behavior remains unverified.
 

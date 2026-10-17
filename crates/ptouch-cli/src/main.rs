@@ -1111,8 +1111,10 @@ fn validate_tcp_media_args(args: &PrintArgs) -> Result<(), PtouchError> {
 
 /// Load a `.ptl` layout, render it, and either print it or save as an image.
 fn print_layout(args: &PrintArgs, layout_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let text = std::fs::read_to_string(layout_path)?;
-    let mut doc = LabelDocument::from_toml_str(&text)?;
+    let (mut doc, warnings) = LabelDocument::from_path(std::path::Path::new(layout_path))?;
+    for warning in warnings {
+        eprintln!("warning: {warning}");
+    }
 
     if args.list_vars {
         for name in doc.placeholders() {

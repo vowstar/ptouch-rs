@@ -14,6 +14,7 @@ pub mod document;
 pub mod font;
 pub mod image_loader;
 pub mod layout;
+pub mod lbx;
 pub mod raster;
 pub mod styled_text;
 pub mod text;
