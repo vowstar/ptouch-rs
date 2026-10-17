@@ -94,7 +94,9 @@ module grid matches Rust's fixed-mask matrix, confirming the gaps come from
 automatic mask selection rather than payload encoding or raster construction.
 Cycle 45 swept integer N2 block-penalty weights 1-8 across 19 captured Brother
 mask choices. The current 1x weight matches 17/19; higher weights match fewer
-and do not resolve either remaining case.
+and do not resolve either remaining case. Cycle 46 found the same result when
+sweeping N1 weights 1-8 and four N4 rounding formulas: no variant improves on
+17/19, and neither residual mask is resolved.
 
 The importer rejects files containing only unsupported objects. LBX conversion
 fidelity and P-touch Editor behavior remain under investigation. iPrint&Label

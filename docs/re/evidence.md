@@ -536,3 +536,12 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | A higher integer N2 weight resolves the two residual Brother mask choices | disproven | `docs/re/windows-lbx-runtime/analyze-qr-n2-weights.py` regenerated all eight candidates for 19 controls and swept N2 weights 1-8 while leaving N1/N3/N4 unchanged. The residual choices remain mismatched at every tested weight. |
 | Raising N2 improves agreement with the 19 captures | disproven | Weight 1 matches 17/19. Weights 2-8 match 16, 13, 13, 12, 12, 10, and 10, respectively. |
 | The sweep identifies the complete Brother mask rule | unknown | Only one component's integer weight was varied. Other scan definitions, score domains, tie-breaks, and payload families remain open. |
+
+
+## Cycle 46 N1 and N4 variants
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Increasing the integer N1 run-penalty weight resolves the residual masks | disproven | `docs/re/windows-lbx-runtime/analyze-qr-n1-n4-variants.py` sweeps N1 weights 1-8 across the same 19 controls. Weight 1 matches 17/19; weights 2-8 match 16, 13, 12, 12, 12, 11, and 11. Neither residual choice changes to Brother's selected mask. |
+| Alternative N4 dark-ratio rounding improves agreement | disproven | Nearest, floor, and ceiling integer-percent bands, and qrcodegen's exact-ratio calculation all retain the same 17/19 matches and the same two residual winners. |
+| N1 weights and N4 rounding determine Brother's complete mask rule | unknown | This sweep varies only simple integer weights and ratio formulas. More general pattern scans, scoring domains, and payload families remain untested. |

@@ -151,6 +151,15 @@ residual case matches at any tested weight. This rejects a simple integer N2
 rescaling, not other scoring algorithms.
 
 
+Cycle 46 extends the same 19-control sweep to N1 and N4. The script
+`analyze-qr-n1-n4-variants.py` tests N1 weights 1-8 and four N4 variants:
+nearest, floor, and ceiling integer-percent bands, plus qrcodegen's exact-ratio
+calculation. N1 weight 1 matches 17/19; weights 2-8 match 16, 13, 12, 12, 12,
+11, and 11. All four N4 variants match the same 17/19 cases and leave both
+residual choices unchanged. These weight and rounding sweeps do not justify a
+production change.
+
+
 Cycle 25 reran the read-only object probe on Windows with the archived
 `pt-e550w-qr-export.lbx`. The additional scalar properties confirm the
 application's QR object selects mixed mode and automatic masking. The matching
