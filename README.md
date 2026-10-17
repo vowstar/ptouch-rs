@@ -49,6 +49,22 @@ routes and SNMP parsing are tested with loopback fixtures, not physical printers
 Tape widths: 3.5mm, 6mm, 9mm, 12mm, 18mm, 24mm, 36mm.
 For `--tape-width-mm`, use Brother's width code; code `4` denotes 3.5mm tape.
 
+## Current parity limits
+
+The Rust layout format is TOML `.ptl`; it does not import or export Brother
+`.lbx` files. The editor has no barcode or QR object yet. iPrint&Label evidence
+confirms LBX editing and print paths for both target models, including text,
+symbol, image, barcode, date/time, frame, rectangle, and polygon objects.
+P-touch Editor ships LBX libraries and CIV LBX templates, but its exact
+import/export and print behavior remains unverified.
+
+The CLI and GUI support placeholder substitution and CSV batches. They do not
+yet match iPrint&Label's LBX numbering and database-assigned print workflows.
+Network media selection currently covers standard tape-width codes. iPrint&Label
+also lists SL and heat-shrink media for PT-E550W and a broader shared media list
+for PT-P900W; media-specific print semantics and acceptance for each listed
+family remain unverified.
+
 ## Building
 
 Requires Rust stable toolchain.
