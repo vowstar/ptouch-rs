@@ -13,7 +13,6 @@ use crate::layout::{PositionMode, TextBox, VerticalAlign};
 use crate::styled_text::{StyleSpan, TextStyle};
 use crate::text::TextAlign;
 use crate::{RenderError, Result};
-use qrcodegen::{QrCode, QrCodeEcc, QrSegment, Version};
 
 const PT_TO_MM: f64 = 25.4 / 72.0;
 pub const MAX_ARCHIVE_BYTES: usize = 64 * 1024 * 1024;
@@ -689,14 +688,11 @@ fn import_barcode(node: roxmltree::Node<'_, '_>, page: LbxPage) -> Result<ImageI
             "skipped non-ASCII LBX QR payload; source MBCS conversion is not reproduced".into(),
         ));
     }
-    let (ecc, error_correction) = match qr_style.attribute("eccLevel").unwrap_or("15%") {
-        "7%" => (QrCodeEcc::Low, crate::barcode::QrErrorCorrection::Low),
-        "15%" => (QrCodeEcc::Medium, crate::barcode::QrErrorCorrection::Medium),
-        "25%" => (
-            QrCodeEcc::Quartile,
-            crate::barcode::QrErrorCorrection::Quartile,
-        ),
-        "30%" => (QrCodeEcc::High, crate::barcode::QrErrorCorrection::High),
+    let error_correction = match qr_style.attribute("eccLevel").unwrap_or("15%") {
+        "7%" => crate::barcode::QrErrorCorrection::Low,
+        "15%" => crate::barcode::QrErrorCorrection::Medium,
+        "25%" => crate::barcode::QrErrorCorrection::Quartile,
+        "30%" => crate::barcode::QrErrorCorrection::High,
         level => {
             return Ok(ImageImport::Skipped(format!(
                 "skipped LBX QR code with unsupported error-correction level '{level}'"
@@ -716,33 +712,15 @@ fn import_barcode(node: roxmltree::Node<'_, '_>, page: LbxPage) -> Result<ImageI
             }
         })
     };
-    let segments = QrSegment::make_segments(data);
-    let qr = match fixed_version {
-        None => match QrCode::encode_segments_advanced(
-            &segments,
-            ecc,
-            Version::MIN,
-            Version::MAX,
-            None,
-            false,
-        ) {
-            Ok(qr) => qr,
-            Err(_) => {
-                return Ok(ImageImport::Skipped(
-                    "skipped LBX QR payload that exceeds the Model 2 QR capacity".into(),
-                ));
-            }
-        },
-        Some(fixed_version) => {
-            let version = Version::new(fixed_version);
-            match QrCode::encode_segments_advanced(&segments, ecc, version, version, None, false) {
-                Ok(qr) => qr,
-                Err(_) => {
-                    return Ok(ImageImport::Skipped(
-                        "skipped LBX QR payload that exceeds its configured version".into(),
-                    ));
-                }
-            }
+    let qr = match crate::barcode::encode_qr(data, error_correction, fixed_version) {
+        Ok(qr) => qr,
+        Err(_) => {
+            let warning = if fixed_version.is_some() {
+                "skipped LBX QR payload that exceeds its configured version"
+            } else {
+                "skipped LBX QR payload that exceeds the Model 2 QR capacity"
+            };
+            return Ok(ImageImport::Skipped(warning.into()));
         }
     };
 
@@ -1762,6 +1740,40 @@ mod tests {
         let content = object.content_box.as_ref().unwrap();
         assert!((content.width_mm - 58.0 * PT_TO_MM).abs() < 0.001);
         assert!((content.height_mm - 58.0 * PT_TO_MM).abs() < 0.001);
+        let rendered = crate::layout::render_document(
+            &result.document,
+            256,
+            180,
+            &mut crate::text::TextRenderer::with_test_font(),
+        )
+        .unwrap();
+        assert!(
+            rendered
+                .bitmap
+                .as_ref()
+                .unwrap()
+                .data()
+                .iter()
+                .any(|pixel| *pixel != 0)
+        );
+    }
+
+    #[test]
+    fn imports_and_renders_fixed_version_mixed_mode_qr() {
+        let xml = format!(
+            "{PREFIX}<barcode:barcode><pt:objectStyle x=\"0pt\" y=\"0pt\" width=\"58pt\" height=\"58pt\" angle=\"0\"/><barcode:barcodeStyle protocol=\"QRCODE\" margin=\"false\"/><pt:data>HELLO WORLD 1234567890</pt:data><barcode:qrcodeStyle model=\"2\" eccLevel=\"15%\" cellSize=\"2.0pt\" mbcs=\"932\" removeCharKind=\"0\" removeCharString=\"\" joint=\"1\" jointSpace=\"8\" jointVertically=\"false\" version=\"1\"/></barcode:barcode>{SUFFIX}"
+        );
+        let result = import(&archive(&xml)).unwrap();
+        assert!(result.warnings.is_empty());
+        assert!(matches!(
+            &result.document.elements[0].as_object().unwrap().content,
+            ObjectContent::QrCode {
+                data,
+                error_correction: crate::barcode::QrErrorCorrection::Medium,
+                version: Some(1),
+            } if data == "HELLO WORLD 1234567890"
+        ));
+
         let rendered = crate::layout::render_document(
             &result.document,
             256,

@@ -86,6 +86,44 @@ impl QrErrorCorrection {
     }
 }
 
+pub(crate) fn encode_qr(
+    data: &str,
+    correction: QrErrorCorrection,
+    version: Option<u8>,
+) -> std::result::Result<qrcodegen::QrCode, qrcodegen::DataTooLong> {
+    if let Some(version) = version {
+        let version = qrcodegen::Version::new(version);
+        let segments = crate::qr_segments::make_segments(data, version);
+        return qrcodegen::QrCode::encode_segments_advanced(
+            &segments,
+            correction.level(),
+            version,
+            version,
+            None,
+            false,
+        );
+    }
+
+    let mut last_error = None;
+    for (first, last) in [(1, 9), (10, 26), (27, 40)] {
+        let min_version = qrcodegen::Version::new(first);
+        let max_version = qrcodegen::Version::new(last);
+        let segments = crate::qr_segments::make_segments(data, min_version);
+        match qrcodegen::QrCode::encode_segments_advanced(
+            &segments,
+            correction.level(),
+            min_version,
+            max_version,
+            None,
+            false,
+        ) {
+            Ok(qr) => return Ok(qr),
+            Err(error) => last_error = Some(error),
+        }
+    }
+    Err(last_error.expect("all QR version groups are evaluated"))
+}
+
 /// Render a QR symbol with a four-module quiet zone at a stable 8 px/module.
 pub fn render_qr(
     data: &str,
@@ -95,32 +133,13 @@ pub fn render_qr(
     if data.is_empty() {
         return Err(RenderError::Layout("QR code data cannot be empty".into()));
     }
-    let segments = qrcodegen::QrSegment::make_segments(data);
-    let qr = if let Some(version) = version {
-        if !(1..=40).contains(&version) {
-            return Err(RenderError::Layout(
-                "QR code version must be between 1 and 40".into(),
-            ));
-        }
-        qrcodegen::QrCode::encode_segments_advanced(
-            &segments,
-            correction.level(),
-            qrcodegen::Version::new(version),
-            qrcodegen::Version::new(version),
-            None,
-            false,
-        )
-    } else {
-        qrcodegen::QrCode::encode_segments_advanced(
-            &segments,
-            correction.level(),
-            qrcodegen::Version::MIN,
-            qrcodegen::Version::MAX,
-            None,
-            false,
-        )
+    if version.is_some_and(|version| !(1..=40).contains(&version)) {
+        return Err(RenderError::Layout(
+            "QR code version must be between 1 and 40".into(),
+        ));
     }
-    .map_err(|_| RenderError::Layout("QR code data exceeds the supported capacity".into()))?;
+    let qr = encode_qr(data, correction, version)
+        .map_err(|_| RenderError::Layout("QR code data exceeds the supported capacity".into()))?;
     let modules = u32::try_from(qr.size())
         .map_err(|_| RenderError::Layout("QR symbol dimensions are invalid".into()))?;
     let side = (modules + 8) * 8;
@@ -276,6 +295,42 @@ mod tests {
             for x in 0..expected.size() {
                 let rendered = bitmap.get_pixel((x as u32 + 4) * 8, (y as u32 + 4) * 8);
                 assert_eq!(rendered, expected.get_module(x, y), "module ({x}, {y})");
+            }
+        }
+    }
+
+    #[test]
+    fn fixed_version_mixed_text_fits_when_segmented_for_its_modes() {
+        let bitmap =
+            render_qr("HELLO WORLD 1234567890", QrErrorCorrection::Medium, Some(1)).unwrap();
+
+        assert_eq!(bitmap.width(), 29 * 8);
+    }
+
+    #[test]
+    fn automatic_mixed_text_selects_compact_version_one() {
+        let bitmap = render_qr("HELLO WORLD 1234567890", QrErrorCorrection::Medium, None).unwrap();
+
+        assert_eq!(bitmap.width(), 29 * 8);
+    }
+
+    #[test]
+    fn automatic_mixed_byte_numeric_qr_matches_brother_modules() {
+        let data = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz01234567";
+        let bitmap = render_qr(data, QrErrorCorrection::Medium, None).unwrap();
+        let reference = include_str!("../tests/fixtures/p900w-qr-mixed-byte-numeric-v4-m.txt");
+        let mut lines = reference.lines();
+        let metadata = lines.next().unwrap();
+        assert_eq!(metadata, "version=4 ecc=Medium mask=2 size=33");
+        let matrix: Vec<_> = lines.collect();
+        assert_eq!(bitmap.width(), 41 * 8);
+        assert_eq!(matrix.len(), 33);
+        for (row, expected) in matrix.iter().enumerate() {
+            assert_eq!(expected.len(), 33);
+            for (column, module) in expected.bytes().enumerate() {
+                let actual =
+                    bitmap.get_pixel((column as u32 + 4) * 8 + 4, (row as u32 + 4) * 8 + 4);
+                assert_eq!(actual, module == b'#', "module ({column}, {row})");
             }
         }
     }

@@ -72,10 +72,13 @@ objects created in the GUI preserve the same fields. Supported Code 39 objects
 preserve data, Mod 43 option, narrow bar width, and centered readable-text
 setting. Code 39 import skips other bar-width ratios and readable-text
 alignments because the native model does not preserve them. Windows P-touch
-Editor in-memory QR rasters match Rust matrices for tested version 3 URL and
-version 1 mixed-segment and numeric payloads. Automatic QR encoding preserves
-the requested ECC level instead of boosting it when the payload fits. Rust still differs from Brother on mask selection for repetitive version 4 byte payloads, and its whole-string segmenter misses Brother's mixed numeric, alphanumeric, and byte-mode splits. GUI canvas
-and physical barcode rendering remain unverified. Symbol rendering
+Editor in-memory QR rasters match Rust matrices for the tested version 3 URL,
+version 1 numeric payload, and version 4 mixed byte/numeric payload. The QR
+segmenter now combines numeric, alphanumeric, and byte runs for automatic and
+fixed versions, and automatic QR encoding preserves the requested ECC level.
+Mask selection still differs for repetitive version 4 byte payloads and tested
+short version 1 mixed payloads. GUI canvas and physical barcode rendering
+remain unverified. Symbol rendering
 requires an installed Brother font containing the requested glyph.
 
 The importer rejects files containing only unsupported objects. LBX conversion

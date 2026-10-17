@@ -462,3 +462,14 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Brother selects numeric and alphanumeric segments around byte-only runs for the tested short mixed payloads | observed | Five P900W version 1/ECC M rasters match candidate segment layouts pixel-for-pixel: byte+numeric for `hello 1234567890`, numeric+byte for `1234567890hello`, alphanumeric+numeric for `HELLO WORLD 1234567890`, byte+alphanumeric for `abc123DEF456`, and alphanumeric+byte for `ABC123abc789`. Decoder masks are 0, 3, 3, 3, and 0 respectively |
 | Rust's current whole-string segmentation reproduces these mixed-mode matrices | disproven | For the first three payloads, Rust automatic encoding selects version 2 while Brother selects version 1. For the last two, Rust also selects version 1 but produces different matrices at the same ECC and Brother-reported mask. Candidate mixed-mode segment matrices match all 28,224 Brother pixels per P900W raster |
 | The observations fully specify Brother's segment optimizer for arbitrary text | unknown | The captures establish five ASCII segmentation cases; Unicode/MBCS, tie-breaking among equal-cost segmentations, long segment count limits, and full GUI editing remain untested |
+
+
+## Cycle 39 QR mixed-mode segmenter implementation
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Automatic QR rendering finds compact numeric/alphanumeric/byte segment combinations | observed | `render_qr("HELLO WORLD 1234567890", Medium, None)` returns a version 1-size raster (232x232 px), matching Brother's reported version. Fixed version 1 rendering also succeeds where the previous whole-string segment exceeded capacity |
+| P900W LBX import accepts and renders the fixed version 1 mixed payload | observed | The new public import/render regression test loads Model 2, ECC M, version 1 from an LBX archive, preserves editable fields, and successfully renders it |
+| The production automatic segmenter reproduces the tested diverse version 4 Brother matrix | observed | The checked-in P900W module reference was extracted from an in-memory runtime raster. The renderer regression test compares every module and passes for the 60-character lowercase/digit payload at version 4, ECC M, mask 2 |
+| The implementation reproduces exact Brother matrices for all five short mixed payloads | not observed | Rust selects version 1 and its production matrices equal the manually segmented qrcodegen candidates, but qrcodegen selects masks 6, 4, 6, 2, and 2 while Brother reports 0, 3, 3, 3, and 0. Those candidate matrices match Brother when forced to Brother's masks; mask selection remains a separate gap |
+| The segmenter establishes Unicode/MBCS and GUI/physical-print parity | unknown | Cycle 39 covers ASCII numeric, alphanumeric, and byte segments through render and LBX import. Unicode/MBCS conversion, exact tie-breaking, GUI canvas behavior, and physical output remain unverified |

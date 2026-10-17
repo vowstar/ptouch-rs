@@ -3,6 +3,31 @@ use qrcodegen::{Mask, QrCode, QrCodeEcc, QrSegment, Version};
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let data = args.first().expect("payload required");
+    if args.get(1).is_some_and(|mode| mode == "production") {
+        let version = args.get(2).and_then(|value| value.parse().ok());
+        let bitmap = ptouch_render::barcode::render_qr(
+            data,
+            ptouch_render::barcode::QrErrorCorrection::Medium,
+            version,
+        )
+        .unwrap();
+        let modules = bitmap.width() / 8 - 8;
+        println!("modules={modules} size={modules} ecc=Medium quiet_zone=4 cell=8");
+        for y in 0..modules {
+            for x in 0..modules {
+                print!(
+                    "{}",
+                    if bitmap.get_pixel((x + 4) * 8 + 4, (y + 4) * 8 + 4) {
+                        '#'
+                    } else {
+                        '.'
+                    }
+                );
+            }
+            println!();
+        }
+        return;
+    }
     let segments = if args
         .get(1)
         .is_some_and(|mode| mode == "split-trailing-numeric")
