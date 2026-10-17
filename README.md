@@ -87,7 +87,8 @@ and captures the in-memory raster returned by Brother's LBX library. It
 confirmed editable QR payload and Code 39 data after load. The Code 39 raster
 decodes to the expected value. Rust's human-readable line now includes the
 Brother-observed start/stop delimiters. Brother and Rust QR rasters differ. ZXing-C++ reports version 3, ECC M, and
-data mask 7 for both decodes. The raw Brother capture needs rotation and
+data mask 7 for both decodes, while Brother reports mixed QR mode and automatic
+mask selection. The raw Brother capture needs rotation and
 quiet-zone padding; Rust decodes without that normalization. GUI canvas behavior and
 physical print output remain unverified. The QR LBX fields follow a generic
 P-touch Editor 5.0.201 sample.

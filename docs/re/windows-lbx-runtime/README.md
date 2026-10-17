@@ -101,3 +101,14 @@ The probe records metadata, supported public object properties, and the
 in-memory raster returned by `GetPrintingImage()`. It does not establish the
 Editor GUI canvas behavior or physical print output. No printer handle was
 opened and no print or setting write was sent.
+
+
+Cycle 25 reran the read-only object probe on Windows with the archived
+`pt-e550w-qr-export.lbx`. The additional scalar properties confirm the
+application's QR object selects mixed mode and automatic masking. The matching
+version/ECC/mask values from Cycle 24 rule out mask selection as the sole
+source of the visible pattern difference. Rust's current QR path calls
+`QrSegment::make_segments()`, which returns a single numeric, alphanumeric, or
+byte segment; the URL contains lowercase characters and is represented as one
+byte segment. Whether Brother's `Mixed` mode splits this payload into multiple
+segments remains to be established.

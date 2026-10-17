@@ -333,3 +333,12 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 |---|---|---|
 | Brother and Rust QR outputs decode as version 3, ECC M, data mask 7, and the same URL | observed | ZXing-C++ `extra` reports `Version=3`, `ECLevel=M`, `DataMask=7` for both the normalized Brother BMP and the Rust PNG; Brother orientation reports -90 and Rust 0 |
 | QR mask choice explains the visible Brother/Rust matrix difference | ruled out as sole cause | Both decoded symbols report data mask 7; codeword/segment/charset details and pixel-level raster mapping remain unknown |
+
+
+## Cycle 25 Brother QR mode properties
+
+| Claim | Status | Evidence |
+|---|---|---|
+| The generated Brother QR object is configured for mixed data mode, automatic mask selection, and automatic medium cell size | observed in object property | Read-only Windows probe of `C:\Users\joshd\ptouch-probe\pt-e550w-qr-export.lbx` returned `QrcodeData.Mode=Mixed`, `Mask=Auto`, `CellSize=M`, with MBCS 932, Model2, auto version3, ECC M; output also retained PT-E550W ID 26160 |
+| Rust's current QR input for the Cycle 17 URL uses one byte segment | observed from dependency implementation | `qrcodegen::QrSegment::make_segments()` returns one whole-string mode: numeric, alphanumeric, or byte; lowercase URL makes the byte branch apply |
+| Brother's `Mixed` mode emits multiple segments for the Cycle 17 URL | unknown | The reflected mode setting does not reveal encoded segment boundaries or codewords |
