@@ -377,3 +377,12 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Changing the QR cell-size property changes the in-memory raster width | observed | Windows probe changed the URL QR BMP width across XS/S/M/L/XL while height stayed 128 px: 66/99/132/165/198. Only M decoded under the rotation-plus-border normalization; hashes and captures for XS/S/L/XL are preserved in `docs/re/windows-lbx-runtime/runtime-renders/` |
 | Changing the QR mask property from Auto to Mask0 changes the raster and decoded mask | observed | Mask0 BMP SHA-256 `4db8e3aed4c4c45136412a08dff4d0fc31574b936a8bfc2d668a87211e7bbaac`; ZXing-C++ recovers the expected URL and reports `DataMask=0` |
 | The default QR matrix difference is caused by the cell-size or mask property | not supported by current evidence | Brother's default reports `CellSize=M`, `Mask=Auto`; the normalized default and Rust symbols both decode as version 3, ECC M, data mask 7 |
+
+
+## Cycle 30 QR cell-size geometry
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother cell-size output width is 33 px times the enum values XS=2 through XL=6 | observed | Captured widths: 66, 99, 132, 165, 198 px; each bitmap height is 128 px |
+| CellSize likely acts as pixels per QR module, with four cell units of horizontal margin | inferred | Version 3 has a 29-module side; observed width equals `(29 + 4) * cellSizeEnum`. The proprietary image API exposes no module coordinates, so this mapping is not independently verified |
+| CellSize L and XL exceed the 128 px raster height | inferred from observed bounds | Expected 29-module sides at enum values 5/6 are 145/174 px; captured black bounds reach the 128 px bitmap edge. The L/XL images do not decode under tested normalization; no physical print was performed |

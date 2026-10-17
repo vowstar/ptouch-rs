@@ -95,8 +95,10 @@ property in memory did not change two returned raster hashes, while changing the
 payload did. The same mode result held for numeric and uppercase alphanumeric
 payloads. Changing cell size across XS/S/M/L/XL changed raster width from 66 to 198 px
 while height stayed 128 px; only M decoded under the tested normalization.
-Forcing mask 0 produced a QR that decodes as mask 0. The mode property's effect on other
-render or save paths remains unknown. GUI canvas behavior and
+Forcing mask 0 produced a QR that decodes as mask 0. Measured widths equal
+33 times the CellSize enum values; this suggests 29 modules plus four cell units
+of horizontal margin, but that mapping remains an inference. The mode property's
+effect on other render or save paths remains unknown. GUI canvas behavior and
 physical print output remain unverified. The QR LBX fields follow a generic
 P-touch Editor 5.0.201 sample.
 

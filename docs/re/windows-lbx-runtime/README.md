@@ -157,3 +157,15 @@ Changing `Mask` from Auto to Mask0 changed the 132x128 raster hash to
 decoded the expected URL and reported data mask 0. The cell-size and mask variant BMPs are preserved in `runtime-renders/`.
 This demonstrates that data, mask, and cell-size changes reach the raster path,
 while tested mode changes do not.
+
+
+Cycle 30 compared the dimensions with the QR version and enum metadata. The
+CellSize enum values are XS=2, S=3, M=4, L=5, and XL=6. The observed raster
+widths are exactly 33 times those values. Version 3 has a 29-module side, so
+this is consistent with each enum value acting as pixels per module plus four
+cell units of horizontal margin. That mapping remains an inference because the
+proprietary raster API does not expose module coordinates. For L and XL, the
+inferred 145 px and 174 px symbol sides exceed the fixed 128 px bitmap height;
+the black bounds reach the bitmap edge, consistent with clipping. XS and S also
+failed decoding despite fitting within 128 px, so their failure cause remains
+unknown. No physical print result is inferred.
