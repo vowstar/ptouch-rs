@@ -85,8 +85,8 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 
 | Gap | Current evidence | Scope limit |
 |---|---|---|
-| Rust reads/writes versioned TOML `.ptl`, imports a bounded LBX subset, and exports absolute text plus supported raster-image objects to target-specific LBX archives through the CLI | `crates/ptouch-render/src/document.rs`, `crates/ptouch-render/src/lbx.rs`, `crates/ptouch-cli/src/main.rs`; target maps from `LBXTagWriter.java` above | Export rejects unsupported layouts; generated-file acceptance and full Brother LBX conversion fidelity remain unknown |
-| Rust's `ObjectContent` supports text, image, cut mark, and padding; it has no barcode/QR object | `crates/ptouch-render/src/document.rs`; compared with iPrint&Label `Barcode.java` and editor creation paths above | Barcode generation rules and exact Brother raster appearance are not established by the decompile |
+| Rust reads/writes versioned TOML `.ptl`, imports a bounded LBX subset, and exports supported absolute text, raster-image, QR, and Code 39 objects to target-specific LBX archives through the CLI | `crates/ptouch-render/src/document.rs`, `crates/ptouch-render/src/lbx.rs`, `crates/ptouch-cli/src/main.rs`; target maps from `LBXTagWriter.java` above | Export rejects unsupported layouts; generated-file acceptance and full Brother LBX conversion fidelity remain unknown |
+| Rust supports Code 39 but not Code 128, EAN13, or EAN128 objects | `crates/ptouch-render/src/barcode.rs`, `document.rs`, and `lbx.rs`; compare iPrint&Label `Barcode.java` and editor creation paths above | Code 39 supports its bounded alphabet and optional Mod 43 character; target-app visual rendering and print acceptance are not established |
 | Rust implements placeholder CSV batches but does not match iPrint&Label LBX numbering or database-assigned bitmap job paths | `crates/ptouch-cli/src/main.rs`; iPrint&Label `PrintTask.java` and `PrinterOptionDialogFragment.java` above | iPrint&Label CSV/schema runtime behavior is only partly established |
 | Current Rust TCP media handling covers standard width codes and does not model SL, FL, or HS media types | `crates/ptouch-core/src/tape.rs`, `session.rs`, `ptouch-gui/src/panels/sidebar.rs`; compare the target media configuration row above | App UI lists do not prove physical media compatibility or wire protocol behavior |
 
@@ -248,8 +248,8 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 |---|---|---|
 | P-touch Editor LBX templates use `label.xml` and `prop.xml` entries and the Brother `pt`, `style`, `text`, and `image` namespace families | observed in preserved app package | Ten CIV archives under `reference/artifacts/ptouch-editor-6.12.10/6/Resources/Templates/CIV/`; `10_NewTerminalBlock.lbx` and `1_NewSelfLaminating.lbx` contain both entries and establish namespaced document, sheet, paper, and object structures |
 | iPrint&Label maps PT-E550W to printer ID `26160` and PT-P900W to `28464`; their LBX paths use PT7/PT9 media maps and 180/360 dpi respectively | observed in source | `reference/artifacts/android-iprintandlabel-5.3.17/jadx/sources/com/brother/ptouch/iprintandlabel/compatible/LBXTagWriter.java:180-184, 263-268, 342-375` |
-| Rust CLI creates target-specific LBX ZIPs containing `label.xml`, `prop.xml`, text and embedded raster image resources; supported objects round-trip through the Rust LBX importer | implemented, tested | `crates/ptouch-render/src/lbx.rs::export`; `crates/ptouch-cli/src/main.rs::execute_convert`; export tests verify target media IDs, escaped text, geometry, image resources, explicit rejection, and CLI convert/reimport behavior |
-| Generated Rust LBX archives render equivalently in P-touch Editor or iPrint&Label, or print correctly on target devices | unknown | Cycle 16 confirms simple text outputs load through P-touch Editor's bundled LBX runtime and retain target/media metadata; no GUI rendering comparison or physical print was performed |
+| Rust CLI creates target-specific LBX ZIPs containing `label.xml`, `prop.xml`, text, embedded raster image resources, and native QR barcode objects; supported text/image objects round-trip through the Rust LBX importer | implemented, tested | `crates/ptouch-render/src/lbx.rs::export`; `crates/ptouch-cli/src/main.rs::execute_convert`; export tests verify target media IDs, escaped text, geometry, image resources, QR XML, explicit rejection, and CLI convert/reimport behavior |
+| Generated Rust LBX archives render equivalently in P-touch Editor or iPrint&Label, or print correctly on target devices | unknown | Cycle 19 returned target metadata through `LbxFactory.CreateFromPath`; no GUI rendering comparison or physical print was performed |
 | LBX export preserves unsupported layout semantics such as inline styles, relative positions, mirroring, and native template wrappers | not implemented | Export returns explicit errors for these structures rather than silently dropping them |
 
 ## Cycle 16 Windows LBX runtime verification
@@ -258,5 +258,252 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 |---|---|---|
 | P-touch Editor startup initializes its LBX runtime with its app version, locale ID, and Fonts directory before creating or loading labels | observed in managed code | `PtouchEditor6.Wpf.App.CreateShell`; `docs/re/windows-lbx-runtime/Program.cs` reproduces the call using `AssemblyInfoService.AppNameVersionOS` and locale ID 1033 |
 | The bundled `LibLbx.DotNet.dll` is x86 mixed C++/CLI version 1.12.1.1 with SHA-256 `7b892c240e7deff849895a987a449ebfeaefdc3a94a788a459c32a50dbf12539`; the tested Windows installation is P-touch Editor 6.12.10 | observed | Installed file hash matched the preserved artifact; the probe initialized with `P-touch Editor 6.12.1.0 Windows` and returned `Initialize=True` |
-| Rust-generated LBX archives from a one-text-object layout load in the Brother runtime and return the intended printer model and stored printer ID for both targets | observed in Windows runtime | PT-E550W, ID `26160`, media ID `261`; PT-P900W, ID `28464`, media ID `261`. The input and generated archives are preserved under `docs/re/windows-lbx-runtime/`, with hashes in its README |
+| Rust-generated LBX archives from a one-text-object layout load in the Brother runtime and return the intended printer model and stored printer ID for both targets | confirmed by Cycle 19 retest | Two runs on Windows host `ryzen` loaded the hash-verified archived files and returned PT-E550W ID `26160` and PT-P900W ID `28464`, media ID `261`. The Cycle 17 fallback report is contradicted; the exact cause is not recoverable from preserved logs |
 | Brother GUI rendering, text appearance, image behavior, and physical print acceptance of generated archives match the Rust output | unknown | The runtime probe loaded metadata only; it did not inspect the GUI canvas or send a print job |
+
+## Cycle 17 native QR authoring
+
+| Claim | Status | Evidence |
+|---|---|---|
+| `.ptl` supports an editable QR object with payload and Low/Medium/Quartile/High error correction levels | implemented, tested | `crates/ptouch-render/src/document.rs`; version 7 preserves QR fields; `document::tests::native_qr_serializes_as_version_7_and_preserves_editable_data` |
+| Shared rendering generates bounded Model 2 QR bitmaps with a four-module quiet zone for preview and print | implemented, tested | `crates/ptouch-render/src/barcode.rs`; `layout::render_object`; barcode unit tests cover quiet zone and invalid/capacity-overflow payloads. CLI offline render of `qr-probe.ptl` decoded back to `https://example.test/ptouch-cycle17` with `zbarimg` |
+| GUI creates and edits QR payloads and correction level | implemented | `crates/ptouch-gui/src/panels/toolbar.rs`, `state.rs`, and `panels/properties.rs`; full GUI interaction is not automated |
+| CLI LBX export retains QR payload as a native `barcode:barcode` object using generic P-touch Editor schema fields | implemented, tested | `crates/ptouch-render/src/lbx.rs::export`; `lbx::tests::exports_editable_qr_as_native_lbx_barcode`; schema evidence is the external P-touch Editor 5.0.201 QL-700 sample cited in Cycle 11 |
+| P-touch Editor 6.12.10's LBX factory returns target model metadata for generated QR archives | confirmed by Cycle 19 retest | Two hash-verified runs returned PT-E550W ID `26160` and PT-P900W ID `28464`, media ID `261` for the archived QR exports. The probe does not read the QR object's payload from the loaded document or test rendering |
+| GUI rendering and physical print output match Brother QR rendering on PT-E550W/PT-P900W | partial evidence | Cycles 33-34 matched visible E550W modules and the full P900W version 3 ECC M mask 7 in-memory raster to Rust; GUI canvas and physical print remain unverified |
+
+## Cycle 19 Windows runtime retest
+
+| Claim | Status | Evidence |
+|---|---|---|
+| The archived text and QR LBX files return their intended target model metadata through P-touch Editor's `LbxFactory.CreateFromPath` | confirmed, repeated | On `ryzen`, `LbxProbe.exe` called `LibLbx.Initialize` successfully, then loaded all four archived files twice. SHA-256 values match the table in `docs/re/windows-lbx-runtime/README.md`; E550W files returned ID `26160`, P900W files returned ID `28464`, all returned media ID `261`, LBX version `1.8`, and generator `ptouch-rs` |
+| Cycle 18 LBX import/export preserves the archived QR export byte-for-byte | confirmed | `ptouch convert` imported and re-exported both target QR archives. Each output SHA-256 exactly matched its input (`4b4b8e2d...9ca708` for E550W; `2230fb5b...10fbd1` for P900W), and the Windows runtime returned the intended model metadata for both output files |
+| The Cycle 17 report of MW-170, stored ID `0`, and media ID `138` can be reproduced for the same archived files | not reproduced; cause unknown | Two Cycle 19 probe runs using the exact archived hashes returned intended target metadata. The original Cycle 17 invocation details sufficient to identify the discrepancy were not preserved |
+
+## Cycle 21 Windows loaded-object and render inspection
+
+| Claim | Status | Evidence |
+|---|---|---|
+| P-touch Editor's `GetPtObjects()` returns a native Barcode object for generated QR and Code 39 LBX archives | observed | `docs/re/windows-lbx-runtime/Program.cs`; the exact archived QR files returned `LibLbx.BcdObj` / `ClassName=Barcode`, and the generated Code 39 archive returned the same object class |
+| The Brother runtime reads the generated QR payload, Model 2, version 3 auto mode, MBCS 932, and Medium ECC | observed in object property | `GetBarcodeProperty()` returned the exact QR URL and `QrcodeData` fields `Model=Model2`, `Version=3`, `VerAuto=True`, `MBCS=932`, `EccLevel=M` |
+| The Brother runtime reads the generated Code 39 payload and display/check-digit options | observed in object property | `GetBarcodeProperty()` returned `Data=ABC-123`, `ShowCheckDigit=True`, `ShowChar=True`, and `CharAlign=Center` for SHA-256 `0cc382b3150075152e3c29ff4eab4fbfe99327a146fb94518440e5c1e3c40214` |
+| The in-memory Brother Code 39 raster is scannable and agrees with the Rust payload/check character | observed | `GetPrintingImage()` returned 482x128 BMP; `zbarimg` decoded `ABC-123W`. The Brother raster includes visible `*` start/stop delimiters and no external quiet zones. Cycle 22 aligned Rust human-readable text to include those delimiters; raster geometry remains incomparable because Brother returns object-only output while Rust currently captures the full label |
+| Brother and Rust QR rasters looked different at native size | historical observation, resolved for visible pixels | `GetPrintingImage()` returned 132x128 BMP; Cycle 33 aligned its visible module pixels to the exact Rust version 3 ECC M mask 7 matrix with zero mismatches. The Brother raster clips rows at the top in a fixed 128 px capture |
+| `GetPrintingImage()` output proves physical print output or the P-touch Editor GUI canvas is equivalent | unknown | The API returned an in-memory BMP without opening a printer handle. No physical print or GUI canvas inspection was performed |
+
+## Cycle 20 Code 39 support
+
+| Claim | Status | Evidence |
+|---|---|---|
+| `.ptl` represents native Code 39 data, Mod 43 option, narrow-bar width, and readable-text option | implemented, tested | `crates/ptouch-render/src/document.rs`, `barcode.rs`; layout format version 9; serialization tests preserve all fields |
+| The offline Code 39 renderer encodes start/stop characters, optional Mod 43 check character, bounded payloads, and readable text | implemented, tested | `barcode::tests::code39_adds_start_stop_and_mod43_check_character`; CLI rendered `docs/re/code39-probe.ptl` and `zbarimg` decoded `ABC-123W` |
+| Supported LBX Code 39 objects import to native `.ptl` objects and export with data, check digit, bar width, and readable-text fields | implemented, tested | `lbx::tests::imports_supported_code39_as_an_editable_native_object`; `lbx::tests::exports_editable_code39_as_a_native_lbx_barcode` |
+| P-touch Editor's LBX runtime returns intended E550W metadata for a Rust-exported Code 39 archive | observed, metadata only | Windows `LbxProbe.exe` loaded SHA-256 `0cc382b3150075152e3c29ff4eab4fbfe99327a146fb94518440e5c1e3c40214` and returned PT-E550W ID `26160`, media ID `261`; it did not inspect the GUI canvas, barcode data, or print output |
+| Generic Code 39 LBX style attribute names match Brother-generated output | not verified against Brother output | Current fields are corroborated by the independent [`bil-lbx` serializer](https://github.com/orochi235/bil-lbx/blob/main/src/serialize.ts); no app-generated Code 39 fixture is preserved |
+| Rust Code 39 raster matches P-touch Editor or iPrint&Label rendering on either target | unknown | The CLI output decoded correctly, but no app-rendered baseline or physical print comparison is available |
+
+## Cycle 18 native QR LBX import
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Supported ASCII Model 2 QR objects import as native editable `.ptl` QR objects rather than SVG-backed images | implemented, tested | `crates/ptouch-render/src/lbx.rs::import_barcode`; `lbx::tests::imports_model_2_qr_from_editor_barcode_tags` asserts native payload, correction, geometry, no flattening warning, and visible rendered pixels |
+| LBX QR error correction, automatic or fixed version, and physical symbol size survive import into `.ptl` and export back to LBX | implemented, tested | `lbx::tests::imports_fixed_qr_version_and_correction_as_native_fields`; `document::tests::fixed_qr_version_requires_layout_version_8`; tests assert ECC, v5, content-box size, `.ptl` v8, and exported `version="5"` / `cellSize="1.250pt"` |
+| Imported LBX QR templates render equivalently to the source Brother application on PT-E550W/PT-P900W | partial in-memory evidence | A generated E550W QR archive now has exact visible matrix parity with Rust after aligning the clipped bitmap; P900W, GUI canvas, and physical print behavior remain unverified |
+
+
+## Cycle 22 Code 39 readable-text parity
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Rust Code 39 readable text includes visible start/stop delimiters observed in Brother's in-memory render | implemented, verified | `crates/ptouch-render/src/layout.rs`; CLI output from `docs/re/code39-probe.ptl` visually shows `*ABC-123W*` and `zbarimg` still decodes `ABC-123W`; PNG SHA-256 `1738433fa446738390b2d40d58129eb748af0ab331d98bd4524d0ce2e36d179d` |
+| Code 39 raster dimensions now match Brother's loaded-object raster | unknown | Brother `GetPrintingImage()` returned 482x128 object-only output; Rust CLI returned a 581x128 full-label raster, so dimensions are not directly comparable |
+
+
+## Cycle 23 QR raster diagnosis
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother's captured QR raster contains the expected URL payload when normalized for decoding | observed | ZXing-C++ decodes `https://example.test/ptouch-cycle17` from a grayscale 90-degree-rotated copy with 4 px white border; artifact `docs/re/windows-lbx-runtime/runtime-renders/editor-pt-e550w-qr-decoder-normalized.png`, SHA-256 `069a79fa7063cf0ab6c5748b219ddc7e596a1fa3c6ee905838f3ae6db226c2bc` |
+| Direct decoder failures establish the Brother QR raster is malformed | disproven | ZXing-C++ recovers the expected payload after the crop-preserving rotation and padding; Cycle 33 later matched every visible matrix pixel to Rust. zbarimg still does not decode the derivative |
+
+
+## Cycle 24 QR mask and symbol metadata
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother and Rust QR outputs decode as version 3, ECC M, data mask 7, and the same URL | observed | ZXing-C++ `extra` reports `Version=3`, `ECLevel=M`, `DataMask=7` for both the normalized Brother BMP and the Rust PNG. The Brother derivative was rotated before decode, so its reported orientation is not evidence of the source bitmap orientation |
+| QR mask choice explains the visible Brother/Rust matrix difference | ruled out as sole cause | Both decoded symbols report data mask 7; codeword/segment/charset details and pixel-level raster mapping remain unknown |
+
+
+## Cycle 25 Brother QR mode properties
+
+| Claim | Status | Evidence |
+|---|---|---|
+| The generated Brother QR object is configured for mixed data mode, automatic mask selection, and automatic medium cell size | observed in object property | Read-only Windows probe of `C:\Users\joshd\ptouch-probe\pt-e550w-qr-export.lbx` returned `QrcodeData.Mode=Mixed`, `Mask=Auto`, `CellSize=M`, with MBCS 932, Model2, auto version3, ECC M; output also retained PT-E550W ID 26160 |
+| Rust's current QR input for the Cycle 17 URL uses one byte segment | observed from dependency implementation | `qrcodegen::QrSegment::make_segments()` returns one whole-string mode: numeric, alphanumeric, or byte; lowercase URL makes the byte branch apply |
+| Brother's `Mixed` mode emits multiple segments for the Cycle 17 URL | unknown | The reflected mode setting does not reveal encoded segment boundaries or codewords |
+
+
+## Cycle 26 QR segment candidate comparison
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Rust's version 3 ECC M byte-mode matrix with mask 7 agrees with an independent QR implementation | observed | Python `qrcode` byte-only mode and `qrcodegen` forced to version 3, ECC M, mask 7 produced identical 29x29 matrices (0 differing modules) for `https://example.test/ptouch-cycle17` |
+| A four-segment byte/alphanumeric/byte/numeric encoding is equivalent to the Brother symbol | not supported by current evidence | Python `qrcode` with optimization threshold 2 selected four segments and automatic mask 5; Brother's decoded mask is 7. This rejects that exact candidate as a mask match, but other mixed segmentations remain possible |
+| Brother `Mode=Mixed` specifies the exact QR segment boundaries | unknown | The reflected setting does not expose segment metadata; no Brother-generated codeword stream or source-app QR fixture is available |
+
+
+## Cycle 27 in-memory QR property probe
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Changing the loaded QR payload in memory changes Brother `GetPrintingImage()` output | observed | On numeric QR `1234567890123456`, setting `Barcode.Data=9876543210987654` before `GetPrintingImage()` changed the BMP hash from `f1da64b34aaf93b125d1872b9164b1617dae6087b58dff06dca19074ac61fcb3` to `bf0af4fdcad756c1209eb24309a80f24e680d3f97070a7e9bee33c5c6efea1ba` |
+| Changing the loaded QR `Mode` property changes `GetPrintingImage()` output for tested URL, numeric, and uppercase alphanumeric payloads | not observed | URL Mixed vs Binary output had identical SHA-256 `8e75634c3f299c9abbad78759d79e6e8279714766640c42a2d77008ede69530a`; numeric Mixed, Number, and Binary outputs shared SHA-256 `f1da64b34aaf93b125d1872b9164b1617dae6087b58dff06dca19074ac61fcb3`; uppercase alphanumeric Mixed, Binary, and AlphabetAndNumber outputs shared SHA-256 `4b6b2066148279fe5ea366aea7b8d119c88f333cada4a11a874f09070f54e2ea` |
+| The QR `Mode` property is ignored across all Brother render/save paths | unknown | The probe only tested `GetPrintingImage()` on three payload classes; no modified LBX was saved and no physical print was made |
+
+
+## Cycle 28 QR mode scope
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother `GetPrintingImage()` output is unchanged when the in-memory QR mode changes among Mixed, Binary, Number, and AlphabetAndNumber for tested payload classes | observed | Windows probe on URL, numeric, and uppercase alphanumeric LBX fixtures; archived inputs are `qr-numeric-mode-probe.ptl` and `qr-alphanumeric-mode-probe.ptl`; unchanged hashes are listed in the Cycle 27/28 property-probe evidence above |
+| Brother's mode property has no effect on GUI previews, saved LBX files, or physical print output | unknown | Only the in-memory `GetPrintingImage()` path was exercised; no modified LBX was saved and no print operation was performed |
+
+
+## Cycle 29 QR raster property effects
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Changing the QR cell-size property changes the in-memory raster width | observed | Windows probe changed the URL QR BMP width across XS/S/M/L/XL while height stayed 128 px: 66/99/132/165/198. Only M decoded under the crop-preserving rotation-plus-border transform; hashes and captures for XS/S/L/XL are preserved in `docs/re/windows-lbx-runtime/runtime-renders/` |
+| Changing the QR mask property from Auto to Mask0 changes the raster and decoded mask | observed | Mask0 BMP SHA-256 `4db8e3aed4c4c45136412a08dff4d0fc31574b936a8bfc2d668a87211e7bbaac`; ZXing-C++ recovers the expected URL and reports `DataMask=0` |
+| The default QR raster appearance difference is caused by a different module matrix | resolved for visible pixels | Cycle 33 found zero pixel mismatches after mapping the captured Brother grid to the Rust version 3 ECC M mask 7 matrix; the Brother bitmap has vertical clipping |
+
+
+## Cycle 30 QR cell-size geometry
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother cell-size output width is 33 px times the enum values XS=2 through XL=6 | observed | Captured widths: 66, 99, 132, 165, 198 px; each bitmap height is 128 px |
+| CellSize acts as pixels per module with two cell units of horizontal margin on each side | observed for visible pixels | Cycle 33 pixel comparison found zero mismatches on a 29-module grid with cell pitch n, origin x=2n, y=2n-14; output width is `(29 + 4) * n` |
+| CellSize variants clip the same QR matrix vertically in the fixed 128 px raster | observed | Cycle 33 matched all captured pixels to the Rust matrix with zero differences; XS/S/M clip leading rows, L/XL clip leading and trailing rows. No physical print was performed |
+
+
+## Cycle 31 QR cell-size decoder sweep
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Only the CellSize M Brother capture decoded with the tested local decoders and raster normalizations | observed | ZXing-C++ tested rotations 0/90/180/270 with Pillow `expand=False`, nearest-neighbor scales 1x/2x/4x, and white borders 0/4/8/16/32/64 px (scaled with the image); only M decoded. With `expand=True`, retaining the full rotated rectangle, none decoded, including M. zbar decoded none of the five captures in either transform family |
+| XS/S/L/XL captures contain a different or malformed visible QR matrix | disproven for visible pixels | Cycle 33 found zero pixel mismatches against the Rust version 3 ECC M mask 7 matrix across every visible module pixel; the captures are truncated at the bitmap edges |
+
+
+## Cycle 32 QR rotation normalization correction
+
+| Claim | Status | Evidence |
+|---|---|---|
+| The saved Brother decoder derivative was created with a full, uncropped 90-degree rotation | corrected | Pillow `Image.rotate(90)` used its default `expand=False`, preserving the original rectangular canvas and cropping the rotated content; a 4 px border was then added |
+| Retaining the full rotated rectangle decodes the Brother QR capture | not observed | With Pillow `expand=True`, ZXing-C++ did not decode any CellSize raster, including M, even after scaling and borders. The earlier successful M decode depends on the fixed-canvas cropped transform |
+| The crop-preserving transform establishes the source image's inherent QR orientation | unknown | The transform itself rotates and crops the image, so scanner orientation from that derivative cannot establish source orientation |
+
+
+## Cycle 33 Brother/Rust QR module-grid alignment
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Every visible Brother E550W QR matrix pixel matches Rust's version 3 ECC M mask 7 output | observed | `compare-qr-matrix.py` reports zero pixel mismatches for XS/S/M/L/XL BMPs against `qr-v3-mask7.matrix`, generated by the Rust qrcodegen path for `https://example.test/ptouch-cycle17` |
+| The E550W capture clips the QR module grid vertically at its 128 px raster edges | observed | Grid origin `(x,y)=(2n,2n-14)` for cell pitch `n=2..6`; visible matrix rows are XS 5-28, S 2-28, M 1-28, L 0-26, XL 0-21 |
+| The visible raster parity result establishes full symbol parity or physical print behavior | unknown | Cropped matrix rows are absent from the BMP; only the in-memory `GetPrintingImage()` E550W capture was compared. No GUI canvas or physical print validation occurred |
+
+
+## Cycle 34 PT-P900W QR raster comparison
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother PT-P900W returns the expected generated QR object and target metadata | observed | Windows probe loaded SHA-256 `2230fb5b8d343c3067374e670ee23cc4bd0c83b442dffc36d1eb08d8c510fbd1`; returned PT-P900W ID 28464, media 261, Model2, version3, ECC M, mask Auto, CellSize M, mode Mixed, MBCS 932 |
+| The full P900W in-memory QR raster matches the Rust version 3 ECC M mask 7 matrix pixel-for-pixel | observed | BMP 292x320, pitch 8, origin (30,20), all 29 rows visible, zero mismatches across 53,824 symbol pixels in `compare-qr-matrix.py`; BMP SHA-256 `7c201ed7b3b0e85703e75ba75c929424ac8c0412103bc64f652cd976b3f4f0ed` |
+| The P900W QR bitmap decodes without normalization | observed | zbar and ZXing-C++ both decode `https://example.test/ptouch-cycle17`; ZXing reports version 3, ECC M, data mask 7 |
+| In-memory QR matrix parity establishes P900W GUI canvas or physical print parity | unknown | No GUI canvas or physical print was tested |
+
+
+## Cycle 35 QR payload and segmentation comparison
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother and Rust choose equivalent encoding for a 20-digit payload | unresolved | Both P900W and E550W runtime metadata report version 1; the P900W raster decodes to the expected payload. The current Rust version 1/mask 4 candidate does not align pixel-for-pixel at the assumed object origin, so exact matrix parity remains unverified |
+| Brother splits a mixed uppercase/numeric payload into segments that fit version 1 | observed | For `HELLO WORLD 1234567890`, both models report version 1. Rust's default segmenter produces version 2/mask 6; an alphanumeric prefix plus numeric suffix encoded as version 1/mask 3 matches all P900W and E550W raster pixels at the measured pitch and origins |
+| Brother's 60-character lowercase payload matches Rust's automatic mask choice | disproven | Both models return version 4. Rust auto selects mask 2, while ZXing-C++ reads mask 1 from the P900W BMP. Forced Rust version 4/mask 1 matches all compared E550W pixels; the full P900W comparison against this forced matrix remains to be run |
+| These in-memory comparisons establish GUI or printed behavior | unknown | No GUI canvas or physical print was tested |
+
+
+## Cycle 36 numeric QR correction-level and matrix alignment
+
+| Claim | Status | Evidence |
+|---|---|---|
+| The Cycle 35 numeric mismatch represented a different Brother QR matrix | disproven | The original helper used qrcodegen's convenience API, which boosted the requested Medium ECC to Quartile for this payload. Rust's explicit version-range encoder with boosting disabled produces version 1/ECC M/mask 4 and matches every pixel in both Brother captures at E550W origin (8,-6), pitch 4, and P900W origin (30,20), pitch 8 |
+| Rust's automatic QR path preserves the requested ECC level | corrected | `render_qr` and LBX QR import now use the automatic version range with ECC boosting disabled. Regression coverage compares a 20-digit payload against explicit Medium-level modules. Before the fix qrcodegen selected Quartile for this payload while Brother reports Medium |
+| Brother's 60-character lowercase payload uses Rust's automatic mask | disproven | Both use ECC Medium and version 4, but Rust auto selects mask 2 while the P900W decode reports mask 1. Forcing Rust mask 1 matches all pixels in both models' rasters |
+| These in-memory comparisons establish GUI or printed behavior | unknown | No GUI canvas or physical print was tested |
+
+
+## Cycle 37 QR byte-mask and mixed-segment probes
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother mask 1 on the original 60-byte lowercase payload is a one-payload anomaly | not supported | Three further P900W byte-only version 4/ECC M payloads of 50, 55, and 62 bytes also decode as mask 1. Rust automatic mask selection returns masks 2, 2, and 0 respectively. Forcing Rust mask 1 matches every pixel in all three 324x320 rasters at 8 px/module, origin (30,20) |
+| Brother always selects mask 1 for version 4/ECC M byte payloads | disproven | A diverse 60-character lowercase-plus-digit payload decodes as mask 2. Rust's default whole-byte segmentation also selects mask 2 but does not match the matrix. Encoding the lowercase prefix as bytes and the trailing digits as numeric at version 4/mask 2 matches every raster pixel |
+| Rust's current default QR segmenter reproduces Brother Mixed-mode segmentation for lower-case text followed by digits | disproven | The diverse fixture's default one-byte-segment matrix differs from the Brother BMP even though version, ECC, and mask agree; the byte-prefix/numeric-suffix candidate matches exactly |
+| The mask difference proves a particular alternate penalty formula | unknown | Runtime captures establish selected masks, but the exact Brother mask scoring/tie-break implementation has not been recovered |
+| These in-memory comparisons establish GUI or printed behavior | unknown | No GUI canvas or physical print was tested |
+
+
+## Cycle 38 Brother Mixed-mode segment boundaries
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother selects numeric and alphanumeric segments around byte-only runs for the tested short mixed payloads | observed | Five P900W version 1/ECC M rasters match candidate segment layouts pixel-for-pixel: byte+numeric for `hello 1234567890`, numeric+byte for `1234567890hello`, alphanumeric+numeric for `HELLO WORLD 1234567890`, byte+alphanumeric for `abc123DEF456`, and alphanumeric+byte for `ABC123abc789`. Decoder masks are 0, 3, 3, 3, and 0 respectively |
+| Rust's current whole-string segmentation reproduces these mixed-mode matrices | disproven | For the first three payloads, Rust automatic encoding selects version 2 while Brother selects version 1. For the last two, Rust also selects version 1 but produces different matrices at the same ECC and Brother-reported mask. Candidate mixed-mode segment matrices match all 28,224 Brother pixels per P900W raster |
+| The observations fully specify Brother's segment optimizer for arbitrary text | unknown | The captures establish five ASCII segmentation cases; Unicode/MBCS, tie-breaking among equal-cost segmentations, long segment count limits, and full GUI editing remain untested |
+
+
+## Cycle 39 QR mixed-mode segmenter implementation
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Automatic QR rendering finds compact numeric/alphanumeric/byte segment combinations | observed | `render_qr("HELLO WORLD 1234567890", Medium, None)` returns a version 1-size raster (232x232 px), matching Brother's reported version. Fixed version 1 rendering also succeeds where the previous whole-string segment exceeded capacity |
+| P900W LBX import accepts and renders the fixed version 1 mixed payload | observed | The new public import/render regression test loads Model 2, ECC M, version 1 from an LBX archive, preserves editable fields, and successfully renders it |
+| The production automatic segmenter reproduces the tested diverse version 4 Brother matrix | observed | The checked-in P900W module reference was extracted from an in-memory runtime raster. The renderer regression test compares every module and passes for the 60-character lowercase/digit payload at version 4, ECC M, mask 2 |
+| The implementation reproduces exact Brother matrices for all five short mixed payloads | not observed | Rust selects version 1 and its production matrices equal the manually segmented qrcodegen candidates, but qrcodegen selects masks 6, 4, 6, 2, and 2 while Brother reports 0, 3, 3, 3, and 0. Those candidate matrices match Brother when forced to Brother's masks; mask selection remains a separate gap |
+| The segmenter establishes Unicode/MBCS and GUI/physical-print parity | unknown | Cycle 39 covers ASCII numeric, alphanumeric, and byte segments through render and LBX import. Unicode/MBCS conversion, exact tie-breaking, GUI canvas behavior, and physical output remain unverified |
+
+
+## Cycle 40 QR mask-score probes
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother selects the lowest standard qrcodegen penalty for every version 4 byte payload | disproven | Seven P900W/ECC M/lowercase-only runtime captures decode at version 4 and masks 3, 6, 2, 7, 6, 6, and 0. Each full 33x33 Brother module grid matches the corresponding Rust fixed-mask matrix exactly. Standard N1+N2+N3+N4 scoring predicts masks 2, 2, 2, 2, 6, 6, and 2 |
+| Brother's mask difference is explained by omitting N3 | disproven | The same seven fixed-mask matrices without N3 predict masks 3, 3, 6, 7, 2, 2, and 3. This matches only probes 02 and 20; probes 14 and 30 select neither prediction |
+| A single alternate weight for N3 explains the seven masks | disproven | Probe 14's selected mask is not the minimum for any nonnegative N3 weight when the other qrcodegen components are held fixed |
+| The seven captures differ because their byte segment layout is unknown | not supported | All seven payloads contain only lowercase ASCII, use version 4/ECC M, and each captured grid compares pixel-for-pixel against Rust's version 4 byte matrix at Brother's decoded mask |
+| The findings establish a global Brother mask rule | unknown | The tests cover seven lowercase-only version 4 payloads and do not cover other QR versions, ECC levels, Unicode/MBCS, or GUI canvas/physical output |
+| Native DLL analysis located the QR mask selector | not observed | Hopper opened the 32-bit native `lbxcore.Win32.dll` (SHA-256 `f69a0fa0fd2e37f825436170853e7efdbbe04b299011d8ec11b6c82668fcc704`). The `:qrcodeStyle` references resolve to settings serialization; no named mask-selection routine was identified |
+
+
+## Cycle 41 QR mask scoring implementation
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother uses qrcodegen's exact finder-pattern penalty scan | disproven | Standard qrcodegen scoring predicts Brother's selected mask in 5 of the 19 analyzed captures |
+| A libqrencode-style N3 scan better matches Brother | observed | A local implementation of the scan in libqrencode's public `mask.c` matches 17 of 19 Brother mask selections: all seven Cycle 40 version 4 byte-only probes, four of five Cycle 38 version 1 mixed probes, three of four repetitive version 4 byte probes, and the numeric version 1, URL version 3, and diverse mixed version 4 controls |
+| The new Rust QR renderer reproduces all seven Cycle 40 module grids | observed | The production encoder's seven version 4 ECC M outputs compare module-for-module with the checked-in matrices extracted from Brother's P900W in-memory BMPs; each earlier BMP comparison had zero mismatches across 69,696 module pixels |
+| The libqrencode-style score is a complete Brother mask rule | disproven | It predicts mask 3 for `ABC123abc789` where Brother uses 0, and mask 2 for the 55-byte repetitive lowercase payload where Brother uses 1. The cause of these two differences remains unknown |
+| The implementation identifies Brother's internal QR library | unknown | Matching output is behavioral evidence only. Hopper did not identify a QR mask routine in the inspected Windows DLL |
+| The new rule establishes GUI or printed parity | unknown | Validation uses the in-memory `GetPrintingImage()` path. No GUI canvas or physical printing was tested |
+
+
+## Cycle 42 QR mask behavior across ECC levels
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother's selected mask follows the Cycle 41 scoring behavior across all ECC levels | observed in this sample | One 50-character lowercase byte payload was rendered at ECC L, M, Q, and H. The P900W runtime reported versions 3, 4, 5, and 6, respectively. Format bits in the captured BMPs identify masks 2, 2, 4, and 4 with zero BCH correction errors. The replayable extractor is `docs/re/windows-lbx-runtime/extract-qr-format-probes.py`. |
+| The version 6/ECC H mask can be read with the ordinary image decoder | disproven | The fixed-height 320-pixel P900W raster clips the 41-module symbol's bottom rows, so ZXing does not decode the full symbol. The intact top-left format bits identify H/mask 4 exactly. |
+| The Cycle 41 scoring match is a complete mask-selection rule | unknown | These four ECC cases provide cross-level observations, but do not characterize all versions, payload classes, tie behavior, or Brother's internal implementation. The two Cycle 41 exceptions remain unexplained. |
+| The captures establish GUI or printed parity | unknown | All captures came from the Windows Editor's in-memory `GetPrintingImage()` method. No GUI canvas or physical printing was tested. |

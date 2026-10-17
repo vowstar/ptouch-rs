@@ -1016,6 +1016,86 @@ fn show_object_properties(
                 }
             }
         }
+        ObjectContent::QrCode {
+            data,
+            error_correction,
+            version,
+        } => {
+            ui.label("QR code");
+            changed |= ui.text_edit_multiline(data).changed();
+            egui::ComboBox::from_id_salt(("qr-error-correction", state.selected_element))
+                .selected_text(match error_correction {
+                    ptouch_render::barcode::QrErrorCorrection::Low => "Low (7%)",
+                    ptouch_render::barcode::QrErrorCorrection::Medium => "Medium (15%)",
+                    ptouch_render::barcode::QrErrorCorrection::Quartile => "Quartile (25%)",
+                    ptouch_render::barcode::QrErrorCorrection::High => "High (30%)",
+                })
+                .show_ui(ui, |ui| {
+                    for (level, label) in [
+                        (ptouch_render::barcode::QrErrorCorrection::Low, "Low (7%)"),
+                        (
+                            ptouch_render::barcode::QrErrorCorrection::Medium,
+                            "Medium (15%)",
+                        ),
+                        (
+                            ptouch_render::barcode::QrErrorCorrection::Quartile,
+                            "Quartile (25%)",
+                        ),
+                        (
+                            ptouch_render::barcode::QrErrorCorrection::High,
+                            "High (30%)",
+                        ),
+                    ] {
+                        changed |= ui
+                            .selectable_value(error_correction, level, label)
+                            .changed();
+                    }
+                });
+            let mut selected_version = version.unwrap_or(0);
+            egui::ComboBox::from_id_salt(("qr-version", state.selected_element))
+                .selected_text(if selected_version == 0 {
+                    "Auto".to_string()
+                } else {
+                    format!("Version {selected_version}")
+                })
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut selected_version, 0, "Auto");
+                    for candidate in 1..=40 {
+                        ui.selectable_value(
+                            &mut selected_version,
+                            candidate,
+                            format!("Version {candidate}"),
+                        );
+                    }
+                });
+            let next_version = (selected_version != 0).then_some(selected_version);
+            if *version != next_version {
+                *version = next_version;
+                changed = true;
+            }
+            ui.small("The QR payload stays editable in this layout and LBX export.");
+        }
+        ObjectContent::Code39 {
+            data,
+            bar_width_pt,
+            check_digit,
+            human_readable,
+        } => {
+            ui.label("Code 39 barcode");
+            changed |= ui.text_edit_singleline(data).changed();
+            changed |= ui
+                .add(
+                    egui::DragValue::new(bar_width_pt)
+                        .range(0.1..=10.0)
+                        .suffix(" pt bars"),
+                )
+                .changed();
+            changed |= ui
+                .checkbox(check_digit, "Add Mod 43 check character")
+                .changed();
+            changed |= ui.checkbox(human_readable, "Show readable text").changed();
+            ui.small("Code 39 supports uppercase letters, digits, space, and - . $ / + %.");
+        }
         ObjectContent::CutMark => {
             ui.label("Cut mark");
             ui.small("A printed guide only; it does not trigger the cutter.");

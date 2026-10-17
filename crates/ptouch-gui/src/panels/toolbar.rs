@@ -19,6 +19,8 @@ pub enum ToolbarAction {
     Redo,
     Convert,
     AddText,
+    AddQrCode,
+    AddCode39,
     AddImage,
     CutMark,
     Padding,
@@ -58,6 +60,8 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &AppState) -> Option<ToolbarAction
         ui.separator();
         for (label, command) in [
             ("Add Text", ToolbarAction::AddText),
+            ("Add QR", ToolbarAction::AddQrCode),
+            ("Add Code 39", ToolbarAction::AddCode39),
             ("Add Image", ToolbarAction::AddImage),
             ("Cut Mark", ToolbarAction::CutMark),
         ] {
@@ -125,6 +129,8 @@ pub fn execute_action(state: &mut AppState, action: ToolbarAction) {
             Err(error) => state.status_message = format!("Conversion error: {error}"),
         },
         ToolbarAction::AddText => state.add_text(),
+        ToolbarAction::AddQrCode => state.add_qr_code(),
+        ToolbarAction::AddCode39 => state.add_code39(),
         ToolbarAction::AddImage => {
             if let Some(path) = crate::widgets::image_file_dialog().pick_file() {
                 match std::fs::read(&path) {

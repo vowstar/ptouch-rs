@@ -28,8 +28,9 @@ pub use crate::layout::{
 };
 
 /// Newest supported on-disk layout format version.
-pub const DOCUMENT_VERSION: u32 = 7;
-/// Empty layouts start at v4; content features raise the version when needed.
+pub const DOCUMENT_VERSION: u32 = 9;
+/// Empty layouts start at v4. Styles, layout policies, QR and Code 39 features
+/// raise the saved version when needed.
 pub const DEFAULT_DOCUMENT_VERSION: u32 = 4;
 
 /// Default design resolution for layouts saved before the dpi field existed.
@@ -145,6 +146,11 @@ impl LabelDocument {
         }
         for object in doc.elements.iter().filter_map(LabelElement::as_object) {
             crate::object_layout::validate(object, doc.version)?;
+            if matches!(object.content, ObjectContent::Code39 { .. }) && doc.version < 9 {
+                return Err(RenderError::Layout(
+                    "Code 39 objects require layout version 9".into(),
+                ));
+            }
             if let ObjectContent::Text {
                 content,
                 styles,
@@ -469,6 +475,22 @@ pub enum ObjectContent {
         #[serde(skip)]
         bitmap: Option<LabelBitmap>,
     },
+    QrCode {
+        data: String,
+        #[serde(default)]
+        error_correction: crate::barcode::QrErrorCorrection,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        version: Option<u8>,
+    },
+    Code39 {
+        data: String,
+        #[serde(default = "default_code39_bar_width")]
+        bar_width_pt: f32,
+        #[serde(default)]
+        check_digit: bool,
+        #[serde(default = "default_true")]
+        human_readable: bool,
+    },
     CutMark,
     /// An empty physical frame which still occupies its full width.
     Padding,
@@ -513,6 +535,47 @@ impl LabelObject {
             },
         }
     }
+
+    pub fn qr_code(data: impl Into<String>, frame: TextBox) -> Self {
+        Self {
+            frame,
+            layout: None,
+            content_box: None,
+            rotation: 0.0,
+            flip_h: false,
+            flip_v: false,
+            content: ObjectContent::QrCode {
+                data: data.into(),
+                error_correction: crate::barcode::QrErrorCorrection::default(),
+                version: None,
+            },
+        }
+    }
+
+    pub fn code39(data: impl Into<String>, frame: TextBox) -> Self {
+        Self {
+            frame,
+            layout: None,
+            content_box: None,
+            rotation: 0.0,
+            flip_h: false,
+            flip_v: false,
+            content: ObjectContent::Code39 {
+                data: data.into(),
+                bar_width_pt: default_code39_bar_width(),
+                check_digit: false,
+                human_readable: true,
+            },
+        }
+    }
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_code39_bar_width() -> f32 {
+    1.2
 }
 
 impl LabelElement {
@@ -520,6 +583,18 @@ impl LabelElement {
     pub fn minimum_version(&self) -> u32 {
         match self {
             Self::Object(object) => {
+                if matches!(object.content, ObjectContent::Code39 { .. }) {
+                    return 9;
+                }
+                if let ObjectContent::QrCode {
+                    version: Some(_), ..
+                } = object.content
+                {
+                    return 8;
+                }
+                if matches!(object.content, ObjectContent::QrCode { .. }) {
+                    return 7;
+                }
                 if object.layout.is_some() {
                     return 7;
                 }
@@ -565,6 +640,14 @@ impl LabelElement {
             | Self::Object(LabelObject {
                 content: ObjectContent::Text { content, .. },
                 ..
+            })
+            | Self::Object(LabelObject {
+                content: ObjectContent::QrCode { data: content, .. },
+                ..
+            })
+            | Self::Object(LabelObject {
+                content: ObjectContent::Code39 { data: content, .. },
+                ..
             }) => Some(content),
             _ => None,
         }
@@ -575,6 +658,14 @@ impl LabelElement {
             Self::Text { content, .. }
             | Self::Object(LabelObject {
                 content: ObjectContent::Text { content, .. },
+                ..
+            })
+            | Self::Object(LabelObject {
+                content: ObjectContent::QrCode { data: content, .. },
+                ..
+            })
+            | Self::Object(LabelObject {
+                content: ObjectContent::Code39 { data: content, .. },
                 ..
             }) => Some(content),
             _ => None,
@@ -651,6 +742,14 @@ impl LabelElement {
                     .unwrap_or_else(|| "embedded".to_string());
                 format!("Image: {}", name)
             }
+            LabelElement::Object(LabelObject {
+                content: ObjectContent::QrCode { data, .. },
+                ..
+            }) => format!("QR: {}", data.chars().take(16).collect::<String>()),
+            LabelElement::Object(LabelObject {
+                content: ObjectContent::Code39 { data, .. },
+                ..
+            }) => format!("Code 39: {}", data.chars().take(16).collect::<String>()),
             LabelElement::CutMark
             | LabelElement::Object(LabelObject {
                 content: ObjectContent::CutMark,
@@ -977,6 +1076,108 @@ mod tests {
             },
             other => other,
         }
+    }
+
+    #[test]
+    fn native_qr_serializes_as_version_7_and_preserves_editable_data() {
+        let object = LabelObject::qr_code("{{asset}}", TextBox::default());
+        let doc = LabelDocument {
+            version: DEFAULT_DOCUMENT_VERSION,
+            tape_width_mm: 24,
+            dpi: 180,
+            font_name: String::new(),
+            font_margin: 0,
+            flip_h: false,
+            flip_v: false,
+            elements: vec![LabelElement::Object(object)],
+        };
+        let serialized = doc.to_toml_string().unwrap();
+        assert!(serialized.contains("version = 7"));
+        assert!(serialized.contains("type = \"qr_code\""));
+        let mut restored = LabelDocument::from_toml_str(&serialized).unwrap();
+        assert_eq!(restored.elements[0].display_name(), "QR: {{asset}}");
+        assert_eq!(restored.placeholders(), vec!["asset"]);
+        let ObjectContent::QrCode {
+            data,
+            error_correction,
+            ..
+        } = &restored.elements[0].as_object().unwrap().content
+        else {
+            panic!("expected an editable QR object");
+        };
+        assert_eq!(data, "{{asset}}");
+        assert_eq!(*error_correction, crate::barcode::QrErrorCorrection::Medium);
+        restored.apply_values(&BTreeMap::from([("asset".into(), "A001".into())]));
+        assert!(matches!(
+            &restored.elements[0].as_object().unwrap().content,
+            ObjectContent::QrCode { data, .. } if data == "A001"
+        ));
+    }
+
+    #[test]
+    fn fixed_qr_version_requires_layout_version_8() {
+        let mut object = LabelObject::qr_code("FIXED", TextBox::default());
+        if let ObjectContent::QrCode { version, .. } = &mut object.content {
+            *version = Some(5);
+        }
+        let doc = LabelDocument {
+            version: 7,
+            tape_width_mm: 24,
+            dpi: 180,
+            font_name: String::new(),
+            font_margin: 0,
+            flip_h: false,
+            flip_v: false,
+            elements: vec![LabelElement::Object(object)],
+        };
+        let serialized = doc.to_toml_string().unwrap();
+        assert!(serialized.contains("version = 8"));
+        let restored = LabelDocument::from_toml_str(&serialized).unwrap();
+        assert!(matches!(
+            &restored.elements[0].as_object().unwrap().content,
+            ObjectContent::QrCode {
+                version: Some(5),
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn native_code39_serializes_as_version_9_and_preserves_options() {
+        let mut object = LabelObject::code39("ABC-123", TextBox::default());
+        if let ObjectContent::Code39 {
+            bar_width_pt,
+            check_digit,
+            human_readable,
+            ..
+        } = &mut object.content
+        {
+            *bar_width_pt = 1.6;
+            *check_digit = true;
+            *human_readable = false;
+        }
+        let doc = LabelDocument {
+            version: DEFAULT_DOCUMENT_VERSION,
+            tape_width_mm: 24,
+            dpi: 180,
+            font_name: String::new(),
+            font_margin: 0,
+            flip_h: false,
+            flip_v: false,
+            elements: vec![LabelElement::Object(object)],
+        };
+        let serialized = doc.to_toml_string().unwrap();
+        assert!(serialized.contains("version = 9"));
+        let restored = LabelDocument::from_toml_str(&serialized).unwrap();
+        assert!(matches!(
+            &restored.elements[0].as_object().unwrap().content,
+            ObjectContent::Code39 {
+                data,
+                bar_width_pt,
+                check_digit: true,
+                human_readable: false,
+            } if data == "ABC-123" && *bar_width_pt == 1.6
+        ));
     }
 
     #[test]

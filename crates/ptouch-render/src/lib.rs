@@ -6,6 +6,7 @@
 //! This crate provides bitmap rendering, text layout, image loading,
 //! and raster conversion for label printing.
 
+pub mod barcode;
 pub mod base64_bytes;
 pub mod bitmap;
 pub mod calibration;
@@ -16,6 +17,8 @@ pub mod image_loader;
 pub mod layout;
 pub mod object_layout;
 pub mod lbx;
+mod qr_mask;
+mod qr_segments;
 pub mod raster;
 pub mod styled_text;
 pub mod text;

@@ -8,12 +8,11 @@ use std::path::{Component, Path, PathBuf};
 
 use zip::ZipArchive;
 
-use crate::document::{LabelDocument, LabelElement, LabelObject, ObjectContent};
+use crate::document::{ContentBox, LabelDocument, LabelElement, LabelObject, ObjectContent};
 use crate::layout::{PositionMode, TextBox, VerticalAlign};
 use crate::styled_text::{StyleSpan, TextStyle};
 use crate::text::TextAlign;
 use crate::{RenderError, Result};
-use qrcodegen::{QrCode, QrCodeEcc, QrSegment, Version};
 
 const PT_TO_MM: f64 = 25.4 / 72.0;
 pub const MAX_ARCHIVE_BYTES: usize = 64 * 1024 * 1024;
@@ -58,8 +57,19 @@ pub fn export(document: &LabelDocument, printer: LbxPrinter) -> Result<Vec<u8>> 
                 "LBX export does not support non-object layout element {index}"
             )));
         };
+        let qr_content_box_supported = matches!(object.content, ObjectContent::QrCode { .. })
+            && object.content_box.as_ref().is_none_or(|content| {
+                content.offset_x_mm == 0.0
+                    && content.offset_y_mm == 0.0
+                    && content.width_mm.is_finite()
+                    && content.height_mm.is_finite()
+                    && content.width_mm > 0.0
+                    && content.height_mm > 0.0
+                    && content.width_mm <= object.frame.width_mm
+                    && content.height_mm <= object.frame.height_mm
+            });
         if object.frame.position != PositionMode::Absolute
-            || object.content_box.is_some()
+            || (object.content_box.is_some() && !qr_content_box_supported)
             || object.flip_h
             || object.flip_v
         {
@@ -159,6 +169,71 @@ pub fn export(document: &LabelDocument, printer: LbxPrinter) -> Result<Vec<u8>> 
                 ));
                 assets.push((name, image_data.clone()));
             }
+            ObjectContent::QrCode {
+                data,
+                error_correction,
+                version,
+            } => {
+                if data.is_empty() || data.len() > 4096 {
+                    return Err(RenderError::Layout(format!(
+                        "LBX QR object {index} has empty or oversized data"
+                    )));
+                }
+                // Validate capacity before emitting a native barcode object.
+                let qr_bitmap = crate::barcode::render_qr(data, *error_correction, *version)?;
+                let (x, y, width, height) = style_geometry(object);
+                let frame_width = width.parse::<f64>().map_err(|_| {
+                    RenderError::Layout(format!("LBX QR object {index} has invalid width"))
+                })?;
+                let frame_height = height.parse::<f64>().map_err(|_| {
+                    RenderError::Layout(format!("LBX QR object {index} has invalid height"))
+                })?;
+                let modules_with_quiet_zone = f64::from(qr_bitmap.width() / 8);
+                let content_width = object
+                    .content_box
+                    .as_ref()
+                    .map_or(frame_width, |content| content.width_mm * 72.0 / 25.4);
+                let content_height = object
+                    .content_box
+                    .as_ref()
+                    .map_or(frame_height, |content| content.height_mm * 72.0 / 25.4);
+                let cell_size = content_width.min(content_height) / modules_with_quiet_zone;
+                if !cell_size.is_finite() || cell_size <= 0.0 {
+                    return Err(RenderError::Layout(format!(
+                        "LBX QR object {index} has an invalid physical frame"
+                    )));
+                }
+                objects.push_str(&format!(
+                    "<barcode:barcode><pt:objectStyle x=\"{x}pt\" y=\"{y}pt\" width=\"{width}pt\" height=\"{height}pt\" angle=\"{}\" anchor=\"TOPLEFT\" flip=\"NONE\"><pt:pen style=\"NULL\" widthX=\"0pt\" widthY=\"0pt\" color=\"#000000\"/><pt:brush style=\"NULL\" color=\"#000000\"/></pt:objectStyle><barcode:barcodeStyle protocol=\"QRCODE\" margin=\"false\"/><pt:data>{}</pt:data><barcode:qrcodeStyle model=\"2\" eccLevel=\"{}\" cellSize=\"{cell_size:.3}pt\" mbcs=\"932\" removeCharKind=\"0\" removeCharString=\"\" joint=\"1\" jointSpace=\"8\" jointVertically=\"false\" version=\"{}\"/></barcode:barcode>",
+                    object.rotation,
+                    xml_escape(data)?,
+                    error_correction.lbx_name(),
+                    version.map_or_else(|| "auto".to_string(), |v| v.to_string()),
+                ));
+            }
+            ObjectContent::Code39 {
+                data,
+                bar_width_pt,
+                check_digit,
+                human_readable,
+            } => {
+                if !bar_width_pt.is_finite() || !(0.1..=10.0).contains(bar_width_pt) {
+                    return Err(RenderError::Layout(format!(
+                        "LBX Code 39 object {index} has an invalid narrow bar width"
+                    )));
+                }
+                // Validate payload before emitting a native barcode object.
+                crate::barcode::render_code39(data, *check_digit, 2)?;
+                let (x, y, width, height) = style_geometry(object);
+                objects.push_str(&format!(
+                    "<barcode:barcode><pt:objectStyle x=\"{x}pt\" y=\"{y}pt\" width=\"{width}pt\" height=\"{height}pt\" angle=\"{}\" anchor=\"TOPLEFT\" flip=\"NONE\"><pt:pen style=\"NULL\" widthX=\"0pt\" widthY=\"0pt\" color=\"#000000\"/><pt:brush style=\"NULL\" color=\"#000000\"/></pt:objectStyle><barcode:barcodeStyle protocol=\"CODE39\" lengths=\"{}\" zeroFill=\"false\" barWidth=\"{bar_width_pt}pt\" barRatio=\"1:3\" humanReadable=\"{}\" humanReadableAlignment=\"CENTER\" checkDigit=\"{}\" autoLengths=\"false\" margin=\"false\" sameLengthBar=\"false\" bearerBar=\"false\"/><pt:data>{}</pt:data></barcode:barcode>",
+                    object.rotation,
+                    data.len(),
+                    human_readable,
+                    check_digit,
+                    xml_escape(data)?,
+                ));
+            }
             ObjectContent::CutMark | ObjectContent::Padding => {
                 return Err(RenderError::Layout(format!(
                     "LBX export does not support cut marks or padding objects (object {index})"
@@ -168,7 +243,7 @@ pub fn export(document: &LabelDocument, printer: LbxPrinter) -> Result<Vec<u8>> 
     }
     if objects.is_empty() {
         return Err(RenderError::Layout(
-            "LBX export requires at least one text or image object".into(),
+            "LBX export requires at least one text, image, or QR object".into(),
         ));
     }
     let length_pt = max_length_mm * 72.0 / 25.4;
@@ -520,9 +595,69 @@ fn import_barcode(node: roxmltree::Node<'_, '_>, page: LbxPage) -> Result<ImageI
     let protocol = barcode_style
         .attribute("protocol")
         .ok_or_else(|| RenderError::Layout("LBX barcodeStyle has no protocol".into()))?;
+    if protocol == "CODE39" {
+        if barcode_style
+            .attribute("barRatio")
+            .is_some_and(|ratio| ratio != "1:3")
+            || barcode_style
+                .attribute("humanReadableAlignment")
+                .is_some_and(|alignment| alignment != "CENTER")
+        {
+            return Ok(ImageImport::Skipped(
+                "skipped LBX Code 39 barcode with unsupported bar ratio or readable-text alignment"
+                    .into(),
+            ));
+        }
+        let data = node
+            .children()
+            .find(|child| child.is_element() && child.tag_name().name() == "data")
+            .and_then(|child| child.text())
+            .unwrap_or_default();
+        if let Err(error) = crate::barcode::render_code39(data, false, 2) {
+            return Ok(ImageImport::Skipped(format!(
+                "skipped LBX Code 39 barcode: {error}"
+            )));
+        }
+        let style = object_style(node, "barcode")?;
+        let frame = frame_from_style(style, page)?;
+        let bar_width_pt = match barcode_style.attribute("barWidth") {
+            None => 1.2,
+            Some(value) => match parse_points(value) {
+                Some(width) if width.is_finite() && (0.1..=10.0).contains(&width) => width as f32,
+                _ => {
+                    return Ok(ImageImport::Skipped(
+                        "skipped LBX Code 39 barcode with unsupported bar width".into(),
+                    ));
+                }
+            },
+        };
+        if !bar_width_pt.is_finite() || !(0.1..=10.0).contains(&bar_width_pt) {
+            return Ok(ImageImport::Skipped(
+                "skipped LBX Code 39 barcode with unsupported bar width".into(),
+            ));
+        }
+        let mut object = LabelObject::code39(data, frame);
+        object.rotation = angle_from_style(style)?;
+        if let ObjectContent::Code39 {
+            bar_width_pt: imported_width,
+            check_digit: imported_check_digit,
+            human_readable: imported_human_readable,
+            ..
+        } = &mut object.content
+        {
+            *imported_width = bar_width_pt;
+            *imported_check_digit = barcode_style
+                .attribute("checkDigit")
+                .is_some_and(|value| value.eq_ignore_ascii_case("true"));
+            *imported_human_readable = barcode_style
+                .attribute("humanReadable")
+                .is_some_and(|value| value.eq_ignore_ascii_case("true"));
+        }
+        return Ok(ImageImport::Imported(object));
+    }
     if protocol != "QRCODE" {
         return Ok(ImageImport::Skipped(format!(
-            "skipped LBX barcode protocol '{protocol}'; only QR codes are imported"
+            "skipped LBX barcode protocol '{protocol}'; only Code 39 and QR codes are imported"
         )));
     }
     let qr_style = node
@@ -555,11 +690,11 @@ fn import_barcode(node: roxmltree::Node<'_, '_>, page: LbxPage) -> Result<ImageI
             "skipped non-ASCII LBX QR payload; source MBCS conversion is not reproduced".into(),
         ));
     }
-    let ecc = match qr_style.attribute("eccLevel").unwrap_or("15%") {
-        "7%" => QrCodeEcc::Low,
-        "15%" => QrCodeEcc::Medium,
-        "25%" => QrCodeEcc::Quartile,
-        "30%" => QrCodeEcc::High,
+    let error_correction = match qr_style.attribute("eccLevel").unwrap_or("15%") {
+        "7%" => crate::barcode::QrErrorCorrection::Low,
+        "15%" => crate::barcode::QrErrorCorrection::Medium,
+        "25%" => crate::barcode::QrErrorCorrection::Quartile,
+        "30%" => crate::barcode::QrErrorCorrection::High,
         level => {
             return Ok(ImageImport::Skipped(format!(
                 "skipped LBX QR code with unsupported error-correction level '{level}'"
@@ -567,32 +702,27 @@ fn import_barcode(node: roxmltree::Node<'_, '_>, page: LbxPage) -> Result<ImageI
         }
     };
     let version_attr = qr_style.attribute("version").unwrap_or("auto");
-    let segments = QrSegment::make_segments(data);
-    let qr = if version_attr.eq_ignore_ascii_case("auto") {
-        match QrCode::encode_segments(&segments, ecc) {
-            Ok(qr) => qr,
-            Err(_) => {
-                return Ok(ImageImport::Skipped(
-                    "skipped LBX QR payload that exceeds the Model 2 QR capacity".into(),
-                ));
-            }
-        }
+    let fixed_version = if version_attr.eq_ignore_ascii_case("auto") {
+        None
     } else {
-        let version = match version_attr.parse::<u8>() {
-            Ok(version @ 1..=40) => Version::new(version),
+        Some(match version_attr.parse::<u8>() {
+            Ok(version @ 1..=40) => version,
             _ => {
                 return Ok(ImageImport::Skipped(format!(
                     "skipped LBX QR code with unsupported version '{version_attr}'"
                 )));
             }
-        };
-        match QrCode::encode_segments_advanced(&segments, ecc, version, version, None, false) {
-            Ok(qr) => qr,
-            Err(_) => {
-                return Ok(ImageImport::Skipped(
-                    "skipped LBX QR payload that exceeds its configured version".into(),
-                ));
-            }
+        })
+    };
+    let qr = match crate::barcode::encode_qr(data, error_correction, fixed_version) {
+        Ok(qr) => qr,
+        Err(_) => {
+            let warning = if fixed_version.is_some() {
+                "skipped LBX QR payload that exceeds its configured version"
+            } else {
+                "skipped LBX QR payload that exceeds the Model 2 QR capacity"
+            };
+            return Ok(ImageImport::Skipped(warning.into()));
         }
     };
 
@@ -619,46 +749,22 @@ fn import_barcode(node: roxmltree::Node<'_, '_>, page: LbxPage) -> Result<ImageI
         ));
     }
     let total_size = total_modules * fitted_cell_size;
-    let offset_x = (width_pt - total_size) / 2.0;
-    let offset_y = (height_pt - total_size) / 2.0;
-    let code_x = offset_x + 4.0 * fitted_cell_size;
-    let code_y = offset_y + 4.0 * fitted_cell_size;
-    let mut path = String::new();
-    for y in 0..qr.size() {
-        let mut x = 0;
-        while x < qr.size() {
-            if !qr.get_module(x, y) {
-                x += 1;
-                continue;
-            }
-            let start = x;
-            while x < qr.size() && qr.get_module(x, y) {
-                x += 1;
-            }
-            let run_width = f64::from(x - start) * fitted_cell_size;
-            path.push_str(&format!(
-                "M{} {}h{}v{}h-{}z",
-                svg_num(code_x + f64::from(start) * fitted_cell_size),
-                svg_num(code_y + f64::from(y) * fitted_cell_size),
-                svg_num(run_width),
-                svg_num(fitted_cell_size),
-                svg_num(run_width)
-            ));
-        }
-    }
-    let svg = format!(
-        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{}pt\" height=\"{}pt\" viewBox=\"0 0 {} {}\"><rect width=\"100%\" height=\"100%\" fill=\"white\"/><path d=\"{path}\" fill=\"black\"/></svg>",
-        svg_num(width_pt),
-        svg_num(height_pt),
-        svg_num(width_pt),
-        svg_num(height_pt)
-    );
-    let mut object = LabelObject::image_from_bytes(None, svg.into_bytes(), frame);
+    let mut object = LabelObject::qr_code(data, frame);
     object.rotation = angle_from_style(style)?;
-    if matches!(&object.content, ObjectContent::Image { bitmap: None, .. }) {
-        return Err(RenderError::Layout(
-            "LBX QR code could not be rasterized from its vector source".into(),
-        ));
+    object.content_box = Some(ContentBox {
+        width_mm: total_size * PT_TO_MM,
+        height_mm: total_size * PT_TO_MM,
+        offset_x_mm: 0.0,
+        offset_y_mm: 0.0,
+    });
+    if let ObjectContent::QrCode {
+        error_correction: imported_correction,
+        version,
+        ..
+    } = &mut object.content
+    {
+        *imported_correction = error_correction;
+        *version = fixed_version;
     }
     Ok(ImageImport::Imported(object))
 }
@@ -688,12 +794,7 @@ fn import_container(
         "text" => import_text(node, page, elements, warnings, font_name)?,
         "symbol" => import_symbol(node, page, elements, warnings)?,
         "barcode" => match import_barcode(node, page)? {
-            ImageImport::Imported(object) => {
-                elements.push(LabelElement::Object(object));
-                warnings.push(
-                    "converted LBX QR barcode into an SVG-backed image; native barcode editing and exact Brother rendering are not retained".into(),
-                );
-            }
+            ImageImport::Imported(object) => elements.push(LabelElement::Object(object)),
             ImageImport::Skipped(reason) => warnings.push(reason),
         },
         "image" => match import_image(archive, node, page)? {
@@ -1230,6 +1331,72 @@ mod tests {
     }
 
     #[test]
+    fn exports_editable_qr_as_native_lbx_barcode() {
+        let mut document = text_document(24, "unused");
+        document.elements = vec![LabelElement::Object(LabelObject::qr_code(
+            "https://example.test/?a=1&b=2",
+            TextBox {
+                width_mm: 17.0,
+                height_mm: 17.0,
+                position: PositionMode::Absolute,
+                x_mm: 2.0,
+                y_mm: 1.0,
+                gap_mm: 0.0,
+                vertical_align: VerticalAlign::Center,
+            },
+        ))];
+        let bytes = export(&document, LbxPrinter::PtE550w).unwrap();
+        let mut zip = ZipArchive::new(Cursor::new(bytes)).unwrap();
+        let mut xml = String::new();
+        zip.by_name("label.xml")
+            .unwrap()
+            .read_to_string(&mut xml)
+            .unwrap();
+        assert!(xml.contains("<barcode:barcode>"));
+        assert!(xml.contains("protocol=\"QRCODE\""));
+        assert!(xml.contains("eccLevel=\"15%\""));
+        assert!(xml.contains("https://example.test/?a=1&amp;b=2"));
+        assert!(!xml.contains("image:imageStyle"));
+    }
+
+    #[test]
+    fn exports_editable_code39_as_a_native_lbx_barcode() {
+        let mut object = LabelObject::code39(
+            "ABC-123",
+            TextBox {
+                width_mm: 45.0,
+                height_mm: 12.0,
+                ..TextBox::default()
+            },
+        );
+        if let ObjectContent::Code39 {
+            bar_width_pt,
+            check_digit,
+            human_readable,
+            ..
+        } = &mut object.content
+        {
+            *bar_width_pt = 1.6;
+            *check_digit = true;
+            *human_readable = false;
+        }
+        let mut document = text_document(24, "");
+        document.elements = vec![LabelElement::Object(object)];
+        let exported = export(&document, LbxPrinter::PtE550w).unwrap();
+        let mut zip = ZipArchive::new(Cursor::new(exported)).unwrap();
+        let mut xml = String::new();
+        zip.by_name("label.xml")
+            .unwrap()
+            .read_to_string(&mut xml)
+            .unwrap();
+        assert!(xml.contains("protocol=\"CODE39\""));
+        assert!(xml.contains("barWidth=\"1.6pt\""));
+        assert!(xml.contains("checkDigit=\"true\""));
+        assert!(xml.contains("humanReadable=\"false\""));
+        assert!(xml.contains("<pt:data>ABC-123</pt:data>"));
+    }
+
+    #[test]
     fn export_rejects_content_that_would_be_silently_lost() {
         let mut document = text_document(24, "rich");
         let LabelElement::Object(object) = &mut document.elements[0] else {
@@ -1505,21 +1672,76 @@ mod tests {
     }
 
     #[test]
+    fn imports_supported_code39_as_an_editable_native_object() {
+        let xml = format!(
+            "{PREFIX}<barcode:barcode><pt:objectStyle x=\"2pt\" y=\"1pt\" width=\"72pt\" height=\"24pt\" angle=\"0\"/><barcode:barcodeStyle protocol=\"CODE39\" lengths=\"7\" barWidth=\"1.6pt\" barRatio=\"1:3\" humanReadable=\"true\" humanReadableAlignment=\"CENTER\" checkDigit=\"true\"/><pt:data>ABC-123</pt:data></barcode:barcode>{SUFFIX}"
+        );
+        let result = import(&archive(&xml)).unwrap();
+        assert!(result.warnings.is_empty());
+        assert!(matches!(
+            &result.document.elements[0].as_object().unwrap().content,
+            ObjectContent::Code39 {
+                data,
+                bar_width_pt,
+                check_digit: true,
+                human_readable: true,
+            } if data == "ABC-123" && *bar_width_pt == 1.6
+        ));
+        let serialized = result.document.to_toml_string().unwrap();
+        assert!(serialized.contains("version = 9"));
+        let restored = LabelDocument::from_toml_str(&serialized).unwrap();
+        let exported = export(&restored, LbxPrinter::PtE550w).unwrap();
+        let mut zip = ZipArchive::new(Cursor::new(exported)).unwrap();
+        let mut exported_xml = String::new();
+        zip.by_name("label.xml")
+            .unwrap()
+            .read_to_string(&mut exported_xml)
+            .unwrap();
+        assert!(exported_xml.contains("protocol=\"CODE39\""));
+        assert!(exported_xml.contains("barWidth=\"1.6pt\""));
+        assert!(exported_xml.contains("checkDigit=\"true\""));
+    }
+
+    #[test]
+    fn skips_code39_settings_that_the_native_model_cannot_preserve() {
+        for style in [
+            "barRatio=\"1:2\" humanReadableAlignment=\"CENTER\"",
+            "barRatio=\"1:3\" humanReadableAlignment=\"LEFT\"",
+        ] {
+            let xml = format!(
+                "{PREFIX}<barcode:barcode><pt:objectStyle x=\"0pt\" y=\"0pt\" width=\"58pt\" height=\"20pt\"/><barcode:barcodeStyle protocol=\"CODE39\" {style}/><pt:data>ABC123</pt:data></barcode:barcode>{SUFFIX}"
+            );
+            let error = import(&archive(&xml)).unwrap_err();
+            assert!(
+                error
+                    .to_string()
+                    .contains("unsupported bar ratio or readable-text alignment")
+            );
+        }
+    }
+
+    #[test]
     fn imports_model_2_qr_from_editor_barcode_tags() {
         let xml = format!(
             "{PREFIX}<barcode:barcode><pt:objectStyle x=\"0pt\" y=\"0pt\" width=\"58pt\" height=\"58pt\" angle=\"0\"/><barcode:barcodeStyle protocol=\"QRCODE\" margin=\"false\"/><pt:data>http://alecto.ca</pt:data><barcode:qrcodeStyle model=\"2\" eccLevel=\"15%\" cellSize=\"2.0pt\" mbcs=\"932\" removeCharKind=\"0\" removeCharString=\"\" joint=\"1\" jointSpace=\"8\" jointVertically=\"false\" version=\"auto\"/></barcode:barcode>{SUFFIX}"
         );
         let result = import(&archive(&xml)).unwrap();
         assert_eq!(result.document.elements.len(), 1);
-        assert!(result.warnings[0].contains("native barcode editing"));
+        assert!(result.warnings.is_empty());
         let Some(LabelElement::Object(object)) = result.document.elements.first() else {
-            panic!("expected QR image object");
+            panic!("expected native QR object");
         };
         assert!(matches!(
             &object.content,
-            ObjectContent::Image { image_data, bitmap: Some(_), .. }
-                if String::from_utf8_lossy(image_data).contains("<path d=\"M")
+            ObjectContent::QrCode {
+                data,
+                error_correction: crate::barcode::QrErrorCorrection::Medium,
+                version: None,
+            } if data == "http://alecto.ca"
         ));
+        let content = object.content_box.as_ref().unwrap();
+        assert!((content.width_mm - 58.0 * PT_TO_MM).abs() < 0.001);
+        assert!((content.height_mm - 58.0 * PT_TO_MM).abs() < 0.001);
         let rendered = crate::layout::render_document(
             &result.document,
             256,
@@ -1539,17 +1761,90 @@ mod tests {
     }
 
     #[test]
+    fn imports_and_renders_fixed_version_mixed_mode_qr() {
+        let xml = format!(
+            "{PREFIX}<barcode:barcode><pt:objectStyle x=\"0pt\" y=\"0pt\" width=\"58pt\" height=\"58pt\" angle=\"0\"/><barcode:barcodeStyle protocol=\"QRCODE\" margin=\"false\"/><pt:data>HELLO WORLD 1234567890</pt:data><barcode:qrcodeStyle model=\"2\" eccLevel=\"15%\" cellSize=\"2.0pt\" mbcs=\"932\" removeCharKind=\"0\" removeCharString=\"\" joint=\"1\" jointSpace=\"8\" jointVertically=\"false\" version=\"1\"/></barcode:barcode>{SUFFIX}"
+        );
+        let result = import(&archive(&xml)).unwrap();
+        assert!(result.warnings.is_empty());
+        assert!(matches!(
+            &result.document.elements[0].as_object().unwrap().content,
+            ObjectContent::QrCode {
+                data,
+                error_correction: crate::barcode::QrErrorCorrection::Medium,
+                version: Some(1),
+            } if data == "HELLO WORLD 1234567890"
+        ));
+
+        let rendered = crate::layout::render_document(
+            &result.document,
+            256,
+            180,
+            &mut crate::text::TextRenderer::with_test_font(),
+        )
+        .unwrap();
+        assert!(
+            rendered
+                .bitmap
+                .as_ref()
+                .unwrap()
+                .data()
+                .iter()
+                .any(|pixel| *pixel != 0)
+        );
+    }
+
+    #[test]
+    fn imports_fixed_qr_version_and_correction_as_native_fields() {
+        let xml = format!(
+            "{PREFIX}<barcode:barcode><pt:objectStyle x=\"0pt\" y=\"0pt\" width=\"120pt\" height=\"60pt\" angle=\"0\"/><barcode:barcodeStyle protocol=\"QRCODE\" margin=\"false\"/><pt:data>FIXED QR</pt:data><barcode:qrcodeStyle model=\"2\" eccLevel=\"25%\" cellSize=\"1.25pt\" mbcs=\"932\" removeCharKind=\"0\" removeCharString=\"\" joint=\"1\" jointSpace=\"8\" jointVertically=\"false\" version=\"5\"/></barcode:barcode>{SUFFIX}"
+        );
+        let result = import(&archive(&xml)).unwrap();
+        assert!(result.warnings.is_empty());
+        let object = result.document.elements[0].as_object().unwrap();
+        assert!(matches!(
+            &object.content,
+            ObjectContent::QrCode {
+                data,
+                error_correction: crate::barcode::QrErrorCorrection::Quartile,
+                version: Some(5),
+            } if data == "FIXED QR"
+        ));
+        let qr_size_pt = (37.0 + 8.0) * 1.25;
+        let content = object.content_box.as_ref().unwrap();
+        assert!((content.width_mm - qr_size_pt * PT_TO_MM).abs() < 0.001);
+        assert!((content.height_mm - qr_size_pt * PT_TO_MM).abs() < 0.001);
+        let serialized = result.document.to_toml_string().unwrap();
+        assert!(serialized.contains("version = 9"));
+        let restored = LabelDocument::from_toml_str(&serialized).unwrap();
+        assert!(matches!(
+            &restored.elements[0].as_object().unwrap().content,
+            ObjectContent::QrCode {
+                version: Some(5),
+                ..
+            }
+        ));
+        let exported = export(&restored, LbxPrinter::PtE550w).unwrap();
+        let mut zip = ZipArchive::new(Cursor::new(exported)).unwrap();
+        let mut exported_xml = String::new();
+        zip.by_name("label.xml")
+            .unwrap()
+            .read_to_string(&mut exported_xml)
+            .unwrap();
+        assert!(exported_xml.contains("version=\"5\""));
+        assert!(exported_xml.contains("cellSize=\"1.250pt\""));
+    }
+
+    #[test]
     fn skips_non_qr_barcodes_with_an_explicit_protocol_warning() {
         let xml = format!(
-            "{PREFIX}<barcode:barcode><pt:objectStyle x=\"0pt\" y=\"0pt\" width=\"58pt\" height=\"20pt\"/><barcode:barcodeStyle protocol=\"CODE39\"/><pt:data>ABC123</pt:data></barcode:barcode><text:text><pt:objectStyle x=\"0pt\" y=\"0pt\" width=\"20pt\" height=\"12pt\"/><pt:data>Text</pt:data></text:text>{SUFFIX}"
+            "{PREFIX}<barcode:barcode><pt:objectStyle x=\"0pt\" y=\"0pt\" width=\"58pt\" height=\"20pt\"/><barcode:barcodeStyle protocol=\"CODE128\"/><pt:data>ABC123</pt:data></barcode:barcode><text:text><pt:objectStyle x=\"0pt\" y=\"0pt\" width=\"20pt\" height=\"12pt\"/><pt:data>Text</pt:data></text:text>{SUFFIX}"
         );
         let result = import(&archive(&xml)).unwrap();
         assert_eq!(result.document.elements.len(), 1);
-        assert!(
-            result.warnings.iter().any(|warning| {
-                warning.contains("protocol 'CODE39'; only QR codes are imported")
-            })
-        );
+        assert!(result.warnings.iter().any(|warning| {
+            warning.contains("protocol 'CODE128'; only Code 39 and QR codes are imported")
+        }));
     }
 
     #[test]

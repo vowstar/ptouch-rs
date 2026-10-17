@@ -14,8 +14,11 @@ Optional native macOS Bluetooth support is available in `ptouch-core` for the PT
   after the previous box; preview with a millimeter ruler
 - Save and reload designs as self-contained `.ptl` layout files (images
   embedded), then print them from the GUI or CLI. Open supported text, PT
-  Dingbats symbols, QR codes, untrimmed images, and selected vector outlines
-  from `.lbx` files
+  Dingbats symbols, QR and Code 39 barcodes, untrimmed images, and selected
+  vector outlines from `.lbx` files
+- Create and edit QR and Code 39 barcode objects in the GUI; QR correction,
+  QR version, Code 39 check digit, bar width, and readable text stay editable
+  through shared rendering and native LBX export
 - Template layouts with `{{name}}` placeholders and batch-print from a CSV
 - Numbered layout batches by placeholder, with configurable start, increment,
   and label count
@@ -57,27 +60,65 @@ For `--tape-width-mm`, use Brother's width code; code `4` denotes 3.5mm tape.
 
 The Rust layout format is TOML `.ptl`. The CLI and GUI can import ordinary
 text, untrimmed embedded images, PT Dingbats symbols, and selected unfilled
-vector outlines from `.lbx` archives, but cannot export LBX. This bounded
-importer flattens nested wrappers with warnings, converts symbols to styled
-text glyphs and vector
-outlines to embedded SVG-backed image objects, and skips unsupported shapes,
-barcodes other than Model 2 QR, trimmed images, and image effects with warnings.
-QR codes import as SVG-backed images, so native barcode editing and exact Brother
-rendering are not retained; other barcode protocols remain unsupported. The GUI
-does not yet create or edit native barcode objects. Symbol rendering requires
-an installed Brother font containing the requested glyph.
+vector outlines from `.lbx` archives. The CLI exports a bounded target-specific
+LBX subset containing supported text, raster images, native QR barcode objects,
+and Code 39 barcodes. The importer flattens nested wrappers with warnings,
+converts symbols to styled text glyphs and vector outlines to embedded
+SVG-backed image objects, and skips unsupported shapes and barcode protocols,
+trimmed images, and image effects with warnings. Supported imported QR codes
+now preserve their editable payload,
+error correction, fixed or automatic version, and physical symbol size. QR
+objects created in the GUI preserve the same fields. Supported Code 39 objects
+preserve data, Mod 43 option, narrow bar width, and centered readable-text
+setting. Code 39 import skips other bar-width ratios and readable-text
+alignments because the native model does not preserve them. Windows P-touch
+Editor in-memory QR rasters match Rust matrices for the tested version 3 URL,
+version 1 numeric payload, and version 4 mixed byte/numeric payload. The QR
+segmenter now combines numeric, alphanumeric, and byte runs for automatic and
+fixed versions, and automatic QR encoding preserves the requested ECC level.
+Cycle 41 switches QR mask selection to a libqrencode-style finder-pattern scan.
+It matches Brother's selected mask in 17 of 19 analyzed captures, including
+seven version 4 byte-only matrices that match every module. Two mask choices
+remain different: one short mixed-mode payload and one repetitive version 4
+byte payload. Unicode/MBCS, GUI canvas, and physical barcode rendering remain
+unverified. Cycle 42 tested one 50-character byte payload at all four ECC
+levels. Brother selected masks 2, 2, 4, and 4 for ECC L, M, Q, and H at
+versions 3, 4, 5, and 6. The version 6 capture clips the symbol's bottom, but
+its QR format bits identify ECC H and mask 4. Symbol rendering requires an
+installed Brother font containing the requested glyph.
+
 The importer rejects files containing only unsupported objects. LBX conversion
-fidelity and P-touch Editor behavior remain under investigation. The editor has
-no barcode or QR object yet. iPrint&Label evidence confirms LBX editing and
-print paths for both target models, including text, symbol, image, barcode,
-date/time, frame, rectangle, and polygon objects. P-touch Editor ships LBX
-libraries and CIV LBX templates. A Windows probe using the Editor's bundled
-`LibLbx.DotNet` runtime loads simple text exports for both target models and
-reports their target IDs and media ID. Visual parity in the Editor and print
-behavior remain unverified. An external P-touch Editor 5.0.201 sample
-establishes the generic QR XML fields, while target-model rendering parity
-remains unknown. The CLI exports a bounded subset of layouts as target-specific
-LBX archives.
+fidelity and P-touch Editor behavior remain under investigation. iPrint&Label
+evidence confirms LBX editing and print paths for both target models, including
+text, symbol, image, barcode, date/time, frame, rectangle, and polygon objects.
+P-touch Editor ships LBX libraries and CIV LBX templates. Two hash-verified
+Windows runtime runs returned the intended PT-E550W and PT-P900W metadata for
+the archived text and QR exports. This contradicts a Cycle 17 report of the
+default MW-170 model; the earlier result's cause is unresolved. The Windows runtime probe reads loaded object types and barcode properties,
+can test in-memory QR property changes, and captures the in-memory raster returned by Brother's LBX library. It
+confirmed editable QR payload and Code 39 data after load. The Code 39 raster
+decodes to the expected value. Rust's human-readable line now includes the
+Brother-observed start/stop delimiters. Brother's QR raster first looked different from Rust's because its module
+pitch and placement differ. A pixel-level grid comparison found zero mismatches
+against Rust's exact version 3, ECC M, mask 7 matrix across every visible Brother
+cell for XS/S/M/L/XL. The E550W captures clip the QR grid vertically in their fixed 128-pixel raster.
+The P900W raster contains the full grid and decodes directly with zbar and
+ZXing-C++. Pixel comparison confirms zero mismatches across all visible E550W
+modules and the full P900W symbol. A crop-preserving 90-degree rotation
+and white padding lets ZXing-C++ recover the M payload, while an expanded
+lossless rotation does not decode because the raster still omits matrix rows. A second QR encoder also matches Rust's exact 29x29 matrix. On Windows,
+changing the Brother QR mode
+property in memory did not change two returned raster hashes, while changing the
+payload did. The same mode result held for numeric and uppercase alphanumeric
+payloads. Changing cell size across XS/S/M/L/XL changed raster width from 66 to 198 px
+while height stayed 128 px; only M decoded after the crop-preserving transform. Expanded rotations failed for all cell sizes.
+Forcing mask 0 produced a QR that decodes as mask 0. Measured widths equal
+33 times the CellSize enum values; the pixel mapping confirms a 29-module grid
+with two cell units of horizontal margin on each side. Brother's visible QR cells use the exact Rust byte-mode grid; the matrix rows
+cut off by the captured bitmap remain unobserved. The mode property's effect on
+other render or save paths remains unknown. GUI canvas behavior and
+physical print output remain unverified. The QR LBX fields follow a generic
+P-touch Editor 5.0.201 sample.
 
 The CLI and GUI support placeholder substitution and CSV batches. The CLI can
 also generate a numeric sequence through a named layout placeholder. This does
@@ -386,7 +427,8 @@ Independent content needs v4, custom line spacing v5, inline styles v6, and layo
 policies v7; older builds reject unsupported versions. Objects without a
 `content_box` keep their original fitting behaviour. Their first content move,
 resize or rotation fixes the current content size and requires v4; previously
-clipped content may reappear on that first edit. **Convert to free layout** preserves the exact dimensions of
+clipped content may reappear on that first edit. QR objects require v7, fixed
+QR versions v8, and Code 39 objects v9. **Convert to free layout** preserves the exact dimensions of
 existing millimeter frames and resolves their positions without rounding
 through preview pixels. Legacy natural dimensions are frozen into physical
 frames at the selected preview DPI.

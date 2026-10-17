@@ -873,6 +873,85 @@ fn render_object(
             )?;
             Ok((bitmap, false, geometry))
         }
+        ObjectContent::QrCode {
+            data,
+            error_correction,
+            version,
+        } => {
+            let source = crate::barcode::render_qr(data, *error_correction, *version)?;
+            let (bitmap, geometry) = render_contained(
+                &source,
+                rotation,
+                object.frame.vertical_align,
+                width,
+                height,
+                true,
+            )?;
+            Ok((bitmap, false, geometry))
+        }
+        ObjectContent::Code39 {
+            data,
+            bar_width_pt,
+            check_digit,
+            human_readable,
+        } => {
+            if !bar_width_pt.is_finite() || !(0.1..=10.0).contains(bar_width_pt) {
+                return Err(RenderError::Layout(
+                    "Code 39 narrow bar width must be between 0.1 and 10 points".into(),
+                ));
+            }
+            let narrow_width = (*bar_width_pt * f32::from(dpi) / 72.0).round().max(1.0) as u32;
+            let (bars, readable_value) =
+                crate::barcode::render_code39(data, *check_digit, narrow_width)?;
+            let source = if *human_readable {
+                // Brother's in-memory rendering includes Code 39 start/stop
+                // sentinels in the human-readable line.
+                let readable_with_sentinels = format!("*{readable_value}*");
+                let caption = renderer.render_text(
+                    &[&readable_with_sentinels],
+                    22,
+                    &doc.font_name,
+                    None,
+                    0,
+                    TextAlign::Center,
+                )?;
+                let width = bars.width().max(caption.width());
+                if width > 16_384 {
+                    return Err(RenderError::Layout(
+                        "Code 39 symbol and caption are too large to render".into(),
+                    ));
+                }
+                let mut combined = LabelBitmap::new(width, bars.height() + 4 + caption.height());
+                let bars_left = (width - bars.width()) / 2;
+                let caption_left = (width - caption.width()) / 2;
+                for y in 0..bars.height() {
+                    for x in 0..bars.width() {
+                        if bars.get_pixel(x, y) {
+                            combined.set_pixel(bars_left + x, y, true);
+                        }
+                    }
+                }
+                for y in 0..caption.height() {
+                    for x in 0..caption.width() {
+                        if caption.get_pixel(x, y) {
+                            combined.set_pixel(caption_left + x, bars.height() + 4 + y, true);
+                        }
+                    }
+                }
+                combined
+            } else {
+                bars
+            };
+            let (bitmap, geometry) = render_contained(
+                &source,
+                rotation,
+                object.frame.vertical_align,
+                width,
+                height,
+                false,
+            )?;
+            Ok((bitmap, false, geometry))
+        }
         ObjectContent::CutMark => {
             // A cut guide spans its frame rather than inheriting the legacy
             // 9-pixel image's aspect ratio. Retain the historical one-pixel
