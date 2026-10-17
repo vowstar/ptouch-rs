@@ -85,8 +85,8 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 
 | Gap | Current evidence | Scope limit |
 |---|---|---|
-| Rust reads/writes versioned TOML `.ptl`, imports a bounded LBX subset, and exports supported absolute text, raster-image, and native QR objects to target-specific LBX archives through the CLI | `crates/ptouch-render/src/document.rs`, `crates/ptouch-render/src/lbx.rs`, `crates/ptouch-cli/src/main.rs`; target maps from `LBXTagWriter.java` above | Export rejects unsupported layouts; generated-file acceptance and full Brother LBX conversion fidelity remain unknown |
-| Rust does not yet support CODE39, CODE128, EAN13, or EAN128 objects | `crates/ptouch-render/src/document.rs` and `lbx.rs`; compare iPrint&Label `Barcode.java` and editor creation paths above | Native QR creation and supported LBX QR import are implemented, but exact Brother raster appearance and target-model acceptance are not established |
+| Rust reads/writes versioned TOML `.ptl`, imports a bounded LBX subset, and exports supported absolute text, raster-image, QR, and Code 39 objects to target-specific LBX archives through the CLI | `crates/ptouch-render/src/document.rs`, `crates/ptouch-render/src/lbx.rs`, `crates/ptouch-cli/src/main.rs`; target maps from `LBXTagWriter.java` above | Export rejects unsupported layouts; generated-file acceptance and full Brother LBX conversion fidelity remain unknown |
+| Rust supports Code 39 but not Code 128, EAN13, or EAN128 objects | `crates/ptouch-render/src/barcode.rs`, `document.rs`, and `lbx.rs`; compare iPrint&Label `Barcode.java` and editor creation paths above | Code 39 supports its bounded alphabet and optional Mod 43 character; target-app visual rendering and print acceptance are not established |
 | Rust implements placeholder CSV batches but does not match iPrint&Label LBX numbering or database-assigned bitmap job paths | `crates/ptouch-cli/src/main.rs`; iPrint&Label `PrintTask.java` and `PrinterOptionDialogFragment.java` above | iPrint&Label CSV/schema runtime behavior is only partly established |
 | Current Rust TCP media handling covers standard width codes and does not model SL, FL, or HS media types | `crates/ptouch-core/src/tape.rs`, `session.rs`, `ptouch-gui/src/panels/sidebar.rs`; compare the target media configuration row above | App UI lists do not prove physical media compatibility or wire protocol behavior |
 
@@ -279,6 +279,17 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | The archived text and QR LBX files return their intended target model metadata through P-touch Editor's `LbxFactory.CreateFromPath` | confirmed, repeated | On `ryzen`, `LbxProbe.exe` called `LibLbx.Initialize` successfully, then loaded all four archived files twice. SHA-256 values match the table in `docs/re/windows-lbx-runtime/README.md`; E550W files returned ID `26160`, P900W files returned ID `28464`, all returned media ID `261`, LBX version `1.8`, and generator `ptouch-rs` |
 | Cycle 18 LBX import/export preserves the archived QR export byte-for-byte | confirmed | `ptouch convert` imported and re-exported both target QR archives. Each output SHA-256 exactly matched its input (`4b4b8e2d...9ca708` for E550W; `2230fb5b...10fbd1` for P900W), and the Windows runtime returned the intended model metadata for both output files |
 | The Cycle 17 report of MW-170, stored ID `0`, and media ID `138` can be reproduced for the same archived files | not reproduced; cause unknown | Two Cycle 19 probe runs using the exact archived hashes returned intended target metadata. The original Cycle 17 invocation details sufficient to identify the discrepancy were not preserved |
+
+## Cycle 20 Code 39 support
+
+| Claim | Status | Evidence |
+|---|---|---|
+| `.ptl` represents native Code 39 data, Mod 43 option, narrow-bar width, and readable-text option | implemented, tested | `crates/ptouch-render/src/document.rs`, `barcode.rs`; layout format version 9; serialization tests preserve all fields |
+| The offline Code 39 renderer encodes start/stop characters, optional Mod 43 check character, bounded payloads, and readable text | implemented, tested | `barcode::tests::code39_adds_start_stop_and_mod43_check_character`; CLI rendered `docs/re/code39-probe.ptl` and `zbarimg` decoded `ABC-123W` |
+| Supported LBX Code 39 objects import to native `.ptl` objects and export with data, check digit, bar width, and readable-text fields | implemented, tested | `lbx::tests::imports_supported_code39_as_an_editable_native_object`; `lbx::tests::exports_editable_code39_as_a_native_lbx_barcode` |
+| P-touch Editor's LBX runtime returns intended E550W metadata for a Rust-exported Code 39 archive | observed, metadata only | Windows `LbxProbe.exe` loaded SHA-256 `0cc382b3150075152e3c29ff4eab4fbfe99327a146fb94518440e5c1e3c40214` and returned PT-E550W ID `26160`, media ID `261`; it did not inspect the GUI canvas, barcode data, or print output |
+| Generic Code 39 LBX style attribute names match Brother-generated output | not verified against Brother output | Current fields are corroborated by the independent [`bil-lbx` serializer](https://github.com/orochi235/bil-lbx/blob/main/src/serialize.ts); no app-generated Code 39 fixture is preserved |
+| Rust Code 39 raster matches P-touch Editor or iPrint&Label rendering on either target | unknown | The CLI output decoded correctly, but no app-rendered baseline or physical print comparison is available |
 
 ## Cycle 18 native QR LBX import
 

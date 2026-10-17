@@ -1,0 +1,22 @@
+version = 9
+tape_width_mm = 24
+dpi = 180
+font_name = "Arial"
+font_margin = 0
+
+[[elements]]
+type = "object"
+rotation = 0.0
+[elements.frame]
+width_mm = 80.0
+height_mm = 14.0
+position = "absolute"
+x_mm = 2.0
+y_mm = 2.0
+vertical_align = "center"
+[elements.content]
+type = "code39"
+data = "ABC-123"
+bar_width_pt = 1.2
+check_digit = true
+human_readable = true

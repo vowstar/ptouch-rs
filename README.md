@@ -14,10 +14,11 @@ Optional native macOS Bluetooth support is available in `ptouch-core` for the PT
   after the previous box; preview with a millimeter ruler
 - Save and reload designs as self-contained `.ptl` layout files (images
   embedded), then print them from the GUI or CLI. Open supported text, PT
-  Dingbats symbols, QR codes, untrimmed images, and selected vector outlines
-  from `.lbx` files
-- Create editable QR objects in the GUI with selectable error correction;
-  render through the shared preview/print path and export as native LBX QR data
+  Dingbats symbols, QR and Code 39 barcodes, untrimmed images, and selected
+  vector outlines from `.lbx` files
+- Create and edit QR and Code 39 barcode objects in the GUI; QR correction,
+  QR version, Code 39 check digit, bar width, and readable text stay editable
+  through shared rendering and native LBX export
 - Template layouts with `{{name}}` placeholders and batch-print from a CSV
 - Numbered layout batches by placeholder, with configurable start, increment,
   and label count
@@ -60,15 +61,19 @@ For `--tape-width-mm`, use Brother's width code; code `4` denotes 3.5mm tape.
 The Rust layout format is TOML `.ptl`. The CLI and GUI can import ordinary
 text, untrimmed embedded images, PT Dingbats symbols, and selected unfilled
 vector outlines from `.lbx` archives. The CLI exports a bounded target-specific
-LBX subset containing supported text, raster images, and native QR barcode
-objects. The importer flattens nested wrappers with warnings, converts symbols
-to styled text glyphs and vector outlines to embedded SVG-backed image objects,
-and skips unsupported shapes, non-QR barcodes, trimmed images, and image effects
-with warnings. Supported imported QR codes now preserve their editable payload,
+LBX subset containing supported text, raster images, native QR barcode objects,
+and Code 39 barcodes. The importer flattens nested wrappers with warnings,
+converts symbols to styled text glyphs and vector outlines to embedded
+SVG-backed image objects, and skips unsupported shapes and barcode protocols,
+trimmed images, and image effects with warnings. Supported imported QR codes
+now preserve their editable payload,
 error correction, fixed or automatic version, and physical symbol size. QR
-objects created in the GUI preserve the same fields. Exact Brother QR rendering
-is unverified. Symbol rendering requires an installed Brother font containing
-the requested glyph.
+objects created in the GUI preserve the same fields. Supported Code 39 objects
+preserve data, Mod 43 option, narrow bar width, and centered readable-text
+setting. Code 39 import skips other bar-width ratios and readable-text
+alignments because the native model does not preserve them. Exact Brother
+barcode rendering is unverified. Symbol rendering requires an installed Brother
+font containing the requested glyph.
 
 The importer rejects files containing only unsupported objects. LBX conversion
 fidelity and P-touch Editor behavior remain under investigation. iPrint&Label
@@ -368,7 +373,8 @@ errors; object center offsets may be negative. Bounds are rounded from absolute
 physical positions, so repeated ports do not accumulate pixel-rounding drift.
 
 New free layouts use format version 4. Non-default line spacing requires version
-5, and inline text styles require version 6. Older builds reject newer features.
+5, inline text styles version 6, QR objects version 7, fixed QR versions version
+8, and Code 39 objects version 9. Older builds reject newer features.
 Versions 1–5 retain their rendering and version when saved without new inline
 styles. Objects without a `content_box` keep fitting inside their slots;
 their first Object move, resize, or rotation fixes the current content size and

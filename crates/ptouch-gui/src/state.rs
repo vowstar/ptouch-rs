@@ -668,6 +668,13 @@ impl AppState {
         self.add_element(LabelElement::Object(object));
     }
 
+    pub fn add_code39(&mut self) {
+        let mut frame = self.default_object_frame(45.0, self.printable_height_mm().min(16.0));
+        frame.vertical_align = ptouch_render::document::VerticalAlign::Center;
+        let object = LabelObject::code39("ABC-123", frame);
+        self.add_element(LabelElement::Object(object));
+    }
+
     pub fn add_image_bytes(&mut self, path: Option<std::path::PathBuf>, bytes: Vec<u8>) -> bool {
         let element = if self.is_free_layout() {
             let mut object = LabelObject::image_from_bytes(
@@ -826,6 +833,23 @@ mod tests {
         assert!(matches!(
             &state.elements[0].as_object().unwrap().content,
             ObjectContent::QrCode { data, .. } if data == "https://example.com"
+        ));
+        assert!(state.needs_rerender);
+    }
+
+    #[test]
+    fn adding_code39_creates_a_selected_native_document_object() {
+        let mut state = AppState::default();
+        state.add_code39();
+        assert_eq!(state.selected_element, Some(0));
+        assert!(matches!(
+            &state.elements[0].as_object().unwrap().content,
+            ObjectContent::Code39 {
+                data,
+                check_digit: false,
+                human_readable: true,
+                ..
+            } if data == "ABC-123"
         ));
         assert!(state.needs_rerender);
     }

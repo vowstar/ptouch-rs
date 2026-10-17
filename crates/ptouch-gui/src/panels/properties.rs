@@ -771,6 +771,27 @@ fn show_object_properties(
             }
             ui.small("The QR payload stays editable in this layout and LBX export.");
         }
+        ObjectContent::Code39 {
+            data,
+            bar_width_pt,
+            check_digit,
+            human_readable,
+        } => {
+            ui.label("Code 39 barcode");
+            changed |= ui.text_edit_singleline(data).changed();
+            changed |= ui
+                .add(
+                    egui::DragValue::new(bar_width_pt)
+                        .range(0.1..=10.0)
+                        .suffix(" pt bars"),
+                )
+                .changed();
+            changed |= ui
+                .checkbox(check_digit, "Add Mod 43 check character")
+                .changed();
+            changed |= ui.checkbox(human_readable, "Show readable text").changed();
+            ui.small("Code 39 supports uppercase letters, digits, space, and - . $ / + %.");
+        }
         ObjectContent::CutMark => {
             ui.label("Cut mark");
             ui.small("A printed guide only; it does not trigger the cutter.");

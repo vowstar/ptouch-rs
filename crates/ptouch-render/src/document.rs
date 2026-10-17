@@ -28,8 +28,8 @@ pub use crate::layout::{
 };
 
 /// Newest supported on-disk layout format version.
-pub const DOCUMENT_VERSION: u32 = 8;
-/// New layouts use v4; custom spacing needs v5, styles v6, QR objects v7, and fixed QR versions v8.
+pub const DOCUMENT_VERSION: u32 = 9;
+/// New layouts use v4; custom spacing needs v5, styles v6, QR objects v7, fixed QR versions v8, and Code 39 v9.
 pub const DEFAULT_DOCUMENT_VERSION: u32 = 4;
 
 /// Default design resolution for layouts saved before the dpi field existed.
@@ -144,6 +144,11 @@ impl LabelDocument {
             ));
         }
         for object in doc.elements.iter().filter_map(LabelElement::as_object) {
+            if matches!(object.content, ObjectContent::Code39 { .. }) && doc.version < 9 {
+                return Err(RenderError::Layout(
+                    "Code 39 objects require layout version 9".into(),
+                ));
+            }
             if let ObjectContent::Text {
                 content,
                 styles,
@@ -472,6 +477,15 @@ pub enum ObjectContent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         version: Option<u8>,
     },
+    Code39 {
+        data: String,
+        #[serde(default = "default_code39_bar_width")]
+        bar_width_pt: f32,
+        #[serde(default)]
+        check_digit: bool,
+        #[serde(default = "default_true")]
+        human_readable: bool,
+    },
     CutMark,
     /// An empty physical frame which still occupies its full width.
     Padding,
@@ -529,6 +543,30 @@ impl LabelObject {
             },
         }
     }
+
+    pub fn code39(data: impl Into<String>, frame: TextBox) -> Self {
+        Self {
+            frame,
+            content_box: None,
+            rotation: 0.0,
+            flip_h: false,
+            flip_v: false,
+            content: ObjectContent::Code39 {
+                data: data.into(),
+                bar_width_pt: default_code39_bar_width(),
+                check_digit: false,
+                human_readable: true,
+            },
+        }
+    }
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_code39_bar_width() -> f32 {
+    1.2
 }
 
 impl LabelElement {
@@ -544,6 +582,9 @@ impl LabelElement {
                 }
                 if matches!(object.content, ObjectContent::QrCode { .. }) {
                     return 7;
+                }
+                if matches!(object.content, ObjectContent::Code39 { .. }) {
+                    return 9;
                 }
                 if let ObjectContent::Text { styles, .. } = &object.content
                     && !styles.is_empty()
@@ -591,6 +632,10 @@ impl LabelElement {
             | Self::Object(LabelObject {
                 content: ObjectContent::QrCode { data: content, .. },
                 ..
+            })
+            | Self::Object(LabelObject {
+                content: ObjectContent::Code39 { data: content, .. },
+                ..
             }) => Some(content),
             _ => None,
         }
@@ -605,6 +650,10 @@ impl LabelElement {
             })
             | Self::Object(LabelObject {
                 content: ObjectContent::QrCode { data: content, .. },
+                ..
+            })
+            | Self::Object(LabelObject {
+                content: ObjectContent::Code39 { data: content, .. },
                 ..
             }) => Some(content),
             _ => None,
@@ -683,6 +732,10 @@ impl LabelElement {
                 content: ObjectContent::QrCode { data, .. },
                 ..
             }) => format!("QR: {}", data.chars().take(16).collect::<String>()),
+            LabelElement::Object(LabelObject {
+                content: ObjectContent::Code39 { data, .. },
+                ..
+            }) => format!("Code 39: {}", data.chars().take(16).collect::<String>()),
             LabelElement::CutMark
             | LabelElement::Object(LabelObject {
                 content: ObjectContent::CutMark,
@@ -1061,6 +1114,44 @@ mod tests {
                 version: Some(5),
                 ..
             }
+        ));
+    }
+
+    #[test]
+    fn native_code39_serializes_as_version_9_and_preserves_options() {
+        let mut object = LabelObject::code39("ABC-123", TextBox::default());
+        if let ObjectContent::Code39 {
+            bar_width_pt,
+            check_digit,
+            human_readable,
+            ..
+        } = &mut object.content
+        {
+            *bar_width_pt = 1.6;
+            *check_digit = true;
+            *human_readable = false;
+        }
+        let doc = LabelDocument {
+            version: DEFAULT_DOCUMENT_VERSION,
+            tape_width_mm: 24,
+            dpi: 180,
+            font_name: String::new(),
+            font_margin: 0,
+            flip_h: false,
+            flip_v: false,
+            elements: vec![LabelElement::Object(object)],
+        };
+        let serialized = doc.to_toml_string().unwrap();
+        assert!(serialized.contains("version = 9"));
+        let restored = LabelDocument::from_toml_str(&serialized).unwrap();
+        assert!(matches!(
+            &restored.elements[0].as_object().unwrap().content,
+            ObjectContent::Code39 {
+                data,
+                bar_width_pt,
+                check_digit: true,
+                human_readable: false,
+            } if data == "ABC-123" && *bar_width_pt == 1.6
         ));
     }
 
