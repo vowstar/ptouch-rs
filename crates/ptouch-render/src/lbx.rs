@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Huang Rui <vowstar@gmail.com>
 
-//! Bounded importer for ordinary Brother LBX label objects.
+//! Bounded importer for supported Brother LBX label objects.
 
 use std::io::{Cursor, Read};
 use std::path::{Component, Path, PathBuf};
@@ -10,6 +10,7 @@ use zip::ZipArchive;
 
 use crate::document::{LabelDocument, LabelElement, LabelObject, ObjectContent};
 use crate::layout::{PositionMode, TextBox, VerticalAlign};
+use crate::styled_text::{StyleSpan, TextStyle};
 use crate::text::TextAlign;
 use crate::{RenderError, Result};
 
@@ -25,7 +26,7 @@ pub struct LbxImport {
     pub warnings: Vec<String>,
 }
 
-/// Import ordinary text and untrimmed image objects from an LBX ZIP archive.
+/// Import supported text, PT Dingbats symbols, images, and vector objects from LBX.
 ///
 /// Specialized cable, table, barcode, drawing, trimmed image, and image-effect
 /// objects are skipped with a warning. A file with no supported objects is
@@ -108,7 +109,7 @@ pub fn import(bytes: &[u8]) -> Result<LbxImport> {
             format!("; {}", warnings.join("; "))
         };
         return Err(RenderError::Layout(format!(
-            "LBX file contains no supported text, untrimmed image, or unfilled vector objects{detail}"
+            "LBX file contains no supported text, PT Dingbats symbols, untrimmed images, or unfilled vector objects{detail}"
         )));
     }
     Ok(LbxImport {
@@ -190,6 +191,69 @@ fn import_text(
     Ok(())
 }
 
+fn import_symbol(
+    node: roxmltree::Node<'_, '_>,
+    page: LbxPage,
+    elements: &mut Vec<LabelElement>,
+    warnings: &mut Vec<String>,
+) -> Result<()> {
+    let style = object_style(node, "symbol")?;
+    let symbol_style = node
+        .descendants()
+        .find(|child| child.is_element() && child.tag_name().name() == "symbolStyle")
+        .ok_or_else(|| RenderError::Layout("LBX symbol has no symbolStyle".into()))?;
+    let font_name = symbol_style
+        .attribute("fontName")
+        .ok_or_else(|| RenderError::Layout("LBX symbolStyle has no fontName".into()))?;
+    let code = symbol_style
+        .attribute("code")
+        .ok_or_else(|| RenderError::Layout("LBX symbolStyle has no code".into()))?
+        .parse::<u32>()
+        .map_err(|_| RenderError::Layout("LBX symbol code is not an integer".into()))?;
+    if !font_name.contains("PT Dingbats")
+        || (!(33..=126).contains(&code) && !(161..=233).contains(&code))
+    {
+        warnings.push(format!(
+            "skipped LBX symbol with unsupported font '{font_name}' or code {code}"
+        ));
+        return Ok(());
+    }
+    let glyph = char::from_u32(0xF000 + code)
+        .ok_or_else(|| RenderError::Layout("LBX symbol code is not a Unicode scalar".into()))?;
+    let object = LabelObject {
+        frame: frame_from_style(style, page)?,
+        content_box: None,
+        rotation: angle_from_style(style)?,
+        flip_h: false,
+        flip_v: false,
+        content: ObjectContent::Text {
+            content: glyph.to_string(),
+            font_size: None,
+            align: TextAlign::Center,
+            line_spacing: crate::text::DEFAULT_LINE_SPACING,
+            styles: vec![StyleSpan {
+                start: 0,
+                end: 1,
+                style: TextStyle {
+                    font_name: Some(font_name.to_owned()),
+                    ..TextStyle::default()
+                },
+            }],
+        },
+    };
+    elements.push(LabelElement::Object(object));
+    warnings.push(format!(
+        "converted LBX symbol '{font_name}' code {code} to editable text; native symbol metadata is not retained"
+    ));
+    if !crate::font::has_glyph(font_name, glyph) {
+        warnings.push(format!(
+            "LBX symbol glyph U+{0:04X} is unavailable in installed font family '{font_name}'; rendering may substitute another font",
+            glyph as u32
+        ));
+    }
+    Ok(())
+}
+
 enum ImageImport {
     Imported(LabelObject),
     Skipped(String),
@@ -213,6 +277,7 @@ fn import_container(
     let kind = node.tag_name().name();
     match kind {
         "text" => import_text(node, page, elements, warnings, font_name)?,
+        "symbol" => import_symbol(node, page, elements, warnings)?,
         "image" => match import_image(archive, node, page)? {
             ImageImport::Imported(object) => elements.push(LabelElement::Object(object)),
             ImageImport::Skipped(reason) => warnings.push(reason),
@@ -232,14 +297,16 @@ fn import_container(
                 .filter(|child| child.is_element())
                 .collect::<Vec<_>>();
             let contains_supported = nested.iter().any(|child| {
-                matches!(child.tag_name().name(), "text" | "image" | "poly" | "rect")
-                    || child.descendants().any(|descendant| {
-                        descendant.is_element()
-                            && matches!(
-                                descendant.tag_name().name(),
-                                "text" | "image" | "poly" | "rect"
-                            )
-                    })
+                matches!(
+                    child.tag_name().name(),
+                    "text" | "symbol" | "image" | "poly" | "rect"
+                ) || child.descendants().any(|descendant| {
+                    descendant.is_element()
+                        && matches!(
+                            descendant.tag_name().name(),
+                            "text" | "symbol" | "image" | "poly" | "rect"
+                        )
+                })
             });
             if contains_supported {
                 if top_level {
@@ -684,7 +751,9 @@ mod tests {
     fn rejects_files_without_supported_objects() {
         let xml = format!("{PREFIX}<cable:cable xmlns:cable=\"urn:cable\"/>{SUFFIX}");
         let error = import(&archive(&xml)).unwrap_err().to_string();
-        assert!(error.contains("no supported text, untrimmed image, or unfilled vector objects"));
+        assert!(error.contains(
+            "no supported text, PT Dingbats symbols, untrimmed images, or unfilled vector objects"
+        ));
         assert!(error.contains("cable"));
     }
 
@@ -833,6 +902,77 @@ mod tests {
                 .iter()
                 .any(|byte| *byte != 0)
         );
+    }
+
+    #[test]
+    fn imports_pt_dingbats_symbols_as_styled_editable_glyphs() {
+        let xml = format!(
+            "{PREFIX}<draw:symbol><pt:objectStyle x=\"3pt\" y=\"4pt\" width=\"20pt\" height=\"18pt\" angle=\"0\"/><draw:symbolStyle fontName=\"PT Dingbats 1\" code=\"65\"/></draw:symbol>{SUFFIX}"
+        );
+        let result = import(&archive(&xml)).unwrap();
+        let Some(LabelElement::Object(object)) = result.document.elements.first() else {
+            panic!("expected imported symbol text object");
+        };
+        assert_eq!(object.frame.x_mm, 3.0 * PT_TO_MM);
+        assert_eq!(object.frame.y_mm, 4.0 * PT_TO_MM);
+        assert!(matches!(
+            &object.content,
+            ObjectContent::Text { content, styles, .. }
+                if content == "\u{f041}"
+                    && styles.len() == 1
+                    && styles[0].style.font_name.as_deref() == Some("PT Dingbats 1")
+        ));
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|warning| { warning.contains("native symbol metadata is not retained") })
+        );
+        let glyph_available = crate::font::has_glyph("PT Dingbats 1", '\u{f041}');
+        assert_eq!(
+            result
+                .warnings
+                .iter()
+                .any(|warning| warning.contains("glyph U+F041 is unavailable")),
+            !glyph_available
+        );
+        let serialized = result.document.to_toml_string().unwrap();
+        let reloaded = LabelDocument::from_toml_str(&serialized).unwrap();
+        assert!(matches!(
+            &reloaded.elements[0],
+            LabelElement::Object(LabelObject {
+                content: ObjectContent::Text { content, styles, .. },
+                ..
+            }) if content == "\u{f041}"
+                && styles[0].style.font_name.as_deref() == Some("PT Dingbats 1")
+        ));
+        if glyph_available {
+            let rendered = crate::layout::render_document(
+                &reloaded,
+                128,
+                180,
+                &mut crate::text::TextRenderer::new(),
+            )
+            .unwrap();
+            assert!(
+                rendered
+                    .bitmap
+                    .as_ref()
+                    .unwrap()
+                    .data()
+                    .iter()
+                    .any(|pixel| *pixel != 0)
+            );
+        }
+    }
+
+    #[test]
+    fn unsupported_symbol_families_are_reported_with_their_code() {
+        let xml = format!(
+            "{PREFIX}<draw:symbol><pt:objectStyle x=\"0pt\" y=\"0pt\" width=\"20pt\" height=\"18pt\"/><draw:symbolStyle fontName=\"Arial\" code=\"65\"/></draw:symbol>{SUFFIX}"
+        );
+        let error = import(&archive(&xml)).unwrap_err().to_string();
+        assert!(error.contains("unsupported font 'Arial' or code 65"));
     }
 
     #[test]

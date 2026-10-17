@@ -85,7 +85,7 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 
 | Gap | Current evidence | Scope limit |
 |---|---|---|
-| Rust reads/writes its versioned TOML `.ptl` layout and imports a bounded subset of LBX ordinary text and untrimmed embedded image objects; it has no LBX export | `crates/ptouch-render/src/document.rs`, `crates/ptouch-render/src/lbx.rs`, CLI and GUI path loading; compared with `LBXTagWriter.java` above | Specialized objects and full Brother LBX conversion fidelity remain unsupported or unknown |
+| Rust reads/writes its versioned TOML `.ptl` layout and imports a bounded subset of LBX text, PT Dingbats symbols, untrimmed embedded images, and selected unfilled vector outlines; it has no LBX export | `crates/ptouch-render/src/document.rs`, `crates/ptouch-render/src/lbx.rs`, CLI and GUI path loading; compared with `LBXTagWriter.java` above | Specialized objects and full Brother LBX conversion fidelity remain unsupported or unknown |
 | Rust's `ObjectContent` supports text, image, cut mark, and padding; it has no barcode/QR object | `crates/ptouch-render/src/document.rs`; compared with iPrint&Label `Barcode.java` and editor creation paths above | Barcode generation rules and exact Brother raster appearance are not established by the decompile |
 | Rust implements placeholder CSV batches but does not match iPrint&Label LBX numbering or database-assigned bitmap job paths | `crates/ptouch-cli/src/main.rs`; iPrint&Label `PrintTask.java` and `PrinterOptionDialogFragment.java` above | iPrint&Label CSV/schema runtime behavior is only partly established |
 | Current Rust TCP media handling covers standard width codes and does not model SL, FL, or HS media types | `crates/ptouch-core/src/tape.rs`, `session.rs`, `ptouch-gui/src/panels/sidebar.rs`; compare the target media configuration row above | App UI lists do not prove physical media compatibility or wire protocol behavior |
@@ -189,3 +189,13 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Landscape left/top margins are swapped into the printable x/y origin | implemented, unit tested | `crates/ptouch-render/src/lbx.rs`; `landscape_page_margins_are_swapped_into_printable_origin` |
 | The preserved cable-flag LBX renders offline through the CLI | verified | Offline `ptouch print --layout .../CIV/3_NewCableFlag.lbx --output /tmp/ptouch-cycle9-cable-flag.png`; output inspected, no source-application visual comparison or printer connection |
 | Native shape editing, symbols, fills, round rectangles, unsupported pens/arrows, exact Brother styling, LBX export, and source-app rendering parity | open gaps | Conversion intentionally uses embedded SVG-backed image objects; unsupported variants warn or skip |
+
+
+## Cycle 10 PT Dingbats symbol import
+
+| Claim | Status | Evidence |
+|---|---|---|
+| iPrint&Label stores symbol family and code in `draw:symbolStyle`; PT Dingbats code values map to glyphs in Unicode private-use range starting at U+F000 | observed in source | `android-iprintandlabel-5.3.17/jadx/sources/com/brother/ptouch/iprintandlabel/compatible/LBXTagWriter.java:1252-1278`, `com/brother/ptouch/lbxwrapper/Symbol.java:46-50`, `com/brother/pns/labeleditorview/labelobject/SymbolUtility.java:18-25` |
+| Preserved iPrint&Label Android assets include PT Dingbats 1-4 font families with private-use glyph coverage; P-touch Editor package does not expose identically named files in its Fonts directory | observed in package | Android `jadx/resources/assets/fonts/BRDB1RT0.TTF` through `BRDB4RT0.TTF`, verified with `fc-query`; P-touch Editor `6/Fonts/` inventory |
+| Rust imports PT Dingbats symbols as centered editable text with an inline font family, frame, and rotation; warns that native symbol metadata is lost and when the family is unavailable | implemented, unit tested | `crates/ptouch-render/src/lbx.rs`; synthetic LBX fixture verifies code 65 maps to U+F041, preserves its inline font through `.ptl` serialization, and renders visible pixels when run with the preserved Brother font in a temporary fontconfig directory |
+| Rendering a symbol exactly matches Brother's native renderer on the target platforms | unknown | Symbol geometry is normalized by iPrint&Label's proprietary LBX core; no preserved symbol-bearing LBX fixture or app-rendered comparison is available |

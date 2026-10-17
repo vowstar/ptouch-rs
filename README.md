@@ -13,8 +13,9 @@ Optional native macOS Bluetooth support is available in `ptouch-core` for the PT
 - Position fixed text boxes in millimeters, with absolute coordinates or gaps
   after the previous box; preview with a millimeter ruler
 - Save and reload designs as self-contained `.ptl` layout files (images
-  embedded), then print them from the GUI or CLI. Open supported text, untrimmed images, and unfilled line/polyline/polygon/
-  rectangle/ellipse outlines from Brother `.lbx` archives
+  embedded), then print them from the GUI or CLI. Open supported text, PT
+  Dingbats symbols, untrimmed images, and selected vector outlines from `.lbx`
+  files
 - Template layouts with `{{name}}` placeholders and batch-print from a CSV
 - Chain print and multi-copy support
 - Print quality modes on selected legacy and modern target models (draft remains legacy-only)
@@ -52,13 +53,17 @@ For `--tape-width-mm`, use Brother's width code; code `4` denotes 3.5mm tape.
 
 ## Current parity limits
 
-The Rust layout format is TOML `.ptl`. The CLI and GUI can import ordinary text, untrimmed embedded images, and
-selected unfilled vector outlines from `.lbx` archives, but cannot export LBX. This
-bounded importer flattens nested wrappers with warnings, converts supported
-vector outlines to embedded SVG-backed image objects, and skips unsupported
-shapes, symbols, barcodes, trimmed images, and image effects with warnings. It
-rejects files containing only unsupported objects. LBX conversion fidelity and
-P-touch Editor behavior remain under investigation. The editor has no barcode or QR object yet. iPrint&Label
+The Rust layout format is TOML `.ptl`. The CLI and GUI can import ordinary
+text, untrimmed embedded images, PT Dingbats symbols, and selected unfilled
+vector outlines from `.lbx` archives, but cannot export LBX. This bounded
+importer flattens nested wrappers with warnings, converts symbols to styled
+text glyphs and vector
+outlines to embedded SVG-backed image objects, and skips unsupported shapes,
+barcodes, trimmed images, and image effects with warnings. Symbol rendering
+requires an installed Brother font containing the requested glyph.
+The importer rejects files containing only unsupported objects. LBX conversion
+fidelity and P-touch Editor behavior remain under investigation. The editor has
+no barcode or QR object yet. iPrint&Label
 evidence confirms LBX editing and print paths for both target models, including
 text, symbol, image, barcode, date/time, frame, rectangle, and polygon objects.
 P-touch Editor ships LBX libraries and CIV LBX templates, but its exact
@@ -201,7 +206,8 @@ Bluetooth devices. The preview uses the layout's saved design DPI.
 - Mirror the whole label or a single element (horizontal/vertical)
 - Tape width selection
 - Save/Open `.ptl` layouts with images embedded for portability; open supported
-  text and untrimmed image content from `.lbx` files
+  text, PT Dingbats symbols, untrimmed images, and selected vector outlines
+  from `.lbx` files
 - Print to connected printer or export to image file
 - Connect to network printers over raw TCP with an explicit model selection
 - Feed and cut tape without printing
