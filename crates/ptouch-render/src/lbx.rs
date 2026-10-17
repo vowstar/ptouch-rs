@@ -718,7 +718,14 @@ fn import_barcode(node: roxmltree::Node<'_, '_>, page: LbxPage) -> Result<ImageI
     };
     let segments = QrSegment::make_segments(data);
     let qr = match fixed_version {
-        None => match QrCode::encode_segments(&segments, ecc) {
+        None => match QrCode::encode_segments_advanced(
+            &segments,
+            ecc,
+            Version::MIN,
+            Version::MAX,
+            None,
+            false,
+        ) {
             Ok(qr) => qr,
             Err(_) => {
                 return Ok(ImageImport::Skipped(

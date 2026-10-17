@@ -432,3 +432,13 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Brother splits a mixed uppercase/numeric payload into segments that fit version 1 | observed | For `HELLO WORLD 1234567890`, both models report version 1. Rust's default segmenter produces version 2/mask 6; an alphanumeric prefix plus numeric suffix encoded as version 1/mask 3 matches all P900W and E550W raster pixels at the measured pitch and origins |
 | Brother's 60-character lowercase payload matches Rust's automatic mask choice | disproven | Both models return version 4. Rust auto selects mask 2, while ZXing-C++ reads mask 1 from the P900W BMP. Forced Rust version 4/mask 1 matches all compared E550W pixels; the full P900W comparison against this forced matrix remains to be run |
 | These in-memory comparisons establish GUI or printed behavior | unknown | No GUI canvas or physical print was tested |
+
+
+## Cycle 36 numeric QR correction-level and matrix alignment
+
+| Claim | Status | Evidence |
+|---|---|---|
+| The Cycle 35 numeric mismatch represented a different Brother QR matrix | disproven | The original helper used qrcodegen's convenience API, which boosted the requested Medium ECC to Quartile for this payload. Rust's explicit version-range encoder with boosting disabled produces version 1/ECC M/mask 4 and matches every pixel in both Brother captures at E550W origin (8,-6), pitch 4, and P900W origin (30,20), pitch 8 |
+| Rust's automatic QR path preserves the requested ECC level | corrected | `render_qr` and LBX QR import now use the automatic version range with ECC boosting disabled. Regression coverage compares a 20-digit payload against explicit Medium-level modules. Before the fix qrcodegen selected Quartile for this payload while Brother reports Medium |
+| Brother's 60-character lowercase payload uses Rust's automatic mask | disproven | Both use ECC Medium and version 4, but Rust auto selects mask 2 while the P900W decode reports mask 1. Forcing Rust mask 1 matches all pixels in both models' rasters |
+| These in-memory comparisons establish GUI or printed behavior | unknown | No GUI canvas or physical print was tested |

@@ -73,9 +73,10 @@ preserve data, Mod 43 option, narrow bar width, and centered readable-text
 setting. Code 39 import skips other bar-width ratios and readable-text
 alignments because the native model does not preserve them. Windows P-touch
 Editor in-memory QR rasters match Rust matrices for tested version 3 URL and
-version 1 mixed-segment payloads. A 60-character byte payload shows a mask
-selection difference, while exact numeric-matrix alignment remains unresolved.
-GUI canvas and physical barcode rendering remain unverified. Symbol rendering
+version 1 mixed-segment and numeric payloads. Automatic QR encoding preserves
+the requested ECC level instead of boosting it when the payload fits. A
+60-character byte payload still shows a mask-selection difference. GUI canvas
+and physical barcode rendering remain unverified. Symbol rendering
 requires an installed Brother font containing the requested glyph.
 
 The importer rejects files containing only unsupported objects. LBX conversion

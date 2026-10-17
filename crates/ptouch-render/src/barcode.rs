@@ -111,7 +111,14 @@ pub fn render_qr(
             false,
         )
     } else {
-        qrcodegen::QrCode::encode_segments(&segments, correction.level())
+        qrcodegen::QrCode::encode_segments_advanced(
+            &segments,
+            correction.level(),
+            qrcodegen::Version::MIN,
+            qrcodegen::Version::MAX,
+            None,
+            false,
+        )
     }
     .map_err(|_| RenderError::Layout("QR code data exceeds the supported capacity".into()))?;
     let modules = u32::try_from(qr.size())
@@ -244,6 +251,33 @@ mod tests {
         assert!(
             (0..bitmap.height()).any(|y| { (0..bitmap.width()).any(|x| bitmap.get_pixel(x, y)) })
         );
+    }
+
+    #[test]
+    fn automatic_qr_preserves_requested_error_correction_without_boosting() {
+        let data = "12345678901234567890";
+        let bitmap = render_qr(data, QrErrorCorrection::Medium, None).unwrap();
+        let segments = qrcodegen::QrSegment::make_segments(data);
+        let expected = qrcodegen::QrCode::encode_segments_advanced(
+            &segments,
+            qrcodegen::QrCodeEcc::Medium,
+            qrcodegen::Version::MIN,
+            qrcodegen::Version::MAX,
+            None,
+            false,
+        )
+        .unwrap();
+        assert_eq!(
+            expected.error_correction_level(),
+            qrcodegen::QrCodeEcc::Medium
+        );
+        assert_eq!(bitmap.width(), (expected.size() as u32 + 8) * 8);
+        for y in 0..expected.size() {
+            for x in 0..expected.size() {
+                let rendered = bitmap.get_pixel((x as u32 + 4) * 8, (y as u32 + 4) * 8);
+                assert_eq!(rendered, expected.get_module(x, y), "module ({x}, {y})");
+            }
+        }
     }
 
     #[test]
