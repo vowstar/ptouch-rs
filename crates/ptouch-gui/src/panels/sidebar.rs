@@ -23,10 +23,43 @@ pub fn show_sidebar(ui: &mut egui::Ui, state: &mut AppState) {
         ui.separator();
         show_print_options(ui, state);
         ui.separator();
+        show_template_values(ui, state);
+        ui.separator();
         show_mirror_section(ui, state);
         ui.separator();
         show_elements_section(ui, state);
     });
+}
+
+fn show_template_values(ui: &mut egui::Ui, state: &mut AppState) {
+    let placeholders =
+        ptouch_render::document::LabelDocument::placeholders_in_elements(&state.elements);
+    if placeholders.is_empty() {
+        return;
+    }
+    ui.heading("Template values");
+    ui.small("Values apply to preview and printing. Saved layout tokens stay unchanged.");
+    for name in placeholders {
+        let mut value = state
+            .template_values
+            .get(&name)
+            .cloned()
+            .unwrap_or_default();
+        let response = ui.horizontal(|ui| {
+            ui.label(&name);
+            ui.text_edit_singleline(&mut value)
+        });
+        if response.inner.changed() {
+            state.template_values.insert(name, value);
+            state.mark_dirty();
+        }
+    }
+    if state.has_unfilled_template_values() {
+        ui.colored_label(
+            egui::Color32::YELLOW,
+            "Fill each value to print the template",
+        );
+    }
 }
 
 /// Printer connection section.

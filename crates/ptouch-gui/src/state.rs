@@ -167,6 +167,9 @@ pub struct AppState {
     pub document_version: u32,
     /// List of label elements in composition order.
     pub elements: Vec<LabelElement>,
+    /// Transient values used to render and print layout placeholders. These
+    /// values are intentionally excluded from saved layout documents.
+    pub template_values: std::collections::BTreeMap<String, String>,
     /// Index of the currently selected element, if any.
     pub selected_element: Option<usize>,
     /// Isolate unfinished widget drafts across selections and structural edits.
@@ -267,6 +270,7 @@ impl Default for AppState {
         Self {
             document_version: DEFAULT_DOCUMENT_VERSION,
             elements: Vec::new(),
+            template_values: Default::default(),
             selected_element: None,
             selection_revision: 0,
             editor_generation: 0,
@@ -450,6 +454,26 @@ impl AppState {
             flip_v: self.overall_flip_v,
             elements: self.elements.clone(),
         }
+    }
+
+    pub fn preview_document(&self) -> LabelDocument {
+        let mut document = self.document();
+        let placeholders = LabelDocument::placeholders_in_elements(&self.elements);
+        if placeholders
+            .iter()
+            .all(|name| self.template_values.contains_key(name))
+        {
+            document.apply_values(&self.template_values);
+        }
+        document
+    }
+
+    pub fn has_unfilled_template_values(&self) -> bool {
+        let placeholders = LabelDocument::placeholders_in_elements(&self.elements);
+        !placeholders.is_empty()
+            && placeholders
+                .iter()
+                .any(|name| !self.template_values.contains_key(name))
     }
 
     pub fn is_free_layout(&self) -> bool {
@@ -781,6 +805,29 @@ fn content_box_for_frame(frame: &TextBox) -> ContentBox {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn template_values_resolve_preview_without_changing_saved_document() {
+        let mut state = AppState::default();
+        state.add_text();
+        let ObjectContent::Text { content, .. } =
+            &mut state.elements[0].as_object_mut().unwrap().content
+        else {
+            unreachable!();
+        };
+        *content = "Port {{id}}".into();
+        let saved_before = state.document().to_toml_string().unwrap();
+        assert!(state.has_unfilled_template_values());
+
+        state.template_values.insert("id".into(), "42".into());
+        let preview = state.preview_document();
+        assert!(!state.has_unfilled_template_values());
+        assert!(matches!(
+            &preview.elements[0].as_object().unwrap().content,
+            ObjectContent::Text { content, .. } if content == "Port 42"
+        ));
+        assert_eq!(state.document().to_toml_string().unwrap(), saved_before);
+    }
 
     #[test]
     fn tcp_media_selection_requires_a_supported_manual_width_or_detected_width() {

@@ -74,7 +74,7 @@ impl PtouchApp {
         }
 
         let result = match ptouch_render::document::render_document(
-            &self.state.document(),
+            &self.state.preview_document(),
             self.state.tape_width_px,
             self.state.target_dpi(),
             &mut self.renderer,

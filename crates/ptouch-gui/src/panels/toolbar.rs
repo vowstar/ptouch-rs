@@ -56,7 +56,9 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &AppState) -> Option<ToolbarAction
         ui.separator();
         let ready =
             state.printer_connected && !state.is_printer_busy() && state.can_print_selected_media();
-        let bitmap = state.preview_bitmap.is_some() && !state.needs_rerender;
+        let bitmap = state.preview_bitmap.is_some()
+            && !state.needs_rerender
+            && !state.has_unfilled_template_values();
         if ui
             .add_enabled(ready && bitmap, egui::Button::new("Print"))
             .clicked()
@@ -289,6 +291,7 @@ fn apply_layout(state: &mut AppState, document: LabelDocument) -> Result<(), Str
     state.overall_flip_v = document.flip_v;
     state.editor_generation = state.editor_generation.wrapping_add(1);
     state.elements = document.elements;
+    state.template_values.clear();
     state.select_canvas_target(None);
     state.selection_revision = state.selection_revision.wrapping_add(1);
     state.mark_dirty();

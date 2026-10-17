@@ -452,7 +452,8 @@ exports, copies and CSV rows use the same correction at their output DPI.
 
 Text in a layout may contain `{{name}}` placeholders. Fill them through the CLI
 per print, or drive a batch from a CSV file. The GUI edits and saves placeholders
-but does not have a variable-value form; its preview shows the literal tokens.
+and provides a **Template values** section for preview and printing. Values are
+transient and do not replace the saved tokens.
 CLI substitution changes only text content, preserving slots, independent
 object dimensions, offsets, and rotation.
 

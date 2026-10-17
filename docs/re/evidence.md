@@ -221,3 +221,12 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | iPrint&Label creates one rendered LBX bitmap per sequence value, restores the source number after rendering each bitmap, then repeats the sequence for configured copies | observed in source | `reference/artifacts/android-iprintandlabel-5.3.17/jadx/sources/com/brother/ptouch/iprintandlabel/print/PrintTask.java:lambda$printNumberingLbx$0,printNumberingLbx` |
 | Rust CLI creates numbered layout output by replacing a declared placeholder with start/increment/count values and routes labels through existing batch output/printing | implemented, tested | `crates/ptouch-cli/src/main.rs`; regression compares all three exported images at values 7, 9, and 11 against independently rendered layouts |
 | Rust reproduces iPrint&Label selected-character numbering inside native LBX text objects or its database-assigned jobs | open gaps | Current numbering is an explicit CLI placeholder workflow. Native LBX character-range encoding and database file/job schemas are not implemented |
+
+
+## Cycle 13 GUI template values
+
+| Claim | Status | Evidence |
+|---|---|---|
+| GUI exposes each declared layout placeholder in a Template values section and applies values to preview and print rendering only when all placeholders have values | implemented, tested | `crates/ptouch-gui/src/panels/sidebar.rs`, `state.rs`, and `app.rs`; missing values keep the original tokens visible and disable Print |
+| Transient GUI values do not alter the saved layout document and are cleared when another layout is opened | implemented, tested | `AppState::preview_document` applies values to a clone; `toolbar::apply_layout` clears the transient map; regression test compares serialized source before and after preview resolution |
+| GUI supports CSV or multi-label numbered placeholder printing | no | GUI now supports single-label placeholder entry; CSV and numeric sequence batches remain CLI workflows |

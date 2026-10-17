@@ -215,8 +215,13 @@ impl LabelDocument {
     ///
     /// The result is sorted for stable display and de-duplication.
     pub fn placeholders(&self) -> Vec<String> {
+        Self::placeholders_in_elements(&self.elements)
+    }
+
+    /// Collect placeholders from elements without cloning embedded payloads.
+    pub fn placeholders_in_elements(elements: &[LabelElement]) -> Vec<String> {
         let mut names = BTreeSet::new();
-        for element in &self.elements {
+        for element in elements {
             if let Some(content) = element.text_content() {
                 collect_placeholder_names(content, &mut names);
             }
