@@ -358,5 +358,13 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | Claim | Status | Evidence |
 |---|---|---|
 | Changing the loaded QR payload in memory changes Brother `GetPrintingImage()` output | observed | On numeric QR `1234567890123456`, setting `Barcode.Data=9876543210987654` before `GetPrintingImage()` changed the BMP hash from `f1da64b34aaf93b125d1872b9164b1617dae6087b58dff06dca19074ac61fcb3` to `bf0af4fdcad756c1209eb24309a80f24e680d3f97070a7e9bee33c5c6efea1ba` |
-| Changing the loaded QR `Mode` property changes `GetPrintingImage()` output for the tested URL and numeric payloads | not observed | URL Mixed vs Binary output had identical SHA-256 `8e75634c3f299c9abbad78759d79e6e8279714766640c42a2d77008ede69530a`; numeric Mixed, Number, and Binary outputs shared SHA-256 `f1da64b34aaf93b125d1872b9164b1617dae6087b58dff06dca19074ac61fcb3` |
+| Changing the loaded QR `Mode` property changes `GetPrintingImage()` output for the tested URL and numeric payloads | not observed | URL Mixed vs Binary output had identical SHA-256 `8e75634c3f299c9abbad78759d79e6e8279714766640c42a2d77008ede69530a`; numeric Mixed, Number, and Binary outputs shared SHA-256 `f1da64b34aaf93b125d1872b9164b1617dae6087b58dff06dca19074ac61fcb3`; uppercase alphanumeric Mixed, Binary, and AlphabetAndNumber outputs shared SHA-256 `4b6b2066148279fe5ea366aea7b8d119c88f333cada4a11a874f09070f54e2ea` |
 | The QR `Mode` property is ignored across all Brother render/save paths | unknown | The probe only tested `GetPrintingImage()` on two payloads; no modified LBX was saved and no physical print was made |
+
+
+## Cycle 28 QR mode scope
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Brother `GetPrintingImage()` output is unchanged when the in-memory QR mode changes among Mixed, Binary, Number, and AlphabetAndNumber for tested payload classes | observed | Windows probe on URL, numeric, and uppercase alphanumeric LBX fixtures; archived inputs are `qr-numeric-mode-probe.ptl` and `qr-alphanumeric-mode-probe.ptl`; unchanged hashes are listed in the Cycle 27/28 property-probe evidence above |
+| Brother's mode property has no effect on GUI previews, saved LBX files, or physical print output | unknown | Only the in-memory `GetPrintingImage()` path was exercised; no modified LBX was saved and no print operation was performed |

@@ -133,9 +133,14 @@ returned byte-identical 132x128 BMPs (SHA-256
 `8e75634c3f299c9abbad78759d79e6e8279714766640c42a2d77008ede69530a`). On a
 numeric QR archive, default `Mixed`, override `Number`, and override `Binary`
 all returned byte-identical BMPs (SHA-256
-`f1da64b34aaf93b125d1872b9164b1617dae6087b58dff06dca19074ac61fcb3`). Changing
+`f1da64b34aaf93b125d1872b9164b1617dae6087b58dff06dca19074ac61fcb3`). On an
+uppercase alphanumeric QR archive, default `Mixed`, override `Binary`, and
+override `AlphabetAndNumber` all returned byte-identical BMPs (SHA-256
+`4b6b2066148279fe5ea366aea7b8d119c88f333cada4a11a874f09070f54e2ea`). The
+reproducible inputs are `qr-numeric-mode-probe.ptl` and
+`qr-alphanumeric-mode-probe.ptl`. Changing
 the numeric payload in memory to `9876543210987654` changed the returned BMP
 hash to `bf0af4fdcad756c1209eb24309a80f24e680d3f97070a7e9bee33c5c6efea1ba`.
-This validates that data changes reach the renderer while tested mode changes do
-not alter its raster. It does not establish whether the mode property affects
+This validates that data changes reach the renderer while mode changes across
+three payload classes do not alter its raster. It does not establish whether the mode property affects
 other render paths or saved documents.
