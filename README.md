@@ -68,15 +68,16 @@ does not yet create or edit native barcode objects. Symbol rendering requires
 an installed Brother font containing the requested glyph.
 The importer rejects files containing only unsupported objects. LBX conversion
 fidelity and P-touch Editor behavior remain under investigation. The editor has
-no barcode or QR object yet. iPrint&Label
-evidence confirms LBX editing and print paths for both target models, including
-text, symbol, image, barcode, date/time, frame, rectangle, and polygon objects.
-P-touch Editor ships LBX libraries and CIV LBX templates, but its exact
-import/export and print behavior remains unverified. An external P-touch Editor
-5.0.201 sample establishes the generic QR XML fields, while target-model
-rendering parity remains unknown. The CLI can export a bounded subset of
-layouts as target-specific LBX archives. P-touch Editor/iPrint&Label acceptance
-of generated files has not been runtime-verified.
+no barcode or QR object yet. iPrint&Label evidence confirms LBX editing and
+print paths for both target models, including text, symbol, image, barcode,
+date/time, frame, rectangle, and polygon objects. P-touch Editor ships LBX
+libraries and CIV LBX templates. A Windows probe using the Editor's bundled
+`LibLbx.DotNet` runtime loads simple text exports for both target models and
+reports their target IDs and media ID. Visual parity in the Editor and print
+behavior remain unverified. An external P-touch Editor 5.0.201 sample
+establishes the generic QR XML fields, while target-model rendering parity
+remains unknown. The CLI exports a bounded subset of layouts as target-specific
+LBX archives.
 
 The CLI and GUI support placeholder substitution and CSV batches. The CLI can
 also generate a numeric sequence through a named layout placeholder. This does
