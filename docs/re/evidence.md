@@ -177,3 +177,15 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | The 32-byte GET reply's byte 30 is decoded using the preserved values ESC/P (0x00), Raster (0x01), and P-touch Template (0x03); unknown values remain visible as raw hex | implemented from preserved reverse-engineering evidence | `reference/ptset-original/src/settings.rs`; `CommandMode` preserves unknown values |
 | The query rejects models other than PT-P900W before sending a setting request | tested | `settings::tests::command_mode_query_rejects_non_p900w_models_before_sending` |
 | Printer SET commands are implemented or transmitted by this query | no | This operation is read-only; recovered SET bytes remain unverified and are not used |
+
+
+## Cycle 9 LBX vector outlines and nested wrappers
+
+| Claim | Status | Evidence |
+|---|---|---|
+| iPrint&Label creates LINE/POLYLINE/POLYGON and RECTANGLE/ROUNDRECTANGLE/ELLIPSE objects; its internal line widths include thin, normal, and thick | observed in source | `reference/artifacts/android-iprintandlabel-5.3.17/jadx/sources/com/brother/ptouch/iprintandlabel/edit/EditLabelActivity.java:1242-1270`, and the adjacent `lbxwrapper/PolyStyle.java`, `RectStyle.java`, and `WidthType.java` |
+| A preserved P-touch Editor cable-flag CIV template stores a line under nested cable/table/cell wrappers, with a dashed 0.5 pt pen and landscape paper margins | observed in packaged fixture | `reference/artifacts/ptouch-editor-6.12.10/6/Resources/Templates/CIV/3_NewCableFlag.lbx` |
+| Rust imports unfilled line, polyline, polygon, rectangle, and ellipse outlines as SVG-backed image objects; nested supported children flatten in source order with warnings | implemented, unit tested | `crates/ptouch-render/src/lbx.rs`; tests cover visible rendered pixels and nested text/line order |
+| Landscape left/top margins are swapped into the printable x/y origin | implemented, unit tested | `crates/ptouch-render/src/lbx.rs`; `landscape_page_margins_are_swapped_into_printable_origin` |
+| The preserved cable-flag LBX renders offline through the CLI | verified | Offline `ptouch print --layout .../CIV/3_NewCableFlag.lbx --output /tmp/ptouch-cycle9-cable-flag.png`; output inspected, no source-application visual comparison or printer connection |
+| Native shape editing, symbols, fills, round rectangles, unsupported pens/arrows, exact Brother styling, LBX export, and source-app rendering parity | open gaps | Conversion intentionally uses embedded SVG-backed image objects; unsupported variants warn or skip |
