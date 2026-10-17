@@ -17,6 +17,7 @@ use crate::state::{AppState, LabelElement, PrinterCommand};
 pub enum ToolbarAction {
     Convert,
     AddText,
+    AddQrCode,
     AddImage,
     CutMark,
     Padding,
@@ -43,6 +44,7 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &AppState) -> Option<ToolbarAction
     ui.horizontal(|ui| {
         for (label, command) in [
             ("Add Text", ToolbarAction::AddText),
+            ("Add QR", ToolbarAction::AddQrCode),
             ("Add Image", ToolbarAction::AddImage),
             ("Cut Mark", ToolbarAction::CutMark),
         ] {
@@ -108,6 +110,7 @@ pub fn execute_action(state: &mut AppState, action: ToolbarAction) {
             Err(error) => state.status_message = format!("Conversion error: {error}"),
         },
         ToolbarAction::AddText => state.add_text(),
+        ToolbarAction::AddQrCode => state.add_qr_code(),
         ToolbarAction::AddImage => {
             if let Some(path) = crate::widgets::image_file_dialog().pick_file() {
                 match std::fs::read(&path) {

@@ -16,6 +16,8 @@ Optional native macOS Bluetooth support is available in `ptouch-core` for the PT
   embedded), then print them from the GUI or CLI. Open supported text, PT
   Dingbats symbols, QR codes, untrimmed images, and selected vector outlines
   from `.lbx` files
+- Create editable QR objects in the GUI with selectable error correction;
+  render through the shared preview/print path and export as native LBX QR data
 - Template layouts with `{{name}}` placeholders and batch-print from a CSV
 - Numbered layout batches by placeholder, with configurable start, increment,
   and label count
@@ -57,27 +59,26 @@ For `--tape-width-mm`, use Brother's width code; code `4` denotes 3.5mm tape.
 
 The Rust layout format is TOML `.ptl`. The CLI and GUI can import ordinary
 text, untrimmed embedded images, PT Dingbats symbols, and selected unfilled
-vector outlines from `.lbx` archives, but cannot export LBX. This bounded
-importer flattens nested wrappers with warnings, converts symbols to styled
-text glyphs and vector
-outlines to embedded SVG-backed image objects, and skips unsupported shapes,
-barcodes other than Model 2 QR, trimmed images, and image effects with warnings.
-QR codes import as SVG-backed images, so native barcode editing and exact Brother
-rendering are not retained; other barcode protocols remain unsupported. The GUI
-does not yet create or edit native barcode objects. Symbol rendering requires
-an installed Brother font containing the requested glyph.
+vector outlines from `.lbx` archives. The CLI exports a bounded target-specific
+LBX subset containing supported text, raster images, and native QR barcode
+objects. The importer flattens nested wrappers with warnings, converts symbols
+to styled text glyphs and vector outlines to embedded SVG-backed image objects,
+and skips unsupported shapes, non-QR barcodes, trimmed images, and image effects
+with warnings. Imported QR codes remain SVG-backed images, while QR objects
+created in the GUI preserve editable payload and error-correction data. Exact
+Brother QR rendering is unverified. Symbol rendering requires an installed
+Brother font containing the requested glyph.
+
 The importer rejects files containing only unsupported objects. LBX conversion
-fidelity and P-touch Editor behavior remain under investigation. The editor has
-no barcode or QR object yet. iPrint&Label evidence confirms LBX editing and
-print paths for both target models, including text, symbol, image, barcode,
-date/time, frame, rectangle, and polygon objects. P-touch Editor ships LBX
-libraries and CIV LBX templates. A Windows probe using the Editor's bundled
-`LibLbx.DotNet` runtime loads simple text exports for both target models and
-reports their target IDs and media ID. Visual parity in the Editor and print
-behavior remain unverified. An external P-touch Editor 5.0.201 sample
-establishes the generic QR XML fields, while target-model rendering parity
-remains unknown. The CLI exports a bounded subset of layouts as target-specific
-LBX archives.
+fidelity and P-touch Editor behavior remain under investigation. iPrint&Label
+evidence confirms LBX editing and print paths for both target models, including
+text, symbol, image, barcode, date/time, frame, rectangle, and polygon objects.
+P-touch Editor ships LBX libraries and CIV LBX templates. A prior Windows probe
+recorded target IDs for simple text exports, but a repeat run in Cycle 17 loaded
+those same files as the Editor's default MW-170 document with `StoredPrinterID`
+zero. Target-model metadata preservation is therefore unconfirmed. The QR LBX
+fields follow a generic P-touch Editor 5.0.201 sample; target-model QR rendering
+and runtime loading remain unverified.
 
 The CLI and GUI support placeholder substitution and CSV batches. The CLI can
 also generate a numeric sequence through a named layout placeholder. This does

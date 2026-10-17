@@ -159,6 +159,38 @@ pub fn export(document: &LabelDocument, printer: LbxPrinter) -> Result<Vec<u8>> 
                 ));
                 assets.push((name, image_data.clone()));
             }
+            ObjectContent::QrCode {
+                data,
+                error_correction,
+            } => {
+                if data.is_empty() || data.len() > 4096 {
+                    return Err(RenderError::Layout(format!(
+                        "LBX QR object {index} has empty or oversized data"
+                    )));
+                }
+                // Validate capacity before emitting a native barcode object.
+                let qr_bitmap = crate::barcode::render_qr(data, *error_correction)?;
+                let (x, y, width, height) = style_geometry(object);
+                let frame_width = width.parse::<f64>().map_err(|_| {
+                    RenderError::Layout(format!("LBX QR object {index} has invalid width"))
+                })?;
+                let frame_height = height.parse::<f64>().map_err(|_| {
+                    RenderError::Layout(format!("LBX QR object {index} has invalid height"))
+                })?;
+                let modules_with_quiet_zone = f64::from(qr_bitmap.width() / 8);
+                let cell_size = frame_width.min(frame_height) / modules_with_quiet_zone;
+                if !cell_size.is_finite() || cell_size <= 0.0 {
+                    return Err(RenderError::Layout(format!(
+                        "LBX QR object {index} has an invalid physical frame"
+                    )));
+                }
+                objects.push_str(&format!(
+                    "<barcode:barcode><pt:objectStyle x=\"{x}pt\" y=\"{y}pt\" width=\"{width}pt\" height=\"{height}pt\" angle=\"{}\" anchor=\"TOPLEFT\" flip=\"NONE\"><pt:pen style=\"NULL\" widthX=\"0pt\" widthY=\"0pt\" color=\"#000000\"/><pt:brush style=\"NULL\" color=\"#000000\"/></pt:objectStyle><barcode:barcodeStyle protocol=\"QRCODE\" margin=\"false\"/><pt:data>{}</pt:data><barcode:qrcodeStyle model=\"2\" eccLevel=\"{}\" cellSize=\"{cell_size:.3}pt\" mbcs=\"932\" removeCharKind=\"0\" removeCharString=\"\" joint=\"1\" jointSpace=\"8\" jointVertically=\"false\" version=\"auto\"/></barcode:barcode>",
+                    object.rotation,
+                    xml_escape(data)?,
+                    error_correction.lbx_name(),
+                ));
+            }
             ObjectContent::CutMark | ObjectContent::Padding => {
                 return Err(RenderError::Layout(format!(
                     "LBX export does not support cut marks or padding objects (object {index})"
@@ -168,7 +200,7 @@ pub fn export(document: &LabelDocument, printer: LbxPrinter) -> Result<Vec<u8>> 
     }
     if objects.is_empty() {
         return Err(RenderError::Layout(
-            "LBX export requires at least one text or image object".into(),
+            "LBX export requires at least one text, image, or QR object".into(),
         ));
     }
     let length_pt = max_length_mm * 72.0 / 25.4;
@@ -1225,6 +1257,35 @@ mod tests {
                 ..
             }) if image_data == &png_bytes
         ));
+    }
+
+    #[test]
+    fn exports_editable_qr_as_native_lbx_barcode() {
+        let mut document = text_document(24, "unused");
+        document.elements = vec![LabelElement::Object(LabelObject::qr_code(
+            "https://example.test/?a=1&b=2",
+            TextBox {
+                width_mm: 17.0,
+                height_mm: 17.0,
+                position: PositionMode::Absolute,
+                x_mm: 2.0,
+                y_mm: 1.0,
+                gap_mm: 0.0,
+                vertical_align: VerticalAlign::Center,
+            },
+        ))];
+        let bytes = export(&document, LbxPrinter::PtE550w).unwrap();
+        let mut zip = ZipArchive::new(Cursor::new(bytes)).unwrap();
+        let mut xml = String::new();
+        zip.by_name("label.xml")
+            .unwrap()
+            .read_to_string(&mut xml)
+            .unwrap();
+        assert!(xml.contains("<barcode:barcode>"));
+        assert!(xml.contains("protocol=\"QRCODE\""));
+        assert!(xml.contains("eccLevel=\"15%\""));
+        assert!(xml.contains("https://example.test/?a=1&amp;b=2"));
+        assert!(!xml.contains("image:imageStyle"));
     }
 
     #[test]

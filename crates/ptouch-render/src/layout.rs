@@ -857,6 +857,21 @@ fn render_object(
             )?;
             Ok((bitmap, false, geometry))
         }
+        ObjectContent::QrCode {
+            data,
+            error_correction,
+        } => {
+            let source = crate::barcode::render_qr(data, *error_correction)?;
+            let (bitmap, geometry) = render_contained(
+                &source,
+                rotation,
+                object.frame.vertical_align,
+                width,
+                height,
+                true,
+            )?;
+            Ok((bitmap, false, geometry))
+        }
         ObjectContent::CutMark => {
             // A cut guide spans its frame rather than inheriting the legacy
             // 9-pixel image's aspect ratio. Retain the historical one-pixel

@@ -28,8 +28,8 @@ pub use crate::layout::{
 };
 
 /// Newest supported on-disk layout format version.
-pub const DOCUMENT_VERSION: u32 = 6;
-/// New layouts use v4; custom line spacing needs v5 and inline styles need v6.
+pub const DOCUMENT_VERSION: u32 = 7;
+/// New layouts use v4; custom spacing needs v5, inline styles v6, and QR objects v7.
 pub const DEFAULT_DOCUMENT_VERSION: u32 = 4;
 
 /// Default design resolution for layouts saved before the dpi field existed.
@@ -465,6 +465,11 @@ pub enum ObjectContent {
         #[serde(skip)]
         bitmap: Option<LabelBitmap>,
     },
+    QrCode {
+        data: String,
+        #[serde(default)]
+        error_correction: crate::barcode::QrErrorCorrection,
+    },
     CutMark,
     /// An empty physical frame which still occupies its full width.
     Padding,
@@ -507,6 +512,20 @@ impl LabelObject {
             },
         }
     }
+
+    pub fn qr_code(data: impl Into<String>, frame: TextBox) -> Self {
+        Self {
+            frame,
+            content_box: None,
+            rotation: 0.0,
+            flip_h: false,
+            flip_v: false,
+            content: ObjectContent::QrCode {
+                data: data.into(),
+                error_correction: crate::barcode::QrErrorCorrection::default(),
+            },
+        }
+    }
 }
 
 impl LabelElement {
@@ -514,6 +533,9 @@ impl LabelElement {
     pub fn minimum_version(&self) -> u32 {
         match self {
             Self::Object(object) => {
+                if matches!(object.content, ObjectContent::QrCode { .. }) {
+                    return 7;
+                }
                 if let ObjectContent::Text { styles, .. } = &object.content
                     && !styles.is_empty()
                 {
@@ -556,6 +578,10 @@ impl LabelElement {
             | Self::Object(LabelObject {
                 content: ObjectContent::Text { content, .. },
                 ..
+            })
+            | Self::Object(LabelObject {
+                content: ObjectContent::QrCode { data: content, .. },
+                ..
             }) => Some(content),
             _ => None,
         }
@@ -566,6 +592,10 @@ impl LabelElement {
             Self::Text { content, .. }
             | Self::Object(LabelObject {
                 content: ObjectContent::Text { content, .. },
+                ..
+            })
+            | Self::Object(LabelObject {
+                content: ObjectContent::QrCode { data: content, .. },
                 ..
             }) => Some(content),
             _ => None,
@@ -640,6 +670,10 @@ impl LabelElement {
                     .unwrap_or_else(|| "embedded".to_string());
                 format!("Image: {}", name)
             }
+            LabelElement::Object(LabelObject {
+                content: ObjectContent::QrCode { data, .. },
+                ..
+            }) => format!("QR: {}", data.chars().take(16).collect::<String>()),
             LabelElement::CutMark
             | LabelElement::Object(LabelObject {
                 content: ObjectContent::CutMark,
@@ -955,6 +989,41 @@ mod tests {
             },
             other => other,
         }
+    }
+
+    #[test]
+    fn native_qr_serializes_as_version_7_and_preserves_editable_data() {
+        let object = LabelObject::qr_code("{{asset}}", TextBox::default());
+        let doc = LabelDocument {
+            version: DEFAULT_DOCUMENT_VERSION,
+            tape_width_mm: 24,
+            dpi: 180,
+            font_name: String::new(),
+            font_margin: 0,
+            flip_h: false,
+            flip_v: false,
+            elements: vec![LabelElement::Object(object)],
+        };
+        let serialized = doc.to_toml_string().unwrap();
+        assert!(serialized.contains("version = 7"));
+        assert!(serialized.contains("type = \"qr_code\""));
+        let mut restored = LabelDocument::from_toml_str(&serialized).unwrap();
+        assert_eq!(restored.elements[0].display_name(), "QR: {{asset}}");
+        assert_eq!(restored.placeholders(), vec!["asset"]);
+        let ObjectContent::QrCode {
+            data,
+            error_correction,
+        } = &restored.elements[0].as_object().unwrap().content
+        else {
+            panic!("expected an editable QR object");
+        };
+        assert_eq!(data, "{{asset}}");
+        assert_eq!(*error_correction, crate::barcode::QrErrorCorrection::Medium);
+        restored.apply_values(&BTreeMap::from([("asset".into(), "A001".into())]));
+        assert!(matches!(
+            &restored.elements[0].as_object().unwrap().content,
+            ObjectContent::QrCode { data, .. } if data == "A001"
+        ));
     }
 
     #[test]

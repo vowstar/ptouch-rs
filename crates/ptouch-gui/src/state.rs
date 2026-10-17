@@ -659,6 +659,15 @@ impl AppState {
         self.add_element(element);
     }
 
+    pub fn add_qr_code(&mut self) {
+        let side = self.printable_height_mm().min(25.0);
+        let mut frame = self.default_object_frame(side, side);
+        frame.vertical_align = ptouch_render::document::VerticalAlign::Center;
+        let mut object = LabelObject::qr_code("https://example.com", frame);
+        object.content_box = Some(content_box_for_frame(&object.frame));
+        self.add_element(LabelElement::Object(object));
+    }
+
     pub fn add_image_bytes(&mut self, path: Option<std::path::PathBuf>, bytes: Vec<u8>) -> bool {
         let element = if self.is_free_layout() {
             let mut object = LabelObject::image_from_bytes(
@@ -805,6 +814,21 @@ fn content_box_for_frame(frame: &TextBox) -> ContentBox {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn adding_qr_creates_a_selected_native_document_object() {
+        let mut state = AppState::default();
+        state.add_qr_code();
+        assert_eq!(state.selected_element, Some(0));
+        let frame = &state.elements[0].as_object().unwrap().frame;
+        assert_eq!(frame.width_mm, frame.height_mm);
+        assert!(frame.height_mm <= state.printable_height_mm());
+        assert!(matches!(
+            &state.elements[0].as_object().unwrap().content,
+            ObjectContent::QrCode { data, .. } if data == "https://example.com"
+        ));
+        assert!(state.needs_rerender);
+    }
 
     #[test]
     fn template_values_resolve_preview_without_changing_saved_document() {

@@ -712,6 +712,42 @@ fn show_object_properties(
                 }
             }
         }
+        ObjectContent::QrCode {
+            data,
+            error_correction,
+        } => {
+            ui.label("QR code");
+            changed |= ui.text_edit_multiline(data).changed();
+            egui::ComboBox::from_id_salt(("qr-error-correction", state.selected_element))
+                .selected_text(match error_correction {
+                    ptouch_render::barcode::QrErrorCorrection::Low => "Low (7%)",
+                    ptouch_render::barcode::QrErrorCorrection::Medium => "Medium (15%)",
+                    ptouch_render::barcode::QrErrorCorrection::Quartile => "Quartile (25%)",
+                    ptouch_render::barcode::QrErrorCorrection::High => "High (30%)",
+                })
+                .show_ui(ui, |ui| {
+                    for (level, label) in [
+                        (ptouch_render::barcode::QrErrorCorrection::Low, "Low (7%)"),
+                        (
+                            ptouch_render::barcode::QrErrorCorrection::Medium,
+                            "Medium (15%)",
+                        ),
+                        (
+                            ptouch_render::barcode::QrErrorCorrection::Quartile,
+                            "Quartile (25%)",
+                        ),
+                        (
+                            ptouch_render::barcode::QrErrorCorrection::High,
+                            "High (30%)",
+                        ),
+                    ] {
+                        changed |= ui
+                            .selectable_value(error_correction, level, label)
+                            .changed();
+                    }
+                });
+            ui.small("The QR payload stays editable in this layout and LBX export.");
+        }
         ObjectContent::CutMark => {
             ui.label("Cut mark");
             ui.small("A printed guide only; it does not trigger the cutter.");
