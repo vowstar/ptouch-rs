@@ -54,6 +54,33 @@ try
                     if (getBarcodeProperty?.Invoke(item, null) is not { } barcode) continue;
                     try
                     {
+                        var modeOverride = Environment.GetEnvironmentVariable("PT_QR_MODE_OVERRIDE");
+                        var dataOverride = Environment.GetEnvironmentVariable("PT_QR_DATA_OVERRIDE");
+                        var protocol = barcode.GetType().GetProperty("Protocol")?.GetValue(barcode)?.ToString();
+                        var qrData = string.Equals(protocol, "QRCODE", StringComparison.OrdinalIgnoreCase)
+                            ? barcode.GetType().GetProperty("QrcodeData")?.GetValue(barcode)
+                            : null;
+                        var modeProperty = qrData?.GetType().GetProperty("Mode");
+                        var changed = false;
+                        if (!string.IsNullOrWhiteSpace(modeOverride) && modeProperty?.CanWrite == true)
+                        {
+                            var mode = Enum.Parse(modeProperty.PropertyType, modeOverride, ignoreCase: true);
+                            modeProperty.SetValue(qrData, mode);
+                            Console.WriteLine($"    RuntimeModeOverride={mode}");
+                            changed = true;
+                        }
+                        if (qrData is not null && !string.IsNullOrWhiteSpace(dataOverride))
+                        {
+                            var dataProperty = barcode.GetType().GetProperty("Data");
+                            if (dataProperty?.CanWrite == true)
+                            {
+                                dataProperty.SetValue(barcode, dataOverride);
+                                Console.WriteLine($"    RuntimeDataOverride={dataOverride}");
+                                changed = true;
+                            }
+                        }
+                        if (changed)
+                            item.GetType().GetMethod("SetBarcodeProperty")?.Invoke(item, new[] { barcode });
                         foreach (var name in new[] { "Protocol", "Data" })
                         {
                             var property = barcode.GetType().GetProperty(name);
@@ -88,7 +115,7 @@ try
                     var output = Path.Combine(
                         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                         "ptouch-object-probe",
-                        $"rendered-{Path.GetFileNameWithoutExtension(path)}.bin");
+                        $"rendered-{Environment.GetEnvironmentVariable("PT_QR_DATA_OVERRIDE") ?? Environment.GetEnvironmentVariable("PT_QR_MODE_OVERRIDE") ?? "original"}-{Path.GetFileNameWithoutExtension(path)}.bin");
                     File.WriteAllBytes(output, bytes);
                     Console.WriteLine($"  RenderedImage={output}; bytes={bytes.Length}; signature={Convert.ToHexString(bytes.Take(8).ToArray())}");
                 }

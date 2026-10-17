@@ -122,3 +122,20 @@ mask 5 automatically. Brother reports `Mode=Mixed` and `Mask=Auto`, but its
 decoded mask is 7; this particular four-segment candidate therefore does not
 match the Brother mask metadata. The exact segment boundaries and original
 bitmap module mapping remain unknown.
+
+
+Cycle 27 added opt-in `PT_QR_MODE_OVERRIDE` and `PT_QR_DATA_OVERRIDE`
+environment controls to the Windows probe. These change the loaded `BcdObj`
+property only in memory, call `SetBarcodeProperty`, and then capture
+`GetPrintingImage()`; the probe never saves the modified document or opens a
+printer. On the URL archive, default `Mode=Mixed` and override `Mode=Binary`
+returned byte-identical 132x128 BMPs (SHA-256
+`8e75634c3f299c9abbad78759d79e6e8279714766640c42a2d77008ede69530a`). On a
+numeric QR archive, default `Mixed`, override `Number`, and override `Binary`
+all returned byte-identical BMPs (SHA-256
+`f1da64b34aaf93b125d1872b9164b1617dae6087b58dff06dca19074ac61fcb3`). Changing
+the numeric payload in memory to `9876543210987654` changed the returned BMP
+hash to `bf0af4fdcad756c1209eb24309a80f24e680d3f97070a7e9bee33c5c6efea1ba`.
+This validates that data changes reach the renderer while tested mode changes do
+not alter its raster. It does not establish whether the mode property affects
+other render paths or saved documents.

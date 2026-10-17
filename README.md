@@ -90,8 +90,9 @@ Brother-observed start/stop delimiters. Brother and Rust QR rasters differ. ZXin
 data mask 7 for both decodes, while Brother reports mixed QR mode and automatic
 mask selection. The raw Brother capture needs rotation and
 quiet-zone padding; Rust decodes without that normalization. A second QR encoder matches Rust's exact
-byte-mode 29x29 matrix with mask 7; the actual Brother segment boundaries remain
-unknown. GUI canvas behavior and
+byte-mode 29x29 matrix with mask 7. On Windows, changing the Brother QR mode
+property in memory did not change two returned raster hashes, while changing the
+payload did. The mode property's effect on other render or save paths remains unknown. GUI canvas behavior and
 physical print output remain unverified. The QR LBX fields follow a generic
 P-touch Editor 5.0.201 sample.
 
