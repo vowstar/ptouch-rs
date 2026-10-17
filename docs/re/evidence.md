@@ -507,3 +507,13 @@ Distinguish observed facts (from artifacts), inferences, and unknowns. Never tre
 | The version 6/ECC H mask can be read with the ordinary image decoder | disproven | The fixed-height 320-pixel P900W raster clips the 41-module symbol's bottom rows, so ZXing does not decode the full symbol. The intact top-left format bits identify H/mask 4 exactly. |
 | The Cycle 41 scoring match is a complete mask-selection rule | unknown | These four ECC cases provide cross-level observations, but do not characterize all versions, payload classes, tie behavior, or Brother's internal implementation. The two Cycle 41 exceptions remain unexplained. |
 | The captures establish GUI or printed parity | unknown | All captures came from the Windows Editor's in-memory `GetPrintingImage()` method. No GUI canvas or physical printing was tested. |
+
+
+## Cycle 43 QR mask scoring with a quiet margin
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Adding one white module around a candidate explains both residual mask cases | disproven | The replayable `docs/re/windows-lbx-runtime/analyze-qr-mask-margins.py` evaluates all eight forced masks for seven Cycle 40 byte-only controls and both residual cases. A one-module border selects Brother's mask 1 for the 55-byte repetitive string, but still selects mask 3 instead of 0 for `ABC123abc789`. |
+| Border scoring improves agreement across the nine exact-mask captures | disproven | Plain libqrencode-style scoring matches seven of nine Brother selections. Border scoring matches six of nine because it also changes Cycle 40 probes 14 and 20 from their correct masks 6 and 7 to masks 2 and 2. |
+| The residual score gaps are large | disproven | Without a border, the selected Brother masks are 10 points from the winner for `ABC123abc789` and 16 points for the 55-byte case. The script records all N1/N2/N3/N4 components and top-two margins for each candidate. |
+| The findings identify Brother's scoring domain | unknown | The border hypothesis is not a general explanation. No production scoring change is justified by these nine controls, and Brother's internal implementation remains unidentified. |

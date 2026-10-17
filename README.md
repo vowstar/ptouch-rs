@@ -85,7 +85,10 @@ unverified. Cycle 42 tested one 50-character byte payload at all four ECC
 levels. Brother selected masks 2, 2, 4, and 4 for ECC L, M, Q, and H at
 versions 3, 4, 5, and 6. The version 6 capture clips the symbol's bottom, but
 its QR format bits identify ECC H and mask 4. Symbol rendering requires an
-installed Brother font containing the requested glyph.
+installed Brother font containing the requested glyph. Cycle 43 tested adding
+a one-module white margin to the mask-scoring matrix. It explains the 55-byte
+mask exception in isolation, but lowers agreement across nine exact-mask cases
+from seven to six; the production score remains unchanged.
 
 The importer rejects files containing only unsupported objects. LBX conversion
 fidelity and P-touch Editor behavior remain under investigation. iPrint&Label

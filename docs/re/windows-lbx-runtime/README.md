@@ -118,6 +118,18 @@ resolve the two Cycle 41 exceptions or identify Brother's internal algorithm.
 No GUI canvas or physical print was tested.
 
 
+Cycle 43 evaluates whether mask scoring includes a one-module white border.
+`analyze-qr-mask-margins.py` regenerates all eight forced-mask matrices for the
+seven Cycle 40 byte-only probes and the two residual cases, then compares the
+libqrencode-style score with and without that border. Plain scoring matches the
+Brother masks in seven of nine cases. Border scoring matches six of nine: it
+selects Brother's mask 1 for the 55-byte repetitive payload, but changes two
+previously correct Cycle 40 predictions and still selects mask 3 for
+`ABC123abc789` where Brother selects 0. The script reports all eight masks'
+N1/N2/N3/N4 component scores for both residuals. This does not support changing
+the production scorer.
+
+
 Cycle 25 reran the read-only object probe on Windows with the archived
 `pt-e550w-qr-export.lbx`. The additional scalar properties confirm the
 application's QR object selects mixed mode and automatic masking. The matching
