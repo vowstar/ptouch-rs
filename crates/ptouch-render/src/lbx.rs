@@ -13,6 +13,7 @@ use crate::layout::{PositionMode, TextBox, VerticalAlign};
 use crate::styled_text::{StyleSpan, TextStyle};
 use crate::text::TextAlign;
 use crate::{RenderError, Result};
+use qrcodegen::{QrCode, QrCodeEcc, QrSegment, Version};
 
 const PT_TO_MM: f64 = 25.4 / 72.0;
 pub const MAX_ARCHIVE_BYTES: usize = 64 * 1024 * 1024;
@@ -26,11 +27,11 @@ pub struct LbxImport {
     pub warnings: Vec<String>,
 }
 
-/// Import supported text, PT Dingbats symbols, images, and vector objects from LBX.
+/// Import supported text, PT Dingbats symbols, QR codes, images, and vectors.
 ///
-/// Specialized cable, table, barcode, drawing, trimmed image, and image-effect
-/// objects are skipped with a warning. A file with no supported objects is
-/// rejected to avoid silently opening a blank label.
+/// Unsupported barcode protocols, cable/table/drawing objects, trimmed images,
+/// and non-default image effects are skipped with warnings. A file with no
+/// supported objects is rejected to avoid silently opening a blank label.
 pub fn import(bytes: &[u8]) -> Result<LbxImport> {
     if bytes.len() > MAX_ARCHIVE_BYTES {
         return Err(RenderError::Layout(
@@ -109,7 +110,7 @@ pub fn import(bytes: &[u8]) -> Result<LbxImport> {
             format!("; {}", warnings.join("; "))
         };
         return Err(RenderError::Layout(format!(
-            "LBX file contains no supported text, PT Dingbats symbols, untrimmed images, or unfilled vector objects{detail}"
+            "LBX file contains no supported text, PT Dingbats symbols, QR codes, untrimmed images, or unfilled vector objects{detail}"
         )));
     }
     Ok(LbxImport {
@@ -254,6 +255,157 @@ fn import_symbol(
     Ok(())
 }
 
+fn import_barcode(node: roxmltree::Node<'_, '_>, page: LbxPage) -> Result<ImageImport> {
+    let barcode_style = node
+        .descendants()
+        .find(|child| child.is_element() && child.tag_name().name() == "barcodeStyle")
+        .ok_or_else(|| RenderError::Layout("LBX barcode has no barcodeStyle".into()))?;
+    let protocol = barcode_style
+        .attribute("protocol")
+        .ok_or_else(|| RenderError::Layout("LBX barcodeStyle has no protocol".into()))?;
+    if protocol != "QRCODE" {
+        return Ok(ImageImport::Skipped(format!(
+            "skipped LBX barcode protocol '{protocol}'; only QR codes are imported"
+        )));
+    }
+    let qr_style = node
+        .descendants()
+        .find(|child| child.is_element() && child.tag_name().name() == "qrcodeStyle")
+        .ok_or_else(|| RenderError::Layout("LBX QR barcode has no qrcodeStyle".into()))?;
+    if qr_style.attribute("model").unwrap_or("2") != "2"
+        || qr_style.attribute("mbcs").is_some_and(|mbcs| mbcs != "932")
+        || qr_style
+            .attribute("removeCharKind")
+            .is_some_and(|kind| kind != "0")
+        || qr_style
+            .attribute("removeCharString")
+            .is_some_and(|value| !value.is_empty())
+        || qr_style
+            .attribute("jointVertically")
+            .is_some_and(|value| value != "false")
+    {
+        return Ok(ImageImport::Skipped(
+            "skipped LBX QR code with unsupported model, encoding, or character transformation settings".into(),
+        ));
+    }
+    let data = node
+        .children()
+        .find(|child| child.is_element() && child.tag_name().name() == "data")
+        .and_then(|child| child.text())
+        .unwrap_or_default();
+    if !data.is_ascii() {
+        return Ok(ImageImport::Skipped(
+            "skipped non-ASCII LBX QR payload; source MBCS conversion is not reproduced".into(),
+        ));
+    }
+    let ecc = match qr_style.attribute("eccLevel").unwrap_or("15%") {
+        "7%" => QrCodeEcc::Low,
+        "15%" => QrCodeEcc::Medium,
+        "25%" => QrCodeEcc::Quartile,
+        "30%" => QrCodeEcc::High,
+        level => {
+            return Ok(ImageImport::Skipped(format!(
+                "skipped LBX QR code with unsupported error-correction level '{level}'"
+            )));
+        }
+    };
+    let version_attr = qr_style.attribute("version").unwrap_or("auto");
+    let segments = QrSegment::make_segments(data);
+    let qr = if version_attr.eq_ignore_ascii_case("auto") {
+        match QrCode::encode_segments(&segments, ecc) {
+            Ok(qr) => qr,
+            Err(_) => {
+                return Ok(ImageImport::Skipped(
+                    "skipped LBX QR payload that exceeds the Model 2 QR capacity".into(),
+                ));
+            }
+        }
+    } else {
+        let version = match version_attr.parse::<u8>() {
+            Ok(version @ 1..=40) => Version::new(version),
+            _ => {
+                return Ok(ImageImport::Skipped(format!(
+                    "skipped LBX QR code with unsupported version '{version_attr}'"
+                )));
+            }
+        };
+        match QrCode::encode_segments_advanced(&segments, ecc, version, version, None, false) {
+            Ok(qr) => qr,
+            Err(_) => {
+                return Ok(ImageImport::Skipped(
+                    "skipped LBX QR payload that exceeds its configured version".into(),
+                ));
+            }
+        }
+    };
+
+    let style = object_style(node, "barcode")?;
+    let frame = frame_from_style(style, page)?;
+    let width_pt = point_attr_raw(style, "width")?;
+    let height_pt = point_attr_raw(style, "height")?;
+    let cell_size = match qr_style.attribute("cellSize").and_then(parse_points) {
+        Some(size) if size > 0.0 => size,
+        _ => {
+            return Ok(ImageImport::Skipped(
+                "skipped LBX QR code with missing or invalid cellSize".into(),
+            ));
+        }
+    };
+    let modules = qr.size() as f64;
+    let total_modules = modules + 8.0;
+    let fitted_cell_size = cell_size
+        .min(width_pt / total_modules)
+        .min(height_pt / total_modules);
+    if !fitted_cell_size.is_finite() || fitted_cell_size <= 0.0 {
+        return Ok(ImageImport::Skipped(
+            "skipped LBX QR code with an invalid physical frame".into(),
+        ));
+    }
+    let total_size = total_modules * fitted_cell_size;
+    let offset_x = (width_pt - total_size) / 2.0;
+    let offset_y = (height_pt - total_size) / 2.0;
+    let code_x = offset_x + 4.0 * fitted_cell_size;
+    let code_y = offset_y + 4.0 * fitted_cell_size;
+    let mut path = String::new();
+    for y in 0..qr.size() {
+        let mut x = 0;
+        while x < qr.size() {
+            if !qr.get_module(x, y) {
+                x += 1;
+                continue;
+            }
+            let start = x;
+            while x < qr.size() && qr.get_module(x, y) {
+                x += 1;
+            }
+            let run_width = f64::from(x - start) * fitted_cell_size;
+            path.push_str(&format!(
+                "M{} {}h{}v{}h-{}z",
+                svg_num(code_x + f64::from(start) * fitted_cell_size),
+                svg_num(code_y + f64::from(y) * fitted_cell_size),
+                svg_num(run_width),
+                svg_num(fitted_cell_size),
+                svg_num(run_width)
+            ));
+        }
+    }
+    let svg = format!(
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{}pt\" height=\"{}pt\" viewBox=\"0 0 {} {}\"><rect width=\"100%\" height=\"100%\" fill=\"white\"/><path d=\"{path}\" fill=\"black\"/></svg>",
+        svg_num(width_pt),
+        svg_num(height_pt),
+        svg_num(width_pt),
+        svg_num(height_pt)
+    );
+    let mut object = LabelObject::image_from_bytes(None, svg.into_bytes(), frame);
+    object.rotation = angle_from_style(style)?;
+    if matches!(&object.content, ObjectContent::Image { bitmap: None, .. }) {
+        return Err(RenderError::Layout(
+            "LBX QR code could not be rasterized from its vector source".into(),
+        ));
+    }
+    Ok(ImageImport::Imported(object))
+}
+
 enum ImageImport {
     Imported(LabelObject),
     Skipped(String),
@@ -278,6 +430,15 @@ fn import_container(
     match kind {
         "text" => import_text(node, page, elements, warnings, font_name)?,
         "symbol" => import_symbol(node, page, elements, warnings)?,
+        "barcode" => match import_barcode(node, page)? {
+            ImageImport::Imported(object) => {
+                elements.push(LabelElement::Object(object));
+                warnings.push(
+                    "converted LBX QR barcode into an SVG-backed image; native barcode editing and exact Brother rendering are not retained".into(),
+                );
+            }
+            ImageImport::Skipped(reason) => warnings.push(reason),
+        },
         "image" => match import_image(archive, node, page)? {
             ImageImport::Imported(object) => elements.push(LabelElement::Object(object)),
             ImageImport::Skipped(reason) => warnings.push(reason),
@@ -299,12 +460,12 @@ fn import_container(
             let contains_supported = nested.iter().any(|child| {
                 matches!(
                     child.tag_name().name(),
-                    "text" | "symbol" | "image" | "poly" | "rect"
+                    "text" | "symbol" | "barcode" | "image" | "poly" | "rect"
                 ) || child.descendants().any(|descendant| {
                     descendant.is_element()
                         && matches!(
                             descendant.tag_name().name(),
-                            "text" | "symbol" | "image" | "poly" | "rect"
+                            "text" | "symbol" | "barcode" | "image" | "poly" | "rect"
                         )
                 })
             });
@@ -712,7 +873,7 @@ mod tests {
         writer.finish().unwrap().into_inner()
     }
 
-    const PREFIX: &str = r#"<document xmlns:pt="urn:pt" xmlns:style="urn:style" xmlns:text="urn:text" xmlns:image="urn:image" xmlns:draw="urn:draw"><style:paper width="68pt"/><pt:objects>"#;
+    const PREFIX: &str = r#"<document xmlns:pt="urn:pt" xmlns:style="urn:style" xmlns:text="urn:text" xmlns:image="urn:image" xmlns:draw="urn:draw" xmlns:barcode="urn:barcode"><style:paper width="68pt"/><pt:objects>"#;
     const SUFFIX: &str = "</pt:objects></document>";
 
     #[test]
@@ -752,7 +913,7 @@ mod tests {
         let xml = format!("{PREFIX}<cable:cable xmlns:cable=\"urn:cable\"/>{SUFFIX}");
         let error = import(&archive(&xml)).unwrap_err().to_string();
         assert!(error.contains(
-            "no supported text, PT Dingbats symbols, untrimmed images, or unfilled vector objects"
+            "no supported text, PT Dingbats symbols, QR codes, untrimmed images, or unfilled vector objects"
         ));
         assert!(error.contains("cable"));
     }
@@ -964,6 +1125,54 @@ mod tests {
                     .any(|pixel| *pixel != 0)
             );
         }
+    }
+
+    #[test]
+    fn imports_model_2_qr_from_editor_barcode_tags() {
+        let xml = format!(
+            "{PREFIX}<barcode:barcode><pt:objectStyle x=\"0pt\" y=\"0pt\" width=\"58pt\" height=\"58pt\" angle=\"0\"/><barcode:barcodeStyle protocol=\"QRCODE\" margin=\"false\"/><pt:data>http://alecto.ca</pt:data><barcode:qrcodeStyle model=\"2\" eccLevel=\"15%\" cellSize=\"2.0pt\" mbcs=\"932\" removeCharKind=\"0\" removeCharString=\"\" joint=\"1\" jointSpace=\"8\" jointVertically=\"false\" version=\"auto\"/></barcode:barcode>{SUFFIX}"
+        );
+        let result = import(&archive(&xml)).unwrap();
+        assert_eq!(result.document.elements.len(), 1);
+        assert!(result.warnings[0].contains("native barcode editing"));
+        let Some(LabelElement::Object(object)) = result.document.elements.first() else {
+            panic!("expected QR image object");
+        };
+        assert!(matches!(
+            &object.content,
+            ObjectContent::Image { image_data, bitmap: Some(_), .. }
+                if String::from_utf8_lossy(image_data).contains("<path d=\"M")
+        ));
+        let rendered = crate::layout::render_document(
+            &result.document,
+            256,
+            180,
+            &mut crate::text::TextRenderer::with_test_font(),
+        )
+        .unwrap();
+        assert!(
+            rendered
+                .bitmap
+                .as_ref()
+                .unwrap()
+                .data()
+                .iter()
+                .any(|pixel| *pixel != 0)
+        );
+    }
+
+    #[test]
+    fn skips_non_qr_barcodes_with_an_explicit_protocol_warning() {
+        let xml = format!(
+            "{PREFIX}<barcode:barcode><pt:objectStyle x=\"0pt\" y=\"0pt\" width=\"58pt\" height=\"20pt\"/><barcode:barcodeStyle protocol=\"CODE39\"/><pt:data>ABC123</pt:data></barcode:barcode><text:text><pt:objectStyle x=\"0pt\" y=\"0pt\" width=\"20pt\" height=\"12pt\"/><pt:data>Text</pt:data></text:text>{SUFFIX}"
+        );
+        let result = import(&archive(&xml)).unwrap();
+        assert_eq!(result.document.elements.len(), 1);
+        assert!(
+            result.warnings.iter().any(|warning| {
+                warning.contains("protocol 'CODE39'; only QR codes are imported")
+            })
+        );
     }
 
     #[test]

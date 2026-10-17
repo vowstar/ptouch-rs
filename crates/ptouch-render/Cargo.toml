@@ -18,6 +18,7 @@ image = { version = "0.25", default-features = false, features = ["default-forma
 resvg = "0.48"
 cosmic-text = "0.19"
 ttf-parser = "0.25.1"
+qrcodegen = "1.8.0"
 log = "0.4"
 thiserror = "2.0"
 serde = { version = "1.0", features = ["derive"] }

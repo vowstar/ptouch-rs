@@ -59,15 +59,19 @@ vector outlines from `.lbx` archives, but cannot export LBX. This bounded
 importer flattens nested wrappers with warnings, converts symbols to styled
 text glyphs and vector
 outlines to embedded SVG-backed image objects, and skips unsupported shapes,
-barcodes, trimmed images, and image effects with warnings. Symbol rendering
-requires an installed Brother font containing the requested glyph.
+barcodes other than Model 2 QR, trimmed images, and image effects with warnings.
+QR codes import as SVG-backed images, so native barcode editing and exact Brother
+rendering are not retained; other barcode protocols remain unsupported. Symbol
+rendering requires an installed Brother font containing the requested glyph.
 The importer rejects files containing only unsupported objects. LBX conversion
 fidelity and P-touch Editor behavior remain under investigation. The editor has
 no barcode or QR object yet. iPrint&Label
 evidence confirms LBX editing and print paths for both target models, including
 text, symbol, image, barcode, date/time, frame, rectangle, and polygon objects.
 P-touch Editor ships LBX libraries and CIV LBX templates, but its exact
-import/export and print behavior remains unverified.
+import/export and print behavior remains unverified. An external P-touch Editor
+5.0.201 sample establishes the generic QR XML fields, while target-model
+rendering parity remains unknown.
 
 The CLI and GUI support placeholder substitution and CSV batches. They do not
 yet match iPrint&Label's LBX numbering and database-assigned print workflows.
