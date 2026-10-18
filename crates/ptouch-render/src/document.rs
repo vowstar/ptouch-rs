@@ -28,7 +28,7 @@ pub use crate::layout::{
 };
 
 /// Newest supported on-disk layout format version.
-pub const DOCUMENT_VERSION: u32 = 9;
+pub const DOCUMENT_VERSION: u32 = 10;
 /// Empty layouts start at v4; content features raise the version when needed.
 pub const DEFAULT_DOCUMENT_VERSION: u32 = 4;
 
@@ -408,6 +408,8 @@ pub struct LabelObject {
     /// Absent in v3: retain the original fit-to-slot rendering behavior.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub content_box: Option<ContentBox>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border: Option<crate::stroke::BorderStyle>,
     #[serde(default)]
     pub rotation: f32,
     #[serde(default)]
@@ -457,6 +459,25 @@ pub enum ObjectContent {
 
 impl LabelObject {
     pub(crate) fn validate_features(&self, version: u32) -> Result<()> {
+        if let Some(border) = &self.border {
+            if version < 10 {
+                return Err(RenderError::Layout(
+                    "printed borders require layout version 10".into(),
+                ));
+            }
+            if self.content_box.is_none()
+                || !matches!(
+                    self.content,
+                    ObjectContent::Text { .. } | ObjectContent::Image { .. }
+                )
+            {
+                return Err(RenderError::Layout(
+                    "printed borders require a text/image object with independent content geometry"
+                        .into(),
+                ));
+            }
+            border.validate()?;
+        }
         if let ObjectContent::Line { pattern } = &self.content {
             if version < 9 {
                 return Err(RenderError::Layout(
@@ -475,6 +496,7 @@ impl LabelObject {
 
     pub fn text(content: impl Into<String>, frame: TextBox) -> Self {
         Self {
+            border: None,
             frame,
             layout: None,
             content_box: None,
@@ -498,6 +520,7 @@ impl LabelObject {
         )
         .ok();
         Self {
+            border: None,
             frame,
             layout: None,
             content_box: None,
@@ -519,6 +542,9 @@ impl LabelElement {
         match self {
             Self::Object(object) => {
                 let mut required = 3;
+                if object.border.is_some() {
+                    required = required.max(10);
+                }
                 if matches!(object.content, ObjectContent::Line { .. }) {
                     required = required.max(9);
                 }
@@ -1017,6 +1043,7 @@ mod tests {
                     frame.clone(),
                 )),
                 LabelElement::Object(LabelObject {
+                    border: None,
                     frame: frame.clone(),
                     content_box: None,
                     layout: None,
@@ -1026,6 +1053,7 @@ mod tests {
                     content: ObjectContent::CutMark,
                 }),
                 LabelElement::Object(LabelObject {
+                    border: None,
                     frame: frame.clone(),
                     content_box: None,
                     layout: None,
@@ -1643,5 +1671,41 @@ mod tests {
         assert_eq!(content, "旧新");
         assert_eq!((styles[0].start, styles[0].end), (1, 2));
         assert!(styles[0].style.strikethrough);
+    }
+
+    #[test]
+    fn borders_are_optional_and_require_v10_for_roundtrips_and_direct_rendering() {
+        let mut item = LabelObject::text("PORT", TextBox::default());
+        item.content_box = Some(ContentBox {
+            width_mm: 10.0,
+            height_mm: 8.0,
+            offset_x_mm: 0.0,
+            offset_y_mm: 0.0,
+        });
+        item.layout = Some(crate::object_layout::LayoutOptions {
+            width: crate::object_layout::WidthSizing::Fixed,
+            ..Default::default()
+        });
+        let mut doc = text_doc("");
+        doc.version = 7;
+        doc.elements = vec![LabelElement::Object(item)];
+        let plain = doc.to_toml_string().unwrap();
+        assert!(plain.contains("version = 7") && !plain.contains("border"));
+        doc.elements[0].as_object_mut().unwrap().border = Some(Default::default());
+        let saved = doc.to_toml_string().unwrap();
+        assert!(saved.contains("version = 10"));
+        assert!(
+            LabelDocument::from_toml_str(&saved.replace("version = 10", "version = 9")).is_err()
+        );
+        assert!(render_document(&doc, 76, 180, &mut TextRenderer::with_test_font()).is_err());
+        assert_eq!(
+            LabelDocument::from_toml_str(&saved)
+                .unwrap()
+                .to_toml_string()
+                .unwrap(),
+            saved
+        );
+        doc.elements[0].as_object_mut().unwrap().border = None;
+        assert_eq!(doc.to_toml_string().unwrap(), plain);
     }
 }

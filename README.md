@@ -54,6 +54,14 @@ cargo build --release --workspace
 
 Binaries: `target/release/ptouch` (CLI), `target/release/ptouch-gui` (GUI).
 
+To install both binaries from this checkout into Cargo's bin directory
+(`~/.cargo/bin` by default):
+
+```sh
+cargo install --path crates/ptouch-cli --locked
+cargo install --path crates/ptouch-gui --locked
+```
+
 libusb is compiled in statically (`rusb` vendored), so the binaries carry no
 external libusb dependency.
 
@@ -346,6 +354,15 @@ Thin strokes round to at least one output dot. Lines support object and label
 mirroring, duplication, sequence layout and undo. They do not operate the cutter.
 Legacy layouts need explicit conversion before adding lines. Printed lines
 require layout format v9.
+
+### Printed borders
+
+Enable **Printed border** on a text or image object. Set the stroke width,
+inside spacing and solid, dashed or dotted pattern in millimeters. The border
+moves, scales, rotates and mirrors with its object; it is not a separate element.
+Its outer size stays fixed, with text or image fitted inside. Enlarge the object
+or reduce spacing if no interior remains. Borders have no fill and require
+layout format v10. Fixed sequence allocations retain their positions.
 
 ### Rich text within one object
 

@@ -118,6 +118,7 @@ pub fn resolve(doc: &mut LabelDocument, renderer: &mut TextRenderer) -> Result<(
         .filter_map(LabelElement::as_object_mut)
     {
         validate(object, doc.version)?;
+        object.validate_features(doc.version)?;
         let Some(policy) = &object.layout else {
             continue;
         };
@@ -140,7 +141,16 @@ pub fn resolve(doc: &mut LabelDocument, renderer: &mut TextRenderer) -> Result<(
             && !text.trim().is_empty()
         {
             let ppm = f64::from(doc.dpi) / 25.4;
-            let target_h = content.height_mm * ppm;
+            let inset = object
+                .border
+                .as_ref()
+                .map(|b| b.inset_pixels(doc.dpi))
+                .transpose()?
+                .unwrap_or(0);
+            let target_h = content.height_mm * ppm - 2.0 * f64::from(inset);
+            if font_size.is_none() && target_h < 1.0 {
+                return Err(RenderError::Layout("border and spacing leave no room for text; enlarge the object or reduce the border".into()));
+            }
             let normalized: Vec<_> = if font_size.is_none() && !styles.is_empty() {
                 crate::styled_text::style_regions(text, styles)
                     .into_iter()
@@ -210,9 +220,28 @@ pub fn resolve(doc: &mut LabelDocument, renderer: &mut TextRenderer) -> Result<(
             };
             // One design dot avoids hinting/edge quantization clipping at
             // the next output DPI, while keeping the edit box near ink.
-            content.width_mm = f64::from(ink.width() + 1) / ppm;
-            if font_size.is_some() {
-                content.height_mm = f64::from(ink.height() + 1) / ppm;
+            content.width_mm = f64::from(ink.width() + 1 + 2 * inset) / ppm;
+            if let Some(size) = font_size {
+                content.height_mm = f64::from(ink.height() + 1 + 2 * inset) / ppm;
+                if let Some(border) = &object.border {
+                    // Border and glyph rounding differ between printer grids.
+                    // Reserve the largest physical extent at the supported
+                    // resolutions, independently of the connected printer.
+                    for dpi in [180, 360] {
+                        if dpi == doc.dpi {
+                            continue;
+                        }
+                        let measured = render(*size * f32::from(dpi) / 72.0)?;
+                        let inset = border.inset_pixels(dpi)?;
+                        let ppm = f64::from(dpi) / 25.4;
+                        content.width_mm = content
+                            .width_mm
+                            .max(f64::from(measured.width() + 1 + 2 * inset) / ppm);
+                        content.height_mm = content
+                            .height_mm
+                            .max(f64::from(measured.height() + 1 + 2 * inset) / ppm);
+                    }
+                }
             }
         }
         update_allocation(object);
@@ -254,6 +283,122 @@ pub fn content_extent(object: &LabelObject) -> Option<(f64, f64, f64, f64)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bordered_content_width_and_fixed_fonts_converge_without_growing_each_pass() {
+        for size in [None, Some(6.0)] {
+            let mut doc = document();
+            doc.version = 10;
+            doc.apply_values(&std::collections::BTreeMap::from([(
+                "port".into(),
+                "端口01".into(),
+            )]));
+            let object = doc.elements[0].as_object_mut().unwrap();
+            object.border = Some(Default::default());
+            if let ObjectContent::Text { font_size, .. } = &mut object.content {
+                *font_size = size;
+            }
+            let mut renderer = TextRenderer::with_test_font();
+            resolve(&mut doc, &mut renderer).unwrap();
+            let settled = doc.clone();
+            for _ in 0..8 {
+                resolve(&mut doc, &mut renderer).unwrap();
+                assert_eq!(doc, settled);
+                let saved = doc.to_toml_string().unwrap();
+                doc = LabelDocument::from_toml_str(&saved).unwrap();
+            }
+            let object = doc.elements[0].as_object().unwrap();
+            let inset = object.border.as_ref().unwrap().inset_mm(doc.dpi).unwrap();
+            let box_ = object.content_box.as_ref().unwrap();
+            assert!(box_.width_mm > 2.0 * inset && box_.height_mm > 2.0 * inset);
+        }
+    }
+
+    #[test]
+    fn attached_border_does_not_move_fixed_allocations_or_following_objects() {
+        let mut doc = document();
+        doc.version = 10;
+        let object = doc.elements[0].as_object_mut().unwrap();
+        object.layout.as_mut().unwrap().width = WidthSizing::Fixed;
+        object.frame.width_mm = 24.0;
+        object.content_box.as_mut().unwrap().width_mm = 22.0;
+        object.border = Some(Default::default());
+        for element in &mut doc.elements {
+            if let ObjectContent::Text { font_size, .. } =
+                &mut element.as_object_mut().unwrap().content
+            {
+                *font_size = Some(3.0);
+            }
+        }
+        let before = doc
+            .elements
+            .iter()
+            .map(|e| e.as_object().unwrap().frame.clone())
+            .collect::<Vec<_>>();
+        let mut renderer = TextRenderer::with_test_font();
+        for value in ["A", "PORT 012345", "端口 02"] {
+            let mut sample = doc.clone();
+            sample.apply_values(&std::collections::BTreeMap::from([(
+                "port".into(),
+                value.into(),
+            )]));
+            resolve(&mut sample, &mut renderer).unwrap();
+            assert_eq!(
+                sample
+                    .elements
+                    .iter()
+                    .map(|e| e.as_object().unwrap().frame.clone())
+                    .collect::<Vec<_>>(),
+                before
+            );
+            for (dpi, tape) in [(180, 76), (360, 152)] {
+                let output =
+                    crate::layout::render_document(&sample, tape, dpi, &mut renderer).unwrap();
+                assert!(
+                    output.diagnostics.is_empty(),
+                    "{value} at {dpi}: {:?}",
+                    output.diagnostics
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn content_sized_borders_do_not_clip_fixed_fonts_when_output_dpi_changes() {
+        let mut renderer = TextRenderer::with_test_font();
+        for design in [180, 360] {
+            for stroke in [0.1, 0.2, 0.3] {
+                for padding in [0.0, 0.1, 0.2, 0.5] {
+                    let mut doc = document();
+                    doc.version = 10;
+                    doc.dpi = design;
+                    doc.apply_values(&std::collections::BTreeMap::from([(
+                        "port".into(),
+                        "端口01".into(),
+                    )]));
+                    let object = doc.elements[0].as_object_mut().unwrap();
+                    object.border = Some(crate::stroke::BorderStyle {
+                        width_mm: stroke,
+                        padding_mm: padding,
+                        ..Default::default()
+                    });
+                    if let ObjectContent::Text { font_size, .. } = &mut object.content {
+                        *font_size = Some(6.0);
+                    }
+                    resolve(&mut doc, &mut renderer).unwrap();
+                    for (dpi, tape) in [(180, 76), (360, 152)] {
+                        let rendered =
+                            crate::layout::render_document(&doc, tape, dpi, &mut renderer).unwrap();
+                        assert!(
+                            rendered.diagnostics.is_empty(),
+                            "design {design}, output {dpi}, stroke {stroke}, spacing {padding}: {:?}",
+                            rendered.diagnostics
+                        );
+                    }
+                }
+            }
+        }
+    }
     use crate::document::{ContentBox, PositionMode, TextBox};
 
     fn document() -> LabelDocument {

@@ -404,6 +404,7 @@ impl AppState {
         std::mem::swap(&mut first.rotation, &mut second.rotation);
         std::mem::swap(&mut first.flip_h, &mut second.flip_h);
         std::mem::swap(&mut first.flip_v, &mut second.flip_v);
+        std::mem::swap(&mut first.border, &mut second.border);
         if let Err(message) = self
             .constrain_transform(a, &before_a, &mut first)
             .and_then(|_| self.constrain_transform(b, &before_b, &mut second))
@@ -480,6 +481,21 @@ impl AppState {
         candidate: &mut LabelObject,
     ) -> Result<bool, &'static str> {
         use ptouch_render::object_layout::{Placement, WidthSizing, content_extent};
+        if let (Some(border), Some(old), Some(new)) = (
+            &candidate.border,
+            &before.content_box,
+            &candidate.content_box,
+        ) && (old.width_mm != new.width_mm || old.height_mm != new.height_mm)
+        {
+            let inset = border
+                .inset_mm(self.target_dpi())
+                .map_err(|_| "Invalid border dimensions")?;
+            if new.width_mm <= 2.0 * inset || new.height_mm <= 2.0 * inset {
+                return Err(
+                    "Border leaves no room for content — enlarge the object or reduce border spacing",
+                );
+            }
+        }
         let Some(policy) = candidate.layout.clone() else {
             return Ok(false);
         };
@@ -1058,6 +1074,7 @@ impl AppState {
         let mut frame = self.default_object_frame(length, thickness);
         frame.y_mm = (self.printable_height_mm() - thickness).max(0.0) / 2.0;
         self.add_element(LabelElement::Object(LabelObject {
+            border: None,
             content_box: Some(content_box_for_frame(&frame)),
             layout: Some(ptouch_render::object_layout::LayoutOptions {
                 width: ptouch_render::object_layout::WidthSizing::Fixed,
@@ -1077,6 +1094,7 @@ impl AppState {
         let element = if self.is_free_layout() {
             let frame = self.default_object_frame(1.27, self.printable_height_mm());
             LabelElement::Object(LabelObject {
+                border: None,
                 content_box: Some(content_box_for_frame(&frame)),
                 layout: Some(ptouch_render::object_layout::LayoutOptions {
                     padding_mm: 0.0,
@@ -1762,6 +1780,7 @@ mod tests {
             ObjectContent::Padding,
         ] {
             let object = LabelObject {
+                border: None,
                 layout: None,
                 frame: TextBox {
                     x_mm: 5.0,
@@ -2166,8 +2185,15 @@ mod tests {
             .iter()
             .map(|e| e.as_object().unwrap().frame.clone())
             .collect();
+        let border = ptouch_render::stroke::BorderStyle {
+            padding_mm: 0.1,
+            ..Default::default()
+        };
+        state.elements[0].as_object_mut().unwrap().border = Some(border.clone());
         assert!(!state.can_swap_positions(0, 1));
         assert!(state.swap_content(0, 1));
+        assert!(state.elements[0].as_object().unwrap().border.is_none());
+        assert_eq!(state.elements[1].as_object().unwrap().border, Some(border));
         assert_eq!(
             state
                 .elements

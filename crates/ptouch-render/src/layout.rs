@@ -616,6 +616,7 @@ pub fn convert_to_objects(
                     );
                 }
                 LabelObject {
+                    border: None,
                     frame,
                     content_box: None,
                     layout: None,
@@ -651,6 +652,7 @@ pub fn convert_to_objects(
                     index + 1
                 );
                 LabelObject {
+                    border: None,
                     frame,
                     content_box: None,
                     layout: None,
@@ -665,6 +667,7 @@ pub fn convert_to_objects(
                 }
             }
             LabelElement::CutMark | LabelElement::Padding { .. } => LabelObject {
+                border: None,
                 frame,
                 content_box: None,
                 layout: None,
@@ -833,6 +836,40 @@ fn render_independent(
 }
 
 fn render_object(
+    object: &LabelObject,
+    doc: &LabelDocument,
+    width: u32,
+    height: u32,
+    dpi: u16,
+    renderer: &mut TextRenderer,
+    rotation: f32,
+) -> Result<(LabelBitmap, bool, LocalContent)> {
+    if let Some(border) = &object.border {
+        let inset = border.inset_pixels(dpi)?;
+        let inner_width = width.checked_sub(2 * inset).filter(|v| *v > 0);
+        let inner_height = height.checked_sub(2 * inset).filter(|v| *v > 0);
+        let (Some(inner_width), Some(inner_height)) = (inner_width, inner_height) else {
+            return Err(RenderError::Layout("border and spacing leave no room for content; enlarge the object or reduce the border".into()));
+        };
+        let (inner, clipped, _) =
+            render_object_content(object, doc, inner_width, inner_height, dpi, renderer, 0.0)?;
+        let mut outer = LabelBitmap::new(width, height);
+        blit(&mut outer, &inner, i64::from(inset), i64::from(inset));
+        border.draw(&mut outer, dpi)?;
+        let (bitmap, geometry) = render_contained(
+            &outer,
+            rotation,
+            object.frame.vertical_align,
+            width,
+            height,
+            false,
+        )?;
+        return Ok((bitmap, clipped, geometry));
+    }
+    render_object_content(object, doc, width, height, dpi, renderer, rotation)
+}
+
+fn render_object_content(
     object: &LabelObject,
     doc: &LabelDocument,
     width: u32,
@@ -1702,6 +1739,7 @@ mod tests {
 
     fn object(content: ObjectContent, frame: TextBox) -> LabelElement {
         LabelElement::Object(LabelObject {
+            border: None,
             content,
             frame,
             content_box: None,
@@ -1770,6 +1808,97 @@ mod tests {
                         doc.flip_v = false;
                     }
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn text_and_image_borders_share_object_mirroring_and_rotation_at_both_dpis() {
+        let dot = 25.4 / 180.0;
+        let mut image = LabelBitmap::new(7, 5);
+        for y in 0..5 {
+            for x in 0..7 {
+                if x < y + 1 {
+                    image.set_pixel(x, y, true);
+                }
+            }
+        }
+        let contents = [
+            ObjectContent::Text {
+                content: "A口".into(),
+                font_size: Some(6.0),
+                align: TextAlign::Left,
+                line_spacing: 1.2,
+                styles: vec![],
+            },
+            image_content(image),
+        ];
+        let mut renderer = TextRenderer::with_test_font();
+        for content in contents {
+            let mut item = object(
+                content,
+                TextBox {
+                    x_mm: 10.0 * dot,
+                    y_mm: 16.0 * dot,
+                    width_mm: 48.0 * dot,
+                    height_mm: 32.0 * dot,
+                    ..Default::default()
+                },
+            );
+            let o = item.as_object_mut().unwrap();
+            o.content_box = Some(ContentBox {
+                width_mm: 48.0 * dot,
+                height_mm: 32.0 * dot,
+                offset_x_mm: 0.0,
+                offset_y_mm: 0.0,
+            });
+            o.border = Some(Default::default());
+            let mut doc = document(vec![item]);
+            doc.version = 10;
+            for (dpi, scale, tape) in [(180, 1, 76), (360, 2, 152)] {
+                let base = render_document(&doc, tape, dpi, &mut renderer)
+                    .unwrap()
+                    .bitmap
+                    .unwrap();
+                for (h, v) in [(false, false), (true, false), (false, true), (true, true)] {
+                    let o = doc.elements[0].as_object_mut().unwrap();
+                    o.flip_h = h;
+                    o.flip_v = v;
+                    let mirrored = render_document(&doc, tape, dpi, &mut renderer)
+                        .unwrap()
+                        .bitmap
+                        .unwrap();
+                    for y in 0..32 * scale {
+                        for x in 0..48 * scale {
+                            let sx = if h { 48 * scale - 1 - x } else { x };
+                            let sy = if v { 32 * scale - 1 - y } else { y };
+                            assert_eq!(
+                                mirrored.get_pixel(10 * scale + x, 16 * scale + y),
+                                base.get_pixel(10 * scale + sx, 16 * scale + sy)
+                            );
+                        }
+                    }
+                    for angle in [30.0, 90.0] {
+                        doc.elements[0].as_object_mut().unwrap().rotation = angle;
+                        let normal = render_document(&doc, tape, dpi, &mut renderer)
+                            .unwrap()
+                            .bitmap
+                            .unwrap();
+                        doc.flip_h = true;
+                        doc.flip_v = true;
+                        let reflected = render_document(&doc, tape, dpi, &mut renderer)
+                            .unwrap()
+                            .bitmap
+                            .unwrap();
+                        assert_eq!(reflected, normal.mirrored(true, true));
+                        doc.flip_h = false;
+                        doc.flip_v = false;
+                    }
+                    doc.elements[0].as_object_mut().unwrap().rotation = 0.0;
+                }
+                let o = doc.elements[0].as_object_mut().unwrap();
+                o.flip_h = false;
+                o.flip_v = false;
             }
         }
     }

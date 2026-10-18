@@ -1046,6 +1046,49 @@ fn show_object_properties(
             ui.small("Keeps its extent and can anchor relative objects. Use positions or gaps for new spacing.");
         }
     }
+    if matches!(
+        object.content,
+        ObjectContent::Text { .. } | ObjectContent::Image { .. }
+    ) {
+        ui.separator();
+        let mut enabled = object.border.is_some();
+        if ui.checkbox(&mut enabled, "Printed border").changed() {
+            object.border = enabled.then(Default::default);
+            if enabled {
+                object.content_box.get_or_insert_with(|| resolved.clone());
+            }
+            changed = true;
+        }
+        if let Some(border) = &mut object.border {
+            let before = border.clone();
+            for (label, value, min) in [
+                ("Border width", &mut border.width_mm, 0.01),
+                ("Border spacing", &mut border.padding_mm, 0.0),
+            ] {
+                ui.horizontal(|ui| {
+                    ui.label(label);
+                    ui.add(
+                        crate::widgets::decimal_drag(value)
+                            .range(min..=1000.0)
+                            .clamp_existing_to_range(false)
+                            .speed(0.1)
+                            .suffix(" mm"),
+                    );
+                });
+            }
+            changed |= show_stroke_pattern(ui, &mut border.pattern);
+            changed |= *border != before;
+            ui.small("Follows this object. Spacing is inside the printed border.");
+            if let (Some(c), Ok(inset)) = (&object.content_box, border.inset_mm(state.target_dpi()))
+                && (c.width_mm <= 2.0 * inset || c.height_mm <= 2.0 * inset)
+            {
+                ui.colored_label(
+                    ui.visuals().warn_fg_color,
+                    "Enlarge the object or reduce border spacing.",
+                );
+            }
+        }
+    }
     ui.separator();
     ui.label("Object rotation:");
     let mut rotation = object.rotation;
