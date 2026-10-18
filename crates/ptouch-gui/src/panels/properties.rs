@@ -707,7 +707,11 @@ fn show_content_box(
     let mut auto_fit = object.content_box.is_none();
     if object.layout.is_none()
         && ui
-            .checkbox(&mut auto_fit, "Follow allocation size")
+            .add_enabled(
+                object.border.is_none(),
+                egui::Checkbox::new(&mut auto_fit, "Follow allocation size"),
+            )
+            .on_disabled_hover_text("Turn off Printed border to follow allocation size.")
             .changed()
     {
         object.content_box = (!auto_fit).then(|| resolved.clone());
