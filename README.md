@@ -340,7 +340,9 @@ pixels, not the layout DPI or its millimeter coordinates.
 
 Select text in **Text Content**, then use **B**, **I**, **U**, the selection font,
 or the size field to format that range. With a caret, these controls format the
-next text you type. Ctrl+B/I/U (Cmd on macOS), **Undo** and **Redo** work with
+next text you type. **Text format** shows the affected range; a dash on a style
+button indicates mixed formatting. Clicking it applies that style to the whole
+selection. Ctrl+B/I/U (Cmd on macOS), **Undo** and **Redo** work with
 both text and formatting. Ctrl+Z undoes; Ctrl+Shift+Z or Ctrl+Y redoes. Internal
 selected-text copy/paste and object duplication retain styles. External plain
 text inherits the insertion style.

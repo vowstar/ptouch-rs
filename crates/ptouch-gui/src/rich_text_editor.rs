@@ -219,6 +219,75 @@ fn selection_style(session: &Session) -> TextStyle {
     style
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ToggleState {
+    Off,
+    On,
+    Mixed,
+}
+
+fn selection_toggle(session: &Session, attribute: fn(&TextStyle) -> bool) -> ToggleState {
+    let range = selected_range(session.current.selection);
+    let value = attribute(&session.current.pending);
+    if range.is_empty() {
+        return if value {
+            ToggleState::On
+        } else {
+            ToggleState::Off
+        };
+    }
+    let regions = ptouch_render::styled_text::style_regions(
+        &session.current.document.text,
+        &session.current.document.spans,
+    );
+    let mut values = regions
+        .iter()
+        .filter(|(r, _)| r.start < range.end && range.start < r.end)
+        .map(|(_, style)| attribute(style));
+    let first = values.next().unwrap_or(value);
+    if values.any(|value| value != first) {
+        ToggleState::Mixed
+    } else if first {
+        ToggleState::On
+    } else {
+        ToggleState::Off
+    }
+}
+
+fn format_button(ui: &mut Ui, glyph: &str, name: &str, state: ToggleState) -> Response {
+    let label = if state == ToggleState::Mixed {
+        format!("{glyph} —")
+    } else {
+        glyph.into()
+    };
+    let text = RichText::new(label);
+    let text = match glyph {
+        "B" => text.strong(),
+        "I" => text.italics(),
+        "U" => text.underline(),
+        _ => text,
+    };
+    let description = match state {
+        ToggleState::Mixed => format!("{name}: mixed. Apply to the selected text."),
+        ToggleState::On => format!("{name}: on. Click to turn off."),
+        ToggleState::Off => format!("{name}: off. Click to turn on."),
+    };
+    let response = ui.add(
+        Button::new(text)
+            .selected(state != ToggleState::Off)
+            .min_size(vec2(30.0, 24.0)),
+    );
+    response.widget_info(|| {
+        WidgetInfo::selected(
+            WidgetType::Button,
+            ui.is_enabled(),
+            state == ToggleState::On,
+            &description,
+        )
+    });
+    response.on_hover_text(description)
+}
+
 fn inherited_style(document: &StyledText, at: usize) -> TextStyle {
     document.style_at(if at == 0 { 0 } else { at - 1 })
 }
@@ -576,14 +645,23 @@ pub fn show(
             };
         }
     }
-    ui.small("Select text to format it; a caret changes the next text you type.");
     let selected = selected_range(session.current.selection);
     let selected_style = selection_style(&session);
+    ui.label(RichText::new("Text format").strong());
+    if selected.is_empty() {
+        ui.small("Applies to the next text you type.");
+    } else {
+        ui.small(format!(
+            "Applies to {} selected characters.",
+            selected.len()
+        ));
+    }
     ui.horizontal(|ui| {
-        for (label, on, patch) in [
+        for (label, name, state, patch) in [
             (
                 "B",
-                selected_style.bold,
+                "Bold",
+                selection_toggle(&session, |s| s.bold),
                 StylePatch {
                     bold: Some(!selected_style.bold),
                     ..Default::default()
@@ -591,7 +669,8 @@ pub fn show(
             ),
             (
                 "I",
-                selected_style.italic,
+                "Italic",
+                selection_toggle(&session, |s| s.italic),
                 StylePatch {
                     italic: Some(!selected_style.italic),
                     ..Default::default()
@@ -599,14 +678,15 @@ pub fn show(
             ),
             (
                 "U",
-                selected_style.underline,
+                "Underline",
+                selection_toggle(&session, |s| s.underline),
                 StylePatch {
                     underline: Some(!selected_style.underline),
                     ..Default::default()
                 },
             ),
         ] {
-            if ui.selectable_label(on, label).clicked() {
+            if format_button(ui, label, name, state).clicked() {
                 action = Some(Action::Format(patch));
             }
         }
@@ -625,6 +705,15 @@ pub fn show(
             action = Some(Action::Redo);
         }
     });
+    if [
+        selection_toggle(&session, |s| s.bold),
+        selection_toggle(&session, |s| s.italic),
+        selection_toggle(&session, |s| s.underline),
+    ]
+    .contains(&ToggleState::Mixed)
+    {
+        ui.small("— Mixed formatting in selection.");
+    }
     let regions = ptouch_render::styled_text::style_regions(
         &session.current.document.text,
         &session.current.document.spans,
@@ -678,6 +767,11 @@ pub fn show(
     let mixed_font = selected_regions.iter().any(|(_, style)| {
         style.font_name.as_deref().unwrap_or(default_font)
             != selected_style.font_name.as_deref().unwrap_or(default_font)
+    });
+    ui.small(if selected.is_empty() {
+        "Typing font:"
+    } else {
+        "Selection font:"
     });
     ComboBox::from_id_salt(id.with("font"))
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
@@ -957,11 +1051,36 @@ mod tests {
         h.select(0..2);
         h.command(Key::B, false);
         h.select(0..4);
+        let original = h.document.clone();
+        let shapes = h.frame(vec![]);
+        assert!(shapes.iter().any(|s| matches!(&s.shape,
+            egui::epaint::Shape::Text(text) if text.galley.job.text == "B —")));
+        assert_eq!(
+            h.document, original,
+            "displaying mixed formatting must not edit it"
+        );
         h.command(Key::B, false);
         assert!((0..4).all(|i| h.document.style_at(i).bold));
+        let shapes = h.frame(vec![]);
+        assert!(!shapes.iter().any(|s| matches!(&s.shape,
+            egui::epaint::Shape::Text(text) if text.galley.job.text == "B —")));
         h.command(Key::Z, false);
-        assert!(h.document.style_at(0).bold);
-        assert!(!h.document.style_at(3).bold);
+        assert_eq!(h.document, original);
+    }
+
+    #[test]
+    fn scope_hint_distinguishes_range_from_insertion_without_editing() {
+        let mut h = EditorHarness::new("端口AB");
+        let original = h.document.clone();
+        h.select(0..2);
+        let shapes = h.frame(vec![]);
+        assert!(shapes.iter().any(|s| matches!(&s.shape,
+            egui::epaint::Shape::Text(text) if text.galley.job.text == "Applies to 2 selected characters.")));
+        h.select(2..2);
+        let shapes = h.frame(vec![]);
+        assert!(shapes.iter().any(|s| matches!(&s.shape,
+            egui::epaint::Shape::Text(text) if text.galley.job.text == "Applies to the next text you type.")));
+        assert_eq!(h.document, original);
     }
 
     #[test]
