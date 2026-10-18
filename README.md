@@ -3,7 +3,7 @@
 Rust tool for Brother P-Touch USB label printers. CLI and GUI.
 Optional native macOS Bluetooth support is available in `ptouch-core` for the PT-P300BT.
 
-![Object editor with left-aligned elements](https://github.com/user-attachments/assets/4eaf447a-dde8-49d8-8cca-db98dc75228e)
+![Text, image borders and printed cutting guides](https://github.com/user-attachments/assets/8cef5d8e-4d8a-47c7-9002-bcc44c11e32e)
 
 ## Features
 
@@ -359,10 +359,12 @@ require layout format v9.
 
 Enable **Printed border** on a text or image object. Set the stroke width,
 inside spacing and solid, dashed or dotted pattern in millimeters. The border
-moves, scales, rotates and mirrors with its object; it is not a separate element.
-Its outer size stays fixed, with text or image fitted inside. Enlarge the object
-or reduce spacing if no interior remains. Borders have no fill and require
-layout format v10. Fixed sequence allocations retain their positions.
+follows its object's size, position, rotation and mirroring; it is not a separate
+element. Fixed boxes fit their content inside the remaining space; **Auto width**
+includes the border and spacing in its measurement. Stroke width and dash periods
+retain their millimeter values during resizing. Enlarge the object or reduce
+spacing if no interior remains. Borders have no fill and require layout format
+v10. Fixed sequence allocations retain their positions.
 
 ### Rich text within one object
 
