@@ -159,6 +159,9 @@ impl TextRenderer {
                 if style.underline {
                     attr = attr.underline(cosmic_text::UnderlineStyle::Single);
                 }
+                if style.strikethrough {
+                    attr = attr.strikethrough();
+                }
                 let size = font_size_px * style.font_size.unwrap_or(base_size_pt) / base_size_pt;
                 if !size.is_finite() || size > 4096.0 {
                     return Err(RenderError::DimensionMismatch(
@@ -451,5 +454,35 @@ mod tests {
         assert!(rich.width() > plain.width());
         assert!(rich.height() > plain.height());
         assert!(rich.data().iter().any(|byte| *byte != 0));
+    }
+
+    #[test]
+    fn strikethrough_renders_into_the_print_bitmap_at_multiple_sizes() {
+        use crate::styled_text::{StyleSpan, TextStyle};
+        let mut renderer = TextRenderer::with_test_font();
+        for size in [16.0, 32.0] {
+            let mut styles = vec![StyleSpan {
+                start: 0,
+                end: 5,
+                style: TextStyle::default(),
+            }];
+            let plain = renderer
+                .render_unbounded_styled("A  口B", "", size, TextAlign::Left, 1.2, &styles, 12.0)
+                .unwrap();
+            styles[0].style.strikethrough = true;
+            let struck = renderer
+                .render_unbounded_styled("A  口B", "", size, TextAlign::Left, 1.2, &styles, 12.0)
+                .unwrap();
+            let ink = |b: &LabelBitmap| b.data().iter().map(|v| v.count_ones()).sum::<u32>();
+            assert!(
+                ink(&struck) > ink(&plain),
+                "decoration must be present in exported pixels"
+            );
+            styles[0].style.strikethrough = false;
+            let cleared = renderer
+                .render_unbounded_styled("A  口B", "", size, TextAlign::Left, 1.2, &styles, 12.0)
+                .unwrap();
+            assert_eq!(plain, cleared);
+        }
     }
 }

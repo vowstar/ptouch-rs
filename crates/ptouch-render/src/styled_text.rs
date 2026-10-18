@@ -25,6 +25,8 @@ pub struct TextStyle {
     pub italic: bool,
     #[serde(skip_serializing_if = "is_false")]
     pub underline: bool,
+    #[serde(skip_serializing_if = "is_false")]
+    pub strikethrough: bool,
 }
 
 impl TextStyle {
@@ -76,6 +78,7 @@ pub struct StylePatch {
     pub bold: Option<bool>,
     pub italic: Option<bool>,
     pub underline: Option<bool>,
+    pub strikethrough: Option<bool>,
 }
 
 impl StylePatch {
@@ -95,7 +98,31 @@ impl StylePatch {
         if let Some(value) = self.underline {
             style.underline = value;
         }
+        if let Some(value) = self.strikethrough {
+            style.strikethrough = value;
+        }
     }
+}
+
+/// First reader that can retain the styles in these ranges.
+pub(crate) fn minimum_version(spans: &[StyleSpan]) -> u32 {
+    if spans.iter().any(|span| span.style.strikethrough) {
+        8
+    } else if !spans.is_empty() {
+        6
+    } else {
+        1
+    }
+}
+
+pub(crate) fn validate_version(spans: &[StyleSpan], version: u32) -> Result<()> {
+    let required = minimum_version(spans);
+    if version < required {
+        return Err(RenderError::Layout(format!(
+            "inline text styles require layout version {required}"
+        )));
+    }
+    Ok(())
 }
 
 pub fn validate_spans(text: &str, spans: &[StyleSpan]) -> Result<()> {

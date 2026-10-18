@@ -179,6 +179,7 @@ impl TextBuffer for StyledBuffer {
                         bold: Some(span.style.bold),
                         italic: Some(span.style.italic),
                         underline: Some(span.style.underline),
+                        strikethrough: Some(span.style.strikethrough),
                     },
                 );
             }
@@ -215,6 +216,7 @@ fn selection_style(session: &Session) -> TextStyle {
         style.bold = selected.iter().all(|(_, s)| s.bold);
         style.italic = selected.iter().all(|(_, s)| s.italic);
         style.underline = selected.iter().all(|(_, s)| s.underline);
+        style.strikethrough = selected.iter().all(|(_, s)| s.strikethrough);
     }
     style
 }
@@ -265,6 +267,7 @@ fn format_button(ui: &mut Ui, glyph: &str, name: &str, state: ToggleState) -> Re
         "B" => text.strong(),
         "I" => text.italics(),
         "U" => text.underline(),
+        "S" => text.strikethrough(),
         _ => text,
     };
     let description = match state {
@@ -357,6 +360,11 @@ fn editing_format(
         color,
         italics: style.italic && !available,
         underline: if style.underline {
+            Stroke::new(1.0, color)
+        } else {
+            Stroke::NONE
+        },
+        strikethrough: if style.strikethrough {
             Stroke::new(1.0, color)
         } else {
             Stroke::NONE
@@ -685,6 +693,15 @@ pub fn show(
                     ..Default::default()
                 },
             ),
+            (
+                "S",
+                "Strikethrough",
+                selection_toggle(&session, |s| s.strikethrough),
+                StylePatch {
+                    strikethrough: Some(!selected_style.strikethrough),
+                    ..Default::default()
+                },
+            ),
         ] {
             if format_button(ui, label, name, state).clicked() {
                 action = Some(Action::Format(patch));
@@ -709,6 +726,7 @@ pub fn show(
         selection_toggle(&session, |s| s.bold),
         selection_toggle(&session, |s| s.italic),
         selection_toggle(&session, |s| s.underline),
+        selection_toggle(&session, |s| s.strikethrough),
     ]
     .contains(&ToggleState::Mixed)
     {
@@ -761,6 +779,7 @@ pub fn show(
                 bold: Some(false),
                 italic: Some(false),
                 underline: Some(false),
+                strikethrough: Some(false),
             }));
         }
     });
@@ -933,6 +952,45 @@ mod tests {
         assert!(h.document.style_at(2).bold);
         let state = egui::text_edit::TextEditState::load(&h.ctx, h.id).unwrap();
         assert_eq!(selected_range(state.cursor.char_range()), 1..3);
+    }
+
+    #[test]
+    fn strikethrough_button_formats_unicode_selection_and_undo_restores_it() {
+        let mut h = EditorHarness::new("A端口B");
+        h.select(1..3);
+        let pos = h
+            .frame(vec![])
+            .iter()
+            .find_map(|s| match &s.shape {
+                egui::epaint::Shape::Text(t) if t.galley.job.text == "S" => {
+                    Some(t.pos + t.galley.size() * 0.5)
+                }
+                _ => None,
+            })
+            .unwrap();
+        h.frame(vec![
+            Event::PointerMoved(pos),
+            Event::PointerButton {
+                pos,
+                button: PointerButton::Primary,
+                pressed: true,
+                modifiers: Modifiers::NONE,
+            },
+            Event::PointerButton {
+                pos,
+                button: PointerButton::Primary,
+                pressed: false,
+                modifiers: Modifiers::NONE,
+            },
+        ]);
+        h.frame(vec![]);
+        assert_eq!(h.document.text, "A端口B");
+        assert!(h.document.style_at(1).strikethrough && h.document.style_at(2).strikethrough);
+        assert!(!h.document.style_at(0).strikethrough && !h.document.style_at(3).strikethrough);
+        h.command(Key::Z, false);
+        assert!(h.document.spans.is_empty());
+        h.command(Key::Z, true);
+        assert!(h.document.style_at(2).strikethrough);
     }
 
     #[test]
@@ -1159,6 +1217,7 @@ mod tests {
             &StylePatch {
                 font_size: Some(Some(18.0)),
                 underline: Some(true),
+                strikethrough: Some(true),
                 ..Default::default()
             },
         );
@@ -1176,6 +1235,7 @@ mod tests {
         assert_eq!(target.document.text, "端口");
         assert_eq!(target.document.style_at(1).font_size, Some(18.0));
         assert!(target.document.style_at(0).underline);
+        assert!(target.document.style_at(0).strikethrough);
         target.command(Key::Z, false);
         assert!(target.document.text.is_empty() && target.document.spans.is_empty());
     }

@@ -28,7 +28,7 @@ pub use crate::layout::{
 };
 
 /// Newest supported on-disk layout format version.
-pub const DOCUMENT_VERSION: u32 = 7;
+pub const DOCUMENT_VERSION: u32 = 8;
 /// Empty layouts start at v4; content features raise the version when needed.
 pub const DEFAULT_DOCUMENT_VERSION: u32 = 4;
 
@@ -134,11 +134,7 @@ impl LabelDocument {
             } = &object.content
             {
                 crate::styled_text::validate_spans(content, styles)?;
-                if !styles.is_empty() && doc.version < 6 {
-                    return Err(RenderError::Layout(
-                        "inline text styles require layout version 6".into(),
-                    ));
-                }
+                crate::styled_text::validate_version(styles, doc.version)?;
                 crate::text::validate_line_spacing(*line_spacing)?;
                 if *line_spacing != crate::text::DEFAULT_LINE_SPACING && doc.version < 5 {
                     return Err(RenderError::Layout(
@@ -496,23 +492,25 @@ impl LabelElement {
     pub fn minimum_version(&self) -> u32 {
         match self {
             Self::Object(object) => {
+                let mut required = 3;
                 if object.layout.is_some() {
-                    return 7;
+                    required = required.max(7);
                 }
-                if let ObjectContent::Text { styles, .. } = &object.content
-                    && !styles.is_empty()
+                if object.content_box.is_some() {
+                    required = required.max(4);
+                }
+                if let ObjectContent::Text {
+                    styles,
+                    line_spacing,
+                    ..
+                } = &object.content
                 {
-                    return 6;
+                    required = required.max(crate::styled_text::minimum_version(styles));
+                    if *line_spacing != crate::text::DEFAULT_LINE_SPACING {
+                        required = required.max(5);
+                    }
                 }
-                if let ObjectContent::Text { line_spacing, .. } = &object.content
-                    && *line_spacing != crate::text::DEFAULT_LINE_SPACING
-                {
-                    5
-                } else if object.content_box.is_some() {
-                    4
-                } else {
-                    3
-                }
+                required
             }
             Self::Text {
                 text_box: Some(_), ..
@@ -1563,5 +1561,54 @@ mod tests {
         assert!(styles[0].style.bold);
         assert!(!styles[0].style.italic);
         crate::styled_text::validate_spans(content, styles).unwrap();
+    }
+
+    #[test]
+    fn strikethrough_version_survives_layout_policy_and_template_replacement() {
+        use crate::styled_text::{StyleSpan, TextStyle};
+        let mut item = LabelObject::text("旧{{name}}", TextBox::default());
+        item.content_box = Some(ContentBox {
+            width_mm: 10.0,
+            height_mm: 8.0,
+            offset_x_mm: 0.0,
+            offset_y_mm: 0.0,
+        });
+        item.layout = Some(crate::object_layout::LayoutOptions {
+            width: crate::object_layout::WidthSizing::Fixed,
+            ..Default::default()
+        });
+        let ObjectContent::Text { styles, .. } = &mut item.content else {
+            unreachable!()
+        };
+        styles.push(StyleSpan {
+            start: 1,
+            end: 3,
+            style: TextStyle {
+                strikethrough: true,
+                ..Default::default()
+            },
+        });
+        let mut doc = text_doc("");
+        doc.version = 7;
+        doc.elements = vec![LabelElement::Object(item)];
+        let encoded = doc.to_toml_string().unwrap();
+        assert!(encoded.contains("version = 8"));
+        assert!(
+            LabelDocument::from_toml_str(&encoded.replace("version = 8", "version = 7")).is_err()
+        );
+        let mut renderer = TextRenderer::with_test_font();
+        assert!(render_document(&doc, 76, 180, &mut renderer).is_err());
+        let mut restored = LabelDocument::from_toml_str(&encoded).unwrap();
+        assert_eq!(restored.to_toml_string().unwrap(), encoded);
+        restored.apply_values(&BTreeMap::from([("name".into(), "新".into())]));
+        let ObjectContent::Text {
+            content, styles, ..
+        } = &restored.elements[0].as_object().unwrap().content
+        else {
+            unreachable!()
+        };
+        assert_eq!(content, "旧新");
+        assert_eq!((styles[0].start, styles[0].end), (1, 2));
+        assert!(styles[0].style.strikethrough);
     }
 }

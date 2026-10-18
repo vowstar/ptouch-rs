@@ -338,7 +338,7 @@ pixels, not the layout DPI or its millimeter coordinates.
 
 ### Rich text within one object
 
-Select text in **Text Content**, then use **B**, **I**, **U**, the selection font,
+Select text in **Text Content**, then use **B**, **I**, **U**, **S** (strikethrough), the selection font,
 or the size field to format that range. With a caret, these controls format the
 next text you type. **Text format** shows the affected range; a dash on a style
 button indicates mixed formatting. Clicking it applies that style to the whole
@@ -375,7 +375,9 @@ bold = true
 ```
 
 Inline styles need v6; explicit layout policies additionally require v7.
-Documents without either feature retain the original rendering path.
+Strikethrough requires v8; bold/italic use the font family's available faces,
+while underline and strikethrough need no special font variants.
+Documents without these features retain the original rendering path.
 
 ### Optional print-position calibration
 

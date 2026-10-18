@@ -231,11 +231,7 @@ pub fn render_document(
             } = &object.content
         {
             crate::styled_text::validate_spans(content, styles)?;
-            if !styles.is_empty() && doc.version < 6 {
-                return Err(RenderError::Layout(
-                    "inline text styles require layout version 6".into(),
-                ));
-            }
+            crate::styled_text::validate_version(styles, doc.version)?;
             crate::text::validate_line_spacing(*line_spacing)?;
             if *line_spacing != crate::text::DEFAULT_LINE_SPACING && doc.version < 5 {
                 return Err(RenderError::Layout(
