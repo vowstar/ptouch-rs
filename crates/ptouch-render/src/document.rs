@@ -28,7 +28,7 @@ pub use crate::layout::{
 };
 
 /// Newest supported on-disk layout format version.
-pub const DOCUMENT_VERSION: u32 = 8;
+pub const DOCUMENT_VERSION: u32 = 9;
 /// Empty layouts start at v4; content features raise the version when needed.
 pub const DEFAULT_DOCUMENT_VERSION: u32 = 4;
 
@@ -84,6 +84,9 @@ impl LabelDocument {
             }
             doc.version = doc.version.max(element.minimum_version());
         }
+        for object in doc.elements.iter().filter_map(LabelElement::as_object) {
+            object.validate_features(doc.version)?;
+        }
         Ok(toml::to_string(&doc)?)
     }
 
@@ -125,6 +128,7 @@ impl LabelDocument {
             ));
         }
         for object in doc.elements.iter().filter_map(LabelElement::as_object) {
+            object.validate_features(doc.version)?;
             crate::object_layout::validate(object, doc.version)?;
             if let ObjectContent::Text {
                 content,
@@ -441,12 +445,34 @@ pub enum ObjectContent {
         #[serde(skip)]
         bitmap: Option<LabelBitmap>,
     },
+    /// Printed horizontal stroke. Its content-box height is its physical width.
+    Line {
+        #[serde(default)]
+        pattern: crate::stroke::StrokePattern,
+    },
     CutMark,
     /// An empty physical frame which still occupies its full width.
     Padding,
 }
 
 impl LabelObject {
+    pub(crate) fn validate_features(&self, version: u32) -> Result<()> {
+        if let ObjectContent::Line { pattern } = &self.content {
+            if version < 9 {
+                return Err(RenderError::Layout(
+                    "printed lines require layout version 9".into(),
+                ));
+            }
+            if self.content_box.is_none() {
+                return Err(RenderError::Layout(
+                    "printed lines require independent content geometry".into(),
+                ));
+            }
+            pattern.validate()?;
+        }
+        Ok(())
+    }
+
     pub fn text(content: impl Into<String>, frame: TextBox) -> Self {
         Self {
             frame,
@@ -493,6 +519,9 @@ impl LabelElement {
         match self {
             Self::Object(object) => {
                 let mut required = 3;
+                if matches!(object.content, ObjectContent::Line { .. }) {
+                    required = required.max(9);
+                }
                 if object.layout.is_some() {
                     required = required.max(7);
                 }
@@ -625,6 +654,10 @@ impl LabelElement {
                     .unwrap_or_else(|| "embedded".to_string());
                 format!("Image: {}", name)
             }
+            LabelElement::Object(LabelObject {
+                content: ObjectContent::Line { .. },
+                ..
+            }) => "Printed line".into(),
             LabelElement::CutMark
             | LabelElement::Object(LabelObject {
                 content: ObjectContent::CutMark,

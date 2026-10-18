@@ -1049,6 +1049,30 @@ impl AppState {
         true
     }
 
+    pub fn add_line(&mut self) {
+        if !self.is_free_layout() {
+            return;
+        }
+        let thickness = 0.3_f64.max(25.4 / f64::from(self.target_dpi()));
+        let length = (self.printable_height_mm() * 0.8).min(20.0).max(thickness);
+        let mut frame = self.default_object_frame(length, thickness);
+        frame.y_mm = (self.printable_height_mm() - thickness).max(0.0) / 2.0;
+        self.add_element(LabelElement::Object(LabelObject {
+            content_box: Some(content_box_for_frame(&frame)),
+            layout: Some(ptouch_render::object_layout::LayoutOptions {
+                width: ptouch_render::object_layout::WidthSizing::Fixed,
+                ..Default::default()
+            }),
+            frame,
+            rotation: 0.0,
+            flip_h: false,
+            flip_v: false,
+            content: ObjectContent::Line {
+                pattern: Default::default(),
+            },
+        }));
+    }
+
     pub fn add_cut_mark(&mut self) {
         let element = if self.is_free_layout() {
             let frame = self.default_object_frame(1.27, self.printable_height_mm());
@@ -1190,6 +1214,44 @@ fn content_box_for_frame(frame: &TextBox) -> ContentBox {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn new_printed_lines_duplicate_with_their_pattern_and_mirrors() {
+        let mut state = AppState::default();
+        state.add_line();
+        let line = state.elements[0].as_object_mut().unwrap();
+        line.flip_h = true;
+        line.flip_v = true;
+        let ObjectContent::Line { pattern } = &mut line.content else {
+            panic!("printed line")
+        };
+        pattern.kind = ptouch_render::stroke::PatternKind::Dashed;
+        let original = line.clone();
+        assert!(state.duplicate_selected());
+        let copy = state.elements[1].as_object().unwrap();
+        assert_eq!(copy.content, original.content);
+        assert!(copy.flip_h && copy.flip_v);
+        assert!(copy.frame.x_mm >= original.frame.x_mm + original.frame.width_mm);
+        let document = state.document();
+        assert_eq!(document.version, 9);
+        let rendered =
+            ptouch_render::document::render_document(&document, 76, 180, &mut TextRenderer::new())
+                .unwrap();
+        assert_eq!(rendered.bounds.len(), 2);
+        assert!(rendered.bitmap.is_some());
+
+        let mut legacy = AppState {
+            document_version: 1,
+            ..Default::default()
+        };
+        let before = legacy.document();
+        legacy.add_line();
+        assert_eq!(
+            legacy.document(),
+            before,
+            "adding a line must not implicitly convert a legacy layout"
+        );
+    }
 
     #[test]
     fn selecting_and_hovering_targets_never_pin_or_change_the_saved_layout() {

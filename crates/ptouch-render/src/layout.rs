@@ -188,6 +188,9 @@ pub fn render_document(
     target_dpi: u16,
     renderer: &mut TextRenderer,
 ) -> Result<RenderedLabel> {
+    for object in doc.elements.iter().filter_map(LabelElement::as_object) {
+        object.validate_features(doc.version)?;
+    }
     let mut resolved;
     let doc = if doc
         .elements
@@ -295,8 +298,16 @@ pub fn render_document(
             let right_mm = x_mm + frame.width_mm;
             let x = boundary(x_mm, target_dpi)?;
             let y = boundary(frame.y_mm, target_dpi)?;
-            let right = boundary(right_mm, target_dpi)?;
-            let bottom = boundary(frame.y_mm + frame.height_mm, target_dpi)?;
+            let mut right = boundary(right_mm, target_dpi)?;
+            let mut bottom = boundary(frame.y_mm + frame.height_mm, target_dpi)?;
+            if matches!(
+                element.as_object().map(|o| &o.content),
+                Some(ObjectContent::Line { .. })
+            ) {
+                // A positive physical stroke rounds to at least one output dot.
+                right = right.max(x.saturating_add(1));
+                bottom = bottom.max(y.saturating_add(1));
+            }
             if right <= x || bottom <= y || bottom > tape_width_px {
                 return Err(RenderError::Layout(format!(
                     "element {}: box must be at least one output pixel in each dimension and fit inside the printable height ({:.3} mm)",
@@ -776,8 +787,9 @@ fn render_independent(
         .expect("independent content box");
     content_box.validate()?;
     let ppm = f64::from(dpi) / 25.4;
-    let width = boundary(content_box.width_mm, dpi)?;
-    let height = boundary(content_box.height_mm, dpi)?;
+    let minimum = u32::from(matches!(object.content, ObjectContent::Line { .. }));
+    let width = boundary(content_box.width_mm, dpi)?.max(minimum);
+    let height = boundary(content_box.height_mm, dpi)?.max(minimum);
     if width == 0 || height == 0 {
         return Err(RenderError::Layout(
             "content box must be at least one output pixel in each dimension".into(),
@@ -794,7 +806,10 @@ fn render_independent(
     let (source, clipped, _) = render_object(object, doc, width, height, dpi, renderer, 0.0)?;
     let mut bitmap = checked_rotate(&source, object.rotation)?;
     if source.data().iter().any(|byte| *byte != 0) && !bitmap.data().iter().any(|byte| *byte != 0) {
-        if matches!(object.content, ObjectContent::CutMark) {
+        if matches!(
+            object.content,
+            ObjectContent::CutMark | ObjectContent::Line { .. }
+        ) {
             bitmap.set_pixel(bitmap.width() / 2, bitmap.height() / 2, true);
         } else {
             return Err(RenderError::Layout(
@@ -866,6 +881,18 @@ fn render_object(
                 width,
                 height,
                 false,
+            )?;
+            Ok((bitmap, false, geometry))
+        }
+        ObjectContent::Line { pattern } => {
+            let source = pattern.raster_line(width, height, dpi)?;
+            let (bitmap, geometry) = render_contained(
+                &source,
+                rotation,
+                object.frame.vertical_align,
+                width,
+                height,
+                true,
             )?;
             Ok((bitmap, false, geometry))
         }
@@ -1683,6 +1710,68 @@ mod tests {
             flip_h: false,
             flip_v: false,
         })
+    }
+
+    #[test]
+    fn printed_lines_round_trip_and_render_patterns_thin_strokes_and_mirrors() {
+        use crate::stroke::{PatternKind, StrokePattern};
+        let mut renderer = TextRenderer::with_test_font();
+        for kind in [PatternKind::Solid, PatternKind::Dashed, PatternKind::Dotted] {
+            for thickness in [0.01, 0.3] {
+                let mut item = object(
+                    ObjectContent::Line {
+                        pattern: StrokePattern {
+                            kind,
+                            ..Default::default()
+                        },
+                    },
+                    TextBox {
+                        x_mm: 2.0,
+                        y_mm: 3.0,
+                        width_mm: 6.0,
+                        height_mm: thickness,
+                        ..Default::default()
+                    },
+                );
+                item.as_object_mut().unwrap().content_box = Some(ContentBox {
+                    width_mm: 6.0,
+                    height_mm: thickness,
+                    offset_x_mm: 0.0,
+                    offset_y_mm: 0.0,
+                });
+                let mut doc = document(vec![item]);
+                doc.version = 8;
+                assert!(render_document(&doc, 76, 180, &mut renderer).is_err());
+                let encoded = doc.to_toml_string().unwrap();
+                assert!(encoded.contains("version = 9"));
+                assert!(
+                    LabelDocument::from_toml_str(&encoded.replace("version = 9", "version = 8"))
+                        .is_err()
+                );
+                doc = LabelDocument::from_toml_str(&encoded).unwrap();
+                for (dpi, tape) in [(180, 76), (360, 152)] {
+                    for angle in [0.0, 30.0, 90.0] {
+                        doc.elements[0].as_object_mut().unwrap().rotation = angle;
+                        let bitmap = render_document(&doc, tape, dpi, &mut renderer)
+                            .unwrap()
+                            .bitmap
+                            .unwrap();
+                        assert!(bitmap.data().iter().any(|p| *p != 0));
+                        for (h, v) in [(true, false), (false, true), (true, true)] {
+                            doc.flip_h = h;
+                            doc.flip_v = v;
+                            let mirrored = render_document(&doc, tape, dpi, &mut renderer)
+                                .unwrap()
+                                .bitmap
+                                .unwrap();
+                            assert_eq!(mirrored, bitmap.mirrored(h, v));
+                        }
+                        doc.flip_h = false;
+                        doc.flip_v = false;
+                    }
+                }
+            }
+        }
     }
 
     #[test]

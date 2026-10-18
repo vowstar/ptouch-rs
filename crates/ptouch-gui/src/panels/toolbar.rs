@@ -20,6 +20,7 @@ pub enum ToolbarAction {
     Convert,
     AddText,
     AddImage,
+    AddLine,
     CutMark,
     Padding,
     Print,
@@ -64,6 +65,13 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &AppState) -> Option<ToolbarAction
             if ui.button(label).clicked() {
                 action = Some(command);
             }
+        }
+        if ui
+            .add_enabled(state.is_free_layout(), egui::Button::new("Add Line"))
+            .on_hover_text("Add a printed line. Convert legacy layouts to free layout first.")
+            .clicked()
+        {
+            action = Some(ToolbarAction::AddLine);
         }
         if !state.is_free_layout() && ui.button("Padding").clicked() {
             action = Some(ToolbarAction::Padding);
@@ -122,6 +130,7 @@ pub fn execute_action(state: &mut AppState, action: ToolbarAction) {
             Err(error) => state.status_message = format!("Conversion error: {error}"),
         },
         ToolbarAction::AddText => state.add_text(),
+        ToolbarAction::AddLine => state.add_line(),
         ToolbarAction::AddImage => {
             if let Some(path) = crate::widgets::image_file_dialog().pick_file() {
                 match std::fs::read(&path) {

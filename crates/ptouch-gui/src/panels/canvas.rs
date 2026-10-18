@@ -777,6 +777,7 @@ struct CanvasHit {
 }
 
 struct CanvasGeometry {
+    line: bool,
     element: usize,
     slot: egui::Rect,
     object: Option<[egui::Pos2; 4]>,
@@ -845,6 +846,10 @@ fn editing_geometry(
         object = Some(rect_quad(slot));
     }
     Some(CanvasGeometry {
+        line: matches!(
+            element.as_object().map(|o| &o.content),
+            Some(ptouch_render::document::ObjectContent::Line { .. })
+        ),
         element: index,
         slot,
         object,
@@ -955,11 +960,10 @@ fn canvas_hit(
             });
         }
     }
-    if let Some(g) = geometry
-        .iter()
-        .rev()
-        .find(|g| g.object.is_some_and(|q| quad_contains(q, pos)))
-    {
+    if let Some(g) = geometry.iter().rev().find(|g| {
+        g.object
+            .is_some_and(|q| quad_contains(q, pos) || (g.line && quad_edge_distance(q, pos) <= 4.0))
+    }) {
         return Some(CanvasHit {
             target: CanvasTarget {
                 element: g.element,
@@ -1266,6 +1270,17 @@ fn rotation_handle(quad: [egui::Pos2; 4]) -> egui::Pos2 {
     quad[1] + (quad[1] - quad_center(quad)).normalized() * 16.0
 }
 
+fn quad_edge_distance(quad: [egui::Pos2; 4], point: egui::Pos2) -> f32 {
+    (0..4)
+        .map(|i| {
+            let a = quad[i];
+            let edge = quad[(i + 1) % 4] - a;
+            let t = ((point - a).dot(edge) / edge.length_sq().max(f32::EPSILON)).clamp(0.0, 1.0);
+            (a + edge * t).distance(point)
+        })
+        .fold(f32::INFINITY, f32::min)
+}
+
 fn quad_contains(quad: [egui::Pos2; 4], point: egui::Pos2) -> bool {
     let mut positive = false;
     let mut negative = false;
@@ -1563,10 +1578,42 @@ mod tests {
     use super::*;
 
     #[test]
+    fn thin_printed_lines_get_mouse_slop_without_expanding_their_geometry() {
+        let paper = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(500.0, 200.0));
+        let bounds = egui::Rect::from_min_size(egui::pos2(100.0, 100.0), egui::vec2(80.0, 1.0));
+        let mut geometry = [CanvasGeometry {
+            element: 0,
+            slot: bounds,
+            object: Some(rect_quad(bounds)),
+            line: true,
+            has_slot: false,
+            relative: false,
+        }];
+        let near = egui::pos2(140.0, 104.0);
+        assert!(canvas_hit(near, paper, paper, &geometry, None, true, false).is_some());
+        assert!(
+            canvas_hit(
+                egui::pos2(140.0, 106.0),
+                paper,
+                paper,
+                &geometry,
+                None,
+                true,
+                false
+            )
+            .is_none()
+        );
+        assert_eq!(geometry[0].object.unwrap(), rect_quad(bounds));
+        geometry[0].line = false;
+        assert!(canvas_hit(near, paper, paper, &geometry, None, true, false).is_none());
+    }
+
+    #[test]
     fn blank_layout_bands_never_implicitly_select_a_second_target() {
         let rect = |x, y, w, h| egui::Rect::from_min_size(egui::pos2(x, y), egui::vec2(w, h));
         let geometry = vec![
             CanvasGeometry {
+                line: false,
                 element: 0,
                 slot: rect(10.0, 10.0, 40.0, 20.0),
                 object: Some([
@@ -1579,6 +1626,7 @@ mod tests {
                 relative: false,
             },
             CanvasGeometry {
+                line: false,
                 element: 1,
                 slot: rect(10.0, 60.0, 40.0, 20.0),
                 object: None,
@@ -1586,6 +1634,7 @@ mod tests {
                 relative: false,
             },
             CanvasGeometry {
+                line: false,
                 element: 2,
                 slot: rect(10.0, 60.0, 40.0, 20.0),
                 object: None,
@@ -1648,6 +1697,7 @@ mod tests {
     fn selected_slot_border_remains_draggable_when_object_covers_it() {
         let rect = egui::Rect::from_min_max(egui::pos2(10.0, 10.0), egui::pos2(90.0, 90.0));
         let geometry = [CanvasGeometry {
+            line: false,
             element: 0,
             slot: rect,
             object: Some(rect_quad(rect)),
@@ -1682,6 +1732,7 @@ mod tests {
         let rect = egui::Rect::from_min_max(egui::pos2(10.0, 10.0), egui::pos2(90.0, 90.0));
         let geometry: Vec<_> = (0..2)
             .map(|element| CanvasGeometry {
+                line: false,
                 element,
                 slot: rect,
                 object: Some(rect_quad(rect)),

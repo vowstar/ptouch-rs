@@ -774,8 +774,24 @@ fn show_content_box(
             .num_columns(2)
             .show(ui, |ui| {
                 for (label, value, min) in [
-                    ("Object width", &mut dimensions.width_mm, minimum),
-                    ("Object height", &mut dimensions.height_mm, minimum),
+                    (
+                        if matches!(object.content, ObjectContent::Line { .. }) {
+                            "Line length"
+                        } else {
+                            "Object width"
+                        },
+                        &mut dimensions.width_mm,
+                        minimum,
+                    ),
+                    (
+                        if matches!(object.content, ObjectContent::Line { .. }) {
+                            "Line width"
+                        } else {
+                            "Object height"
+                        },
+                        &mut dimensions.height_mm,
+                        minimum,
+                    ),
                     ("Offset X", &mut dimensions.offset_x_mm, -10_000.0),
                     ("Offset Y", &mut dimensions.offset_y_mm, -10_000.0),
                 ] {
@@ -1016,6 +1032,11 @@ fn show_object_properties(
                 }
             }
         }
+        ObjectContent::Line { pattern } => {
+            ui.label("Printed line");
+            changed |= show_stroke_pattern(ui, pattern);
+            ui.small("Printed guide only; does not operate the cutter.");
+        }
         ObjectContent::CutMark => {
             ui.label("Cut mark");
             ui.small("A printed guide only; it does not trigger the cutter.");
@@ -1049,6 +1070,54 @@ fn show_object_properties(
     }
     changed |= show_flip_controls(ui, &mut object.flip_h, &mut object.flip_v);
     changed
+}
+
+fn show_stroke_pattern(
+    ui: &mut egui::Ui,
+    pattern: &mut ptouch_render::stroke::StrokePattern,
+) -> bool {
+    use ptouch_render::stroke::PatternKind;
+    let before = pattern.clone();
+    egui::ComboBox::from_id_salt("stroke_pattern")
+        .selected_text(match pattern.kind {
+            PatternKind::Solid => "Solid",
+            PatternKind::Dashed => "Dashed",
+            PatternKind::Dotted => "Dotted",
+        })
+        .show_ui(ui, |ui| {
+            for (kind, label) in [
+                (PatternKind::Solid, "Solid"),
+                (PatternKind::Dashed, "Dashed"),
+                (PatternKind::Dotted, "Dotted"),
+            ] {
+                ui.selectable_value(&mut pattern.kind, kind, label);
+            }
+        });
+    for (name, value, visible) in [
+        (
+            "Dash length",
+            &mut pattern.dash_mm,
+            pattern.kind == PatternKind::Dashed,
+        ),
+        (
+            "Gap",
+            &mut pattern.gap_mm,
+            pattern.kind != PatternKind::Solid,
+        ),
+    ] {
+        if visible {
+            ui.horizontal(|ui| {
+                ui.label(name);
+                ui.add(
+                    crate::widgets::decimal_drag(value)
+                        .range(0.01..=1000.0)
+                        .speed(0.1)
+                        .suffix(" mm"),
+                );
+            });
+        }
+    }
+    *pattern != before
 }
 
 /// Read and decode an image file, updating the embedded bytes and render cache.

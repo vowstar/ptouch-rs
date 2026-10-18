@@ -336,6 +336,17 @@ preview DPI. A printer disconnect keeps the last printer preview until **Use
 design DPI** is selected. `--tape-width` changes the exported printable height in
 pixels, not the layout DPI or its millimeter coordinates.
 
+### Printed lines
+
+**Add Line** creates a printed guide with solid, dashed or dotted strokes.
+Use **Line length** and **Line width** for independent millimeter dimensions;
+corner resizing scales both. Rotate to 90° for a vertical cutting guide.
+Dash length and gap use millimeters and retain their physical size when resizing.
+Thin strokes round to at least one output dot. Lines support object and label
+mirroring, duplication, sequence layout and undo. They do not operate the cutter.
+Legacy layouts need explicit conversion before adding lines. Printed lines
+require layout format v9.
+
 ### Rich text within one object
 
 Select text in **Text Content**, then use **B**, **I**, **U**, **S** (strikethrough), the selection font,
