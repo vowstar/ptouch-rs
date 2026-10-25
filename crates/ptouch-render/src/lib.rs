@@ -15,6 +15,7 @@ pub mod font;
 pub mod image_loader;
 pub mod layout;
 pub mod object_layout;
+pub mod output_range;
 pub mod raster;
 pub mod scene;
 pub mod sequence;

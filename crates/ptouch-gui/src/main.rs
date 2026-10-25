@@ -18,6 +18,7 @@ mod document_session;
 mod editor_navigation;
 mod file_workflow;
 mod history;
+mod output_tools;
 mod panels;
 mod positioning;
 #[cfg(test)]

@@ -110,6 +110,7 @@ pub fn new_document(state: &mut AppState) {
     state.file_view_generation = state.file_view_generation.wrapping_add(1);
     state.select_canvas_target(None);
     state.selection.clear();
+    crate::output_tools::reset(state);
     state.document_session.reset(&state.document());
     state.file_baseline_pending = false;
     state.history = Default::default();
@@ -253,4 +254,25 @@ fn is_modified(ctx: &egui::Context, state: &AppState) -> bool {
     let modified = state.document_session.is_modified(&state.document());
     ctx.data_mut(|data| data.insert_temp(key, (revision.0, revision.1, modified)));
     modified
+}
+
+#[cfg(test)]
+mod output_range_tests {
+    use super::*;
+    #[test]
+    fn new_clears_selection_and_the_output_range_without_inheriting_a_partial_job() {
+        let mut state = AppState::default();
+        state.add_text();
+        state.add_text();
+        state.set_selected_indices(&[0, 1], Some(1));
+        state.output_range.enabled = true;
+        state.output_range.start_mm = 3.0;
+        state.output_range.end_mm = 9.0;
+        new_document(&mut state);
+        assert_eq!(state.output_range, Default::default());
+        assert!(state.selected_indices().is_empty());
+        assert!(state.elements.is_empty());
+        assert!(!state.history.can_undo());
+        assert!(!state.document_session.is_modified(&state.document()));
+    }
 }

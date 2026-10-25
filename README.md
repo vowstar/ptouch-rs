@@ -214,6 +214,20 @@ ptouch info
 ptouch list
 ```
 
+### Print or export a range
+
+In Print Options, select Range and set Start and End. The values use the preview
+X ruler after label mirrors. Print and Export corrected image apply any enabled
+calibration after the range. Export Image uses the range without calibration.
+New and Open select Entire label.
+
+```sh
+ptouch print --layout label.ptl --range 10 30
+ptouch print --layout label.ptl --range 10 30 -o section.png
+```
+
+If a CSV row is too short, the program stops the job and keeps earlier output.
+
 ### Free layout and precise patch-panel labels
 
 Select an object on the canvas or in the element list. Its blue dashed frame

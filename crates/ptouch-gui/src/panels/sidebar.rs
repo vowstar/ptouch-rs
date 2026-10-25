@@ -199,6 +199,7 @@ fn show_print_options(ui: &mut egui::Ui, state: &mut AppState) {
                 }
             });
     }
+    crate::output_tools::show_controls(ui, state);
     show_calibration(ui, state);
 }
 
@@ -294,32 +295,12 @@ fn show_calibration(ui: &mut egui::Ui, state: &mut AppState) {
             });
             if ui
                 .add_enabled(
-                    state.preview_bitmap.is_some(),
+                    crate::output_tools::preview_ready(state),
                     egui::Button::new("Export corrected image"),
                 )
                 .clicked()
-                && let Some(bitmap) = &state.preview_bitmap
             {
-                match ptouch_render::calibration::apply_calibration(
-                    bitmap,
-                    state.target_dpi(),
-                    state
-                        .calibration_enabled
-                        .then_some(state.calibration.offset_mm),
-                ) {
-                    Ok(corrected) => {
-                        if let Some(path) = rfd::FileDialog::new()
-                            .add_filter("PNG", &["png"])
-                            .save_file()
-                        {
-                            match corrected.save(&path) {
-                                Ok(()) => state.status_message = "Corrected image exported".into(),
-                                Err(e) => state.status_message = e.to_string(),
-                            }
-                        }
-                    }
-                    Err(e) => state.status_message = e.to_string(),
-                }
+                crate::output_tools::export_corrected(state);
             }
         });
     });
