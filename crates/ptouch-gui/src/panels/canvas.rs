@@ -207,7 +207,7 @@ pub fn show_canvas(ui: &mut egui::Ui, state: &mut AppState) {
             .id(ui.id().with("canvas_scroll"))
             .max_rect(viewport_rect),
     );
-    let scroll_id = canvas_ui.make_persistent_id("label_canvas");
+    let scroll_id = canvas_ui.make_persistent_id(("label_canvas", state.file_view_generation));
     let previous_offset = egui::scroll_area::State::load(ui.ctx(), scroll_id)
         .unwrap_or_default()
         .offset;
@@ -270,7 +270,7 @@ pub fn show_canvas(ui: &mut egui::Ui, state: &mut AppState) {
     );
     let mut ruler_label = None;
     let scroll = crate::canvas_zoom::scroll_area(requested_offset)
-        .id_salt("label_canvas")
+        .id_salt(("label_canvas", state.file_view_generation))
         .auto_shrink([false, false])
         .scroll_source(egui::scroll_area::ScrollSource {
             drag: egui::scroll_area::DragScroll::Never,

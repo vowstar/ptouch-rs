@@ -366,11 +366,14 @@ fn show_elements_section(ui: &mut egui::Ui, state: &mut AppState) {
         }
     });
     let scroll = egui::ScrollArea::vertical()
-        .id_salt(if state.layers_view {
-            "layer_rows"
-        } else {
-            "element_rows"
-        })
+        .id_salt((
+            if state.layers_view {
+                "layer_rows"
+            } else {
+                "element_rows"
+            },
+            state.file_view_generation,
+        ))
         .auto_shrink([false, false])
         .show(ui, |ui| {
             if state.layers_view {

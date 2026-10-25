@@ -137,6 +137,8 @@ pub struct AppState {
     pub document_session: crate::document_session::DocumentSession,
     pub pending_file_action: Option<crate::file_workflow::FileAction>,
     pub file_baseline_pending: bool,
+    /// New/Open reset view positions, while Save and Undo keep them.
+    pub file_view_generation: u64,
     pub close_approved: bool,
     pub status_tooltip: Option<(String, String)>,
     /// UI-only help state, excluded from document history and serialization.
@@ -253,6 +255,7 @@ impl Default for AppState {
             document_session: crate::document_session::DocumentSession::new(&initial),
             pending_file_action: None,
             file_baseline_pending: false,
+            file_view_generation: 0,
             close_approved: false,
             status_tooltip: None,
             info_open: false,

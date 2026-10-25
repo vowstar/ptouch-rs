@@ -95,8 +95,11 @@ pub fn reveal_selected_row(
             true
         }
     });
-    if reveal {
-        response.scroll_to_me(Some(egui::Align::Center));
+    let viewport = ui.clip_rect();
+    if reveal
+        && (response.rect.top() < viewport.top() || response.rect.bottom() > viewport.bottom())
+    {
+        response.scroll_to_me(None);
     }
 }
 
@@ -220,5 +223,60 @@ mod tests {
         frame(&ctx, &mut state, vec![key(egui::Key::ArrowUp)], &[0, 1]);
         assert_eq!(state.selected_element, selected);
         assert_eq!(take_canvas_reveal(&ctx), None);
+    }
+}
+
+#[cfg(test)]
+mod visible_row_tests {
+    use super::*;
+    use crate::state::{CanvasEditTarget, CanvasTarget};
+    use ptouch_render::document::{LabelElement, LabelObject, TextBox};
+    #[test]
+    fn selecting_a_fully_visible_row_keeps_the_list_stationary() {
+        let ctx = egui::Context::default();
+        let mut state = AppState {
+            elements: (0..30)
+                .map(|i| LabelElement::Object(LabelObject::text(i.to_string(), TextBox::default())))
+                .collect(),
+            ..Default::default()
+        };
+        let mut offsets = Vec::new();
+        for step in 0..6 {
+            if step == 2 {
+                state.select_canvas_target(Some(CanvasTarget {
+                    element: 3,
+                    edit: CanvasEditTarget::Content,
+                }));
+            }
+            let mut offset = 0.0;
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(250.0, 120.0),
+                    )),
+                    time: Some(step as f64 * 0.2),
+                    ..Default::default()
+                },
+                |ui| {
+                    let scroll = egui::ScrollArea::vertical().show(ui, |ui| {
+                        for index in 0..30 {
+                            let response = ui.selectable_label(
+                                state.selected_element == Some(index),
+                                format!("Item {index}"),
+                            );
+                            reveal_selected_row(ui, &response, &state, index);
+                        }
+                    });
+                    offset = scroll.state.offset.y;
+                },
+            );
+            output.textures_delta.clear();
+            offsets.push(offset);
+        }
+        assert!(
+            offsets.iter().all(|offset| offset.abs() < 0.01),
+            "{offsets:?}"
+        );
     }
 }
