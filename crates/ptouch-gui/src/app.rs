@@ -424,6 +424,7 @@ impl PtouchApp {
         }
 
         panels::info::show(&ctx, &mut self.state.info_open);
+        panels::coordinates::show(&ctx, &mut self.state);
 
         // Periodic repaint so we pick up worker responses even when idle
         ctx.request_repaint_after(std::time::Duration::from_secs(1));

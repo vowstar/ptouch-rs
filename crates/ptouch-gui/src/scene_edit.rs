@@ -27,7 +27,7 @@ pub enum LayerMove {
 
 /// Structural edits are infrequent. Preserve the full model and relevant UI
 /// state so a failed relation edit cannot clear the preview or change history.
-struct SceneSnapshot {
+pub(crate) struct SceneSnapshot {
     elements: Vec<LabelElement>,
     document_version: u32,
     selected: Option<usize>,
@@ -41,7 +41,7 @@ struct SceneSnapshot {
 }
 
 impl SceneSnapshot {
-    fn take(state: &AppState) -> Self {
+    pub(crate) fn take(state: &AppState) -> Self {
         Self {
             elements: state.elements.clone(),
             document_version: state.document_version,
@@ -56,7 +56,7 @@ impl SceneSnapshot {
         }
     }
 
-    fn restore(self, state: &mut AppState) {
+    pub(crate) fn restore(self, state: &mut AppState) {
         state.elements = self.elements;
         state.document_version = self.document_version;
         state.selected_element = self.selected;

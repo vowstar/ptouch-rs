@@ -106,6 +106,7 @@ pub fn show_canvas(ui: &mut egui::Ui, state: &mut AppState) {
         }
         ui.label(format!("Zoom: {:.0}%", state.zoom * 100.0));
         ui.checkbox(&mut snap, "Snap 0.1 mm");
+        ui.toggle_value(&mut state.positions_open, "Positions");
     });
     ui.ctx().data_mut(|data| data.insert_temp(snap_id, snap));
     ui.small(format!("{} mm tape · {:.2} mm printable · edge placement schematic",

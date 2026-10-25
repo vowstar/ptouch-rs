@@ -216,6 +216,12 @@ both follow the rotated content. Click empty canvas space to clear selection.
 There is one selected object, with an explicit **Adjust layout…** action for
 positioning and spacing.
 
+The properties panel shows X, Y, and the right edge. The Positions table shows
+these coordinates for all objects. Position mode changes keep content dimensions.
+A position mode change can move mirrored content by a maximum of two output
+pixels on each axis. For a mode change that changes the label length, clear
+Flip horizontal in the left panel first.
+
 **Free positioning** moves the whole object without moving its neighbours.
 New text starts with **Auto width** sizing: its measured ink height targets
 80% of the printable height and its width follows the text and font. Manual
@@ -273,6 +279,8 @@ off. Boundary feedback explains when a transform cannot fit. **Fit inside**
 shrinks content proportionally and enables automatic text sizing; resizing an
 allocation does not silently change the text's font size. Existing layouts
 retain their saved behaviour until positioning or sizing is explicitly changed.
+For an object that follows its allocation, clear **Follow allocation size**
+before you change the position mode.
 
 One complete mouse drag is one **Undo** step. **Esc** cancels the current drag;
 Ctrl+Z undoes and Ctrl+Shift+Z or Ctrl+Y redoes (Cmd on macOS). Text, formatting,
