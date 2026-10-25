@@ -3,7 +3,7 @@
 
 //! Editor focus and selection visibility do not change the label document.
 
-use crate::state::{AppState, CanvasEditTarget, CanvasTarget};
+use crate::state::AppState;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum EditorFocus {
@@ -36,6 +36,7 @@ pub fn list_keyboard(ui: &egui::Ui, state: &mut AppState, order: &[usize]) {
         || ui.ctx().text_edit_focused()
         || egui::Popup::is_any_open(ui.ctx())
         || state.pending_file_action.is_some()
+        || crate::panels::repeat_tools::is_open(ui.ctx())
         || order.is_empty()
     {
         return;
@@ -60,11 +61,8 @@ pub fn list_keyboard(ui: &egui::Ui, state: &mut AppState, order: &[usize]) {
         (None, false) => order.len() - 1,
     };
     let index = order[position];
-    if state.selected_element != Some(index) {
-        state.select_canvas_target(Some(CanvasTarget {
-            element: index,
-            edit: CanvasEditTarget::Content,
-        }));
+    if state.selected_element != Some(index) || state.selected_indices().len() > 1 {
+        state.set_selected_indices(&[index], Some(index));
         request_canvas_reveal(ui.ctx(), index);
     }
 }

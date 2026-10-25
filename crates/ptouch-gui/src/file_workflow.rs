@@ -109,6 +109,7 @@ pub fn new_document(state: &mut AppState) {
     state.restore_document(document);
     state.file_view_generation = state.file_view_generation.wrapping_add(1);
     state.select_canvas_target(None);
+    state.selection.clear();
     state.document_session.reset(&state.document());
     state.file_baseline_pending = false;
     state.history = Default::default();

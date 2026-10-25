@@ -156,6 +156,7 @@ pub struct AppState {
     pub elements: Vec<LabelElement>,
     /// Index of the currently selected element, if any.
     pub selected_element: Option<usize>,
+    pub selection: crate::selection::Selection,
     /// Isolate unfinished widget drafts across selections and structural edits.
     pub selection_revision: u64,
     /// Invalidate per-index rich editor histories on structural changes.
@@ -267,6 +268,7 @@ impl Default for AppState {
             document_version: DEFAULT_DOCUMENT_VERSION,
             elements: Vec::new(),
             selected_element: None,
+            selection: Default::default(),
             selection_revision: 0,
             editor_generation: 0,
             tape_width_mm: 12,
@@ -854,6 +856,9 @@ impl AppState {
             });
         if self.selected_canvas_target() != target {
             self.selection_revision = self.selection_revision.wrapping_add(1);
+            self.selection.clear();
+        } else if target.is_none() {
+            self.selection.clear();
         }
         self.selected_element = target.map(|target| target.element);
         if let Some(target) = target {
@@ -915,6 +920,12 @@ impl AppState {
 
     /// An interaction hint independent of save/error/printer status messages.
     pub fn canvas_hint(&self) -> Option<String> {
+        let selected = self.selected_indices();
+        if selected.len() > 1 {
+            return Some(if self.overall_flip_h {"Clear Flip horizontal to move selected objects."}
+                else if self.can_translate_selection(){"Drag to move selected objects together. Select one object to resize or rotate it."}
+                else {"Use Arrange selected to set sequence positions and gaps. Select one object to resize or rotate it."}.into());
+        }
         let valid = |target: &CanvasTarget| target.element < self.elements.len();
         let (phase, target) = if let Some(target) = self.canvas_drag_target.filter(valid) {
             ("Dragging", target)
@@ -1290,8 +1301,7 @@ impl AppState {
     }
 
     pub fn duplicate_selected(&mut self) -> bool {
-        self.selected_element
-            .is_some_and(|index| self.duplicate_element(index))
+        self.copy_selection()
     }
 
     /// Removing a sequence's first object transfers its anchor to the next
@@ -1564,7 +1574,7 @@ impl AppState {
     pub fn history_step(&mut self, redo: bool) {
         if let Some(snapshot) = self.history.step(redo) {
             self.restore_document(snapshot.document);
-            self.selected_element = snapshot.selection;
+            self.set_selected_indices(&snapshot.selection_set, snapshot.selection);
             self.status_message = if redo { "Redo" } else { "Undo" }.into();
         }
     }
@@ -2983,6 +2993,7 @@ mod tests {
             .as_mut()
             .unwrap()
             .anchor = Some(Anchor {
+            gap_center: None,
             target: 1,
             horizontal: 1.0,
             vertical: 0.0,
@@ -3024,6 +3035,7 @@ mod tests {
             .as_mut()
             .unwrap()
             .anchor = Some(Anchor {
+            gap_center: None,
             target: 1,
             horizontal: 0.0,
             vertical: 0.0,
@@ -3123,6 +3135,7 @@ mod tests {
             .as_mut()
             .unwrap()
             .anchor = Some(Anchor {
+            gap_center: None,
             target: 1,
             horizontal: 0.0,
             vertical: 0.0,

@@ -11,4 +11,6 @@ pub mod sidebar;
 pub mod status_bar;
 pub mod toolbar;
 
+pub mod repeat_tools;
 pub mod scene_tools;
+pub mod selection_tools;

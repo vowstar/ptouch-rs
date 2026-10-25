@@ -85,7 +85,8 @@ pub fn show_canvas(ui: &mut egui::Ui, state: &mut AppState) {
         state.canvas_drag_target = None;
     }
     state.canvas_hover_target = None;
-    let active_gesture = state.canvas_drag_target.is_some()
+    let active_gesture = crate::selection_canvas::active(ui.ctx())
+        || state.canvas_drag_target.is_some()
         || ui
             .ctx()
             .data_mut(|data| data.get_temp::<CanvasPress>(press_id).is_some());
@@ -134,7 +135,10 @@ pub fn show_canvas(ui: &mut egui::Ui, state: &mut AppState) {
         state.printable_height_mm()))
         .on_hover_text("Y measures the full tape. Dark bands cannot be printed. Exact top/bottom head offsets are not known; properties use the printable area's origin.");
     let can_edit = state.is_free_layout();
-    let can_drag = can_edit && !state.overall_flip_h && state.pending_file_action.is_none();
+    let can_drag = can_edit
+        && !state.overall_flip_h
+        && state.pending_file_action.is_none()
+        && state.selected_indices().len() <= 1;
     if let Some(diagnostic) = state.preview_diagnostics.first() {
         let message = if state.preview_diagnostics.len() > 1 {
             format!(
@@ -155,6 +159,7 @@ pub fn show_canvas(ui: &mut egui::Ui, state: &mut AppState) {
 
     let canvas_size = ui.available_size();
     let (Some(texture), Some(bitmap)) = (&state.preview_texture, &state.preview_bitmap) else {
+        crate::selection_canvas::clear(ui.ctx());
         ui.ctx().data_mut(|data| {
             data.remove::<CanvasDrag>(drag_id);
             data.remove::<CanvasPress>(press_id);
@@ -187,6 +192,7 @@ pub fn show_canvas(ui: &mut egui::Ui, state: &mut AppState) {
     // Selecting an item can widen the properties panel before drag detection.
     // Keep the press geometry stable until release, including that first frame.
     if state.zoom_fit
+        && !crate::selection_canvas::active(ui.ctx())
         && !ui
             .ctx()
             .data_mut(|data| data.get_temp::<CanvasPress>(press_id).is_some())
@@ -348,16 +354,51 @@ pub fn show_canvas(ui: &mut egui::Ui, state: &mut AppState) {
                     _ => None,
                 })
             });
-            if let Some(start) = raw_press
-                && response.rect.contains(start)
-                && painter.clip_rect().contains(start)
-                && ui.ctx().layer_id_at(start) == Some(ui.layer_id())
-            {
+            let valid_press = raw_press.filter(|start| {
+                response.rect.contains(*start)
+                    && painter.clip_rect().contains(*start)
+                    && ui.ctx().layer_id_at(*start) == Some(ui.layer_id())
+            });
+            if valid_press.is_some() {
                 crate::editor_navigation::set_focus(
                     ui.ctx(),
                     crate::editor_navigation::EditorFocus::Canvas,
                 );
-                let press_hit = hit(start);
+            }
+            let press_hit = valid_press.and_then(hit);
+            let shapes: Vec<_> = geometry
+                .iter()
+                .map(|shape| {
+                    (
+                        shape.element,
+                        shape.object.unwrap_or_else(|| rect_quad(shape.slot)),
+                    )
+                })
+                .collect();
+            let multiple_gesture = crate::selection_canvas::handle(
+                ui,
+                state,
+                crate::selection_canvas::Input {
+                    bounds: response.rect.intersect(painter.clip_rect()),
+                    shapes: &shapes,
+                    press: valid_press,
+                    hit: press_hit.map(|hit| (hit.target, hit.action == CanvasAction::Move)),
+                    pixels_per_mm: f64::from(dpi) / 25.4 * f64::from(state.zoom),
+                    snap,
+                },
+            );
+            if multiple_gesture {
+                ui.ctx().data_mut(|data| {
+                    data.remove::<CanvasPress>(press_id);
+                    data.remove::<CanvasDrag>(drag_id);
+                });
+            }
+            if !multiple_gesture
+                && let Some(start) = raw_press
+                && response.rect.contains(start)
+                && painter.clip_rect().contains(start)
+                && ui.ctx().layer_id_at(start) == Some(ui.layer_id())
+            {
                 let drag = press_hit.filter(|_| can_drag).and_then(|hit| {
                     let index = hit.target.element;
                     let object = state.elements.get(index)?.as_object()?;
@@ -925,7 +966,7 @@ pub fn show_canvas(ui: &mut egui::Ui, state: &mut AppState) {
     if previous_hover != state.canvas_hover_target || previous_drag != state.canvas_drag_target {
         ui.ctx().request_repaint();
     }
-    if can_drag {
+    if can_edit && !state.overall_flip_h {
         keyboard_move(ui, state, dpi);
     }
 }
@@ -1160,6 +1201,19 @@ fn draw_targets(
     let hovered = state.canvas_hover_target;
     let blue = egui::Color32::from_rgb(0, 90, 190);
     let orange = egui::Color32::from_rgb(205, 115, 0);
+    for index in state
+        .selected_indices()
+        .into_iter()
+        .filter(|index| Some(*index) != state.selected_element)
+    {
+        if let Some(shape) = geometry.iter().find(|shape| shape.element == index) {
+            dashed_quad(
+                painter,
+                shape.object.unwrap_or_else(|| rect_quad(shape.slot)),
+                egui::Stroke::new(1.5, blue),
+            );
+        }
+    }
     for target in [selected, hovered.filter(|target| Some(*target) != selected)]
         .into_iter()
         .flatten()
@@ -1326,6 +1380,8 @@ fn dragged_frame(
 fn keyboard_move(ui: &egui::Ui, state: &mut AppState, dpi: u16) {
     if crate::editor_navigation::focus(ui.ctx()) != crate::editor_navigation::EditorFocus::Canvas
         || state.pending_file_action.is_some()
+        || crate::panels::repeat_tools::is_open(ui.ctx())
+        || ui.input(|input| input.pointer.any_down())
         || egui::Popup::is_any_open(ui.ctx())
         || ui.ctx().egui_wants_keyboard_input()
     {
@@ -1343,6 +1399,13 @@ fn keyboard_move(ui: &egui::Ui, state: &mut AppState, dpi: u16) {
         )
     });
     if delta == egui::Vec2::ZERO {
+        return;
+    }
+    if state.selected_indices().len() > 1 {
+        let delta = delta * egui::vec2(1.0, if state.overall_flip_v { -1.0 } else { 1.0 });
+        if let Err(message) = state.translate_selection(delta) {
+            state.status_message = message;
+        }
         return;
     }
     if let Some(index) = state.selected_element

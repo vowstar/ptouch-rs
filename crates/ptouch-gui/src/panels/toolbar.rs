@@ -298,6 +298,7 @@ pub(crate) fn apply_layout(state: &mut AppState, document: LabelDocument) -> Res
     state.elements = document.elements;
     state.file_view_generation = state.file_view_generation.wrapping_add(1);
     state.select_canvas_target(None);
+    state.selection.clear();
     state.selection_revision = state.selection_revision.wrapping_add(1);
     state.mark_dirty();
     Ok(())

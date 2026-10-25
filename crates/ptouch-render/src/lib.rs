@@ -24,6 +24,9 @@ pub mod styled_text;
 pub mod surface;
 pub mod text;
 
+#[cfg(test)]
+mod gap_center_tests;
+
 /// Errors produced by the render crate.
 #[derive(Debug, thiserror::Error)]
 pub enum RenderError {

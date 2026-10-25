@@ -405,8 +405,8 @@ fn show_element_rows(ui: &mut egui::Ui, state: &mut AppState) {
     let mut selection = None;
     let order = state.layout_order();
     crate::editor_navigation::list_keyboard(ui, state, &order);
-    let selected = state.selected_canvas_target();
-    for (row, idx) in order.into_iter().enumerate() {
+    let selected_indices = state.selected_indices();
+    for (row, idx) in order.iter().copied().enumerate() {
         let element = &state.elements[idx];
         let object_target = CanvasTarget {
             element: idx,
@@ -479,7 +479,7 @@ fn show_element_rows(ui: &mut egui::Ui, state: &mut AppState) {
                 ui.add_sized(
                     [row_width, ui.spacing().interact_size.y],
                     egui::Button::selectable(
-                        selected.is_some_and(|t| t.element == idx),
+                        selected_indices.contains(&idx),
                         (&label, egui::Atom::grow()),
                     )
                     .truncate()
@@ -499,7 +499,18 @@ fn show_element_rows(ui: &mut egui::Ui, state: &mut AppState) {
             .inner;
         crate::editor_navigation::reveal_selected_row(ui, &response, state, idx);
         if response.clicked() || response.drag_started() {
-            selection = Some(object_target);
+            let modifiers = ui.input(|input| input.modifiers);
+            if !response.drag_started()
+                || (!(modifiers.shift || modifiers.command || modifiers.ctrl)
+                    && (selected_indices.len() <= 1 || !selected_indices.contains(&idx)))
+            {
+                state.select_list_item(idx, modifiers, &order);
+                crate::editor_navigation::set_focus(
+                    ui.ctx(),
+                    crate::editor_navigation::EditorFocus::Elements,
+                );
+                crate::editor_navigation::request_canvas_reveal(ui.ctx(), idx);
+            }
         }
         response.context_menu(|ui| {
             if ui.button("Duplicate").clicked() {
@@ -542,7 +553,12 @@ fn show_element_rows(ui: &mut egui::Ui, state: &mut AppState) {
                 ui.close();
             }
         });
-        if !attached {
+        if !attached
+            && selected_indices.len() <= 1
+            && !ui.input(|input| {
+                input.modifiers.shift || input.modifiers.command || input.modifiers.ctrl
+            })
+        {
             response.dnd_set_drag_payload(ElementDrag(idx));
         }
         if let Some(source) = response.dnd_hover_payload::<ElementDrag>()
@@ -588,6 +604,7 @@ fn show_element_rows(ui: &mut egui::Ui, state: &mut AppState) {
         }
     }
     if let Some(target) = selection {
+        state.set_selected_indices(&[target.element], Some(target.element));
         state.select_canvas_target(Some(target));
         crate::editor_navigation::set_focus(
             ui.ctx(),
@@ -614,6 +631,7 @@ fn show_element_actions(ui: &mut egui::Ui, state: &mut AppState) {
         }
         if ui
             .add_enabled(selected.is_some(), egui::Button::new("Delete"))
+            .on_hover_text("Delete selected objects and their attached objects.")
             .clicked()
             && let Some(index) = selected
         {
@@ -627,7 +645,10 @@ fn show_element_actions(ui: &mut egui::Ui, state: &mut AppState) {
             for (label, forward) in [("Up", false), ("Down", true)] {
                 let next = selected.and_then(|index| state.layout_neighbor(index, forward));
                 if ui
-                    .add_enabled(next.is_some(), egui::Button::new(label))
+                    .add_enabled(
+                        next.is_some() && state.selected_indices().len() == 1,
+                        egui::Button::new(label),
+                    )
                     .on_hover_text("Change the order within this sequence")
                     .clicked()
                     && let (Some(index), Some(next)) = (selected, next)
@@ -654,11 +675,17 @@ fn apply_element_action(state: &mut AppState, act: ElementAction) {
             state.connect_sequence(index);
         }
         ElementAction::Duplicate(idx) => {
-            state.duplicate_element(idx);
+            if !state.selected_indices().contains(&idx) {
+                state.set_selected_indices(&[idx], Some(idx));
+            }
+            state.copy_selection();
         }
         ElementAction::MoveTo(from, to) => move_element(state, from, to),
         ElementAction::Delete(idx) => {
-            state.delete_element(idx);
+            if !state.selected_indices().contains(&idx) {
+                state.set_selected_indices(&[idx], Some(idx));
+            }
+            state.delete_selection();
         }
     }
 }

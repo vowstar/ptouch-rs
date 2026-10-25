@@ -164,7 +164,7 @@ impl AppState {
             }
             let next_frames = self.position_frames();
             for (child, host) in children {
-                if frames[host] == next_frames[host] {
+                if frames[host] == next_frames[host] && frames[child] == next_frames[child] {
                     continue;
                 }
                 let old_world = frames[child]

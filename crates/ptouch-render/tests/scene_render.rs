@@ -313,6 +313,7 @@ fn flow_scene(tagged: bool) -> (LabelDocument, u64, u64, u64) {
         .as_mut()
         .unwrap()
         .anchor = Some(Anchor {
+        gap_center: None,
         target: host_id,
         horizontal: 1.0,
         vertical: 0.0,
@@ -379,6 +380,7 @@ fn v12_scene_and_untouched_v11_documents_round_trip_without_rendering_changes() 
         padding_mm: 0.0,
     });
     icon.scene.as_mut().unwrap().anchor = Some(Anchor {
+        gap_center: None,
         target: host_id,
         horizontal: 0.5,
         vertical: 0.5,

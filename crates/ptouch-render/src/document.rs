@@ -28,7 +28,7 @@ pub use crate::layout::{
 };
 
 /// Newest supported on-disk layout format version.
-pub const DOCUMENT_VERSION: u32 = 13;
+pub const DOCUMENT_VERSION: u32 = 14;
 /// Empty layouts start at v4; content features raise the version when needed.
 pub const DEFAULT_DOCUMENT_VERSION: u32 = 4;
 
@@ -504,6 +504,19 @@ pub enum ObjectContent {
 impl LabelObject {
     /// Validate content features against the saved document format.
     pub fn validate_features(&self, version: u32) -> Result<()> {
+        if let Some(gap_center) = self
+            .scene
+            .as_ref()
+            .and_then(|scene| scene.anchor.as_ref())
+            .and_then(|anchor| anchor.gap_center.as_ref())
+        {
+            if version < 14 {
+                return Err(RenderError::Layout(
+                    "Gap center attachments require layout version 14.".into(),
+                ));
+            }
+            gap_center.validate()?;
+        }
         if (self.scene.is_some()
             || matches!(
                 self.content,
@@ -627,6 +640,14 @@ impl LabelElement {
                     )
                 {
                     required = 12;
+                }
+                if object
+                    .scene
+                    .as_ref()
+                    .and_then(|scene| scene.anchor.as_ref())
+                    .is_some_and(|anchor| anchor.gap_center.is_some())
+                {
+                    required = 14;
                 }
                 if object.border.is_some() {
                     required = required.max(10);

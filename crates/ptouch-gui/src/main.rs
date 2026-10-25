@@ -12,6 +12,7 @@
 
 mod alignment;
 mod app;
+mod batch_edit;
 mod canvas_zoom;
 mod document_session;
 mod editor_navigation;
@@ -22,8 +23,13 @@ mod positioning;
 #[cfg(test)]
 mod positioning_tests;
 mod printer_worker;
+mod repeat_edit;
 mod rich_text_editor;
 mod scene_edit;
+mod selection;
+mod selection_canvas;
+#[cfg(test)]
+mod selection_tests;
 mod state;
 mod widgets;
 

@@ -1,0 +1,1760 @@
+# 24 text boxes with 3.35 mm gaps and centered cutting marks.
+version = 14
+tape_width_mm = 12
+dpi = 180
+font_name = "DejaVuSans"
+font_margin = 0
+flip_h = false
+flip_v = false
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 1
+layer = 0
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "absolute"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "01"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 2
+layer = 1
+[elements.scene.anchor]
+target = 1
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 16.025000000000002
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 3
+layer = 2
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "02"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 4
+layer = 3
+[elements.scene.anchor]
+target = 3
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 33.875
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 5
+layer = 4
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "03"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 6
+layer = 5
+[elements.scene.anchor]
+target = 5
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 51.725
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 7
+layer = 6
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "04"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 8
+layer = 7
+[elements.scene.anchor]
+target = 7
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 69.575
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 9
+layer = 8
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "05"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 10
+layer = 9
+[elements.scene.anchor]
+target = 9
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 87.425
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 11
+layer = 10
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "06"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 12
+layer = 11
+[elements.scene.anchor]
+target = 11
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 105.27499999999999
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 13
+layer = 12
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "07"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 14
+layer = 13
+[elements.scene.anchor]
+target = 13
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 123.125
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 15
+layer = 14
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "08"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 16
+layer = 15
+[elements.scene.anchor]
+target = 15
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 140.97500000000002
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 17
+layer = 16
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "09"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 18
+layer = 17
+[elements.scene.anchor]
+target = 17
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 158.82500000000002
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 19
+layer = 18
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "10"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 20
+layer = 19
+[elements.scene.anchor]
+target = 19
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 176.675
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 21
+layer = 20
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "11"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 22
+layer = 21
+[elements.scene.anchor]
+target = 21
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 194.525
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 23
+layer = 22
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "12"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 24
+layer = 23
+[elements.scene.anchor]
+target = 23
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 212.37500000000003
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 25
+layer = 24
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "13"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 26
+layer = 25
+[elements.scene.anchor]
+target = 25
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 230.22500000000002
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 27
+layer = 26
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "14"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 28
+layer = 27
+[elements.scene.anchor]
+target = 27
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 248.07500000000002
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 29
+layer = 28
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "15"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 30
+layer = 29
+[elements.scene.anchor]
+target = 29
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 265.92500000000007
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 31
+layer = 30
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "16"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 32
+layer = 31
+[elements.scene.anchor]
+target = 31
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 283.77500000000003
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 33
+layer = 32
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "17"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 34
+layer = 33
+[elements.scene.anchor]
+target = 33
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 301.62500000000006
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 35
+layer = 34
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "18"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 36
+layer = 35
+[elements.scene.anchor]
+target = 35
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 319.4750000000001
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 37
+layer = 36
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "19"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 38
+layer = 37
+[elements.scene.anchor]
+target = 37
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 337.32500000000005
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 39
+layer = 38
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "20"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 40
+layer = 39
+[elements.scene.anchor]
+target = 39
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 355.17500000000007
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 41
+layer = 40
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "21"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 42
+layer = 41
+[elements.scene.anchor]
+target = 41
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 373.02500000000003
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 43
+layer = 42
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "22"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 44
+layer = 43
+[elements.scene.anchor]
+target = 43
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 390.87500000000006
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 45
+layer = 44
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "23"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 46
+layer = 45
+[elements.scene.anchor]
+target = 45
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 408.7250000000001
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
+
+[[elements]]
+type = "object"
+sequence = 1
+rotation = 0.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 47
+layer = 46
+[elements.frame]
+width_mm = 14.5
+height_mm = 10.0
+position = "relative"
+x_mm = 0.0
+y_mm = 0.25
+gap_mm = 3.35
+vertical_align = "center"
+[elements.layout]
+placement = "flow"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 14.5
+height_mm = 8.0
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "text"
+content = "24"
+align = "center"
+
+[[elements]]
+type = "object"
+rotation = 90.0
+flip_h = false
+flip_v = false
+[elements.scene]
+id = 48
+layer = 47
+[elements.scene.anchor]
+target = 47
+horizontal = 1.0
+vertical = 0.5
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.scene.anchor.gap_center]
+tail_gap_mm = 3.35
+[elements.frame]
+width_mm = 0.3000000000000005
+height_mm = 8.0
+position = "absolute"
+x_mm = 426.57500000000005
+y_mm = 1.25
+gap_mm = 0.0
+vertical_align = "center"
+[elements.layout]
+placement = "free"
+width = "fixed"
+constrain = true
+padding_mm = 0.0
+[elements.content_box]
+width_mm = 8.0
+height_mm = 0.3
+offset_x_mm = 0.0
+offset_y_mm = 0.0
+[elements.content]
+type = "line"
+[elements.content.pattern]
+kind = "dotted"
+dash_mm = 1.0
+gap_mm = 1.0
