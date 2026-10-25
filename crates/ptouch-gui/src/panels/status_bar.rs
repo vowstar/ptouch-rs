@@ -41,7 +41,13 @@ pub fn show_status_bar(ui: &mut egui::Ui, state: &mut AppState) {
         // Status message (right-aligned)
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.add(egui::Label::new(&state.status_message).truncate())
-                .on_hover_text(&state.status_message);
+                .on_hover_text(
+                    state
+                        .status_tooltip
+                        .as_ref()
+                        .filter(|(message, _)| message == &state.status_message)
+                        .map_or(state.status_message.as_str(), |(_, detail)| detail.as_str()),
+                );
         });
     });
     // Keep a separate, stable-height row so hover feedback never replaces an

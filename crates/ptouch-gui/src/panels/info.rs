@@ -17,13 +17,15 @@ pub fn show(ctx: &egui::Context, open: &mut bool) {
             ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
             ui.separator();
             for tip in [
+                "Use File for New, Open, Save, Save As and Export Image.",
                 "Select an object on the canvas or in Elements.",
-                "Drag to move; use the square handle to scale and the round handle to rotate.",
+                "Drag to move. Use the square handle to scale and the round handle to rotate.",
                 "Free positioning keeps other objects in place. In sequence, allocation width and gaps place the following objects.",
                 "Adjust layout changes the allocation. Gap before is empty space outside it. Align within allocation positions the content inside it.",
                 "For a centred spacer line: set allocation width to 2.8 mm, Gap before to 0, then centre the content horizontally.",
                 "Layout order moves a host with its attachments. Layers changes only which objects cover others.",
-                "Up/Down stays within a sequence. Drag into another sequence to move an object while retaining its gap and both fixed starts.",
+                "The Up and Down keys select rows in Elements. The Up and Down buttons change the order within a sequence.",
+                "On the canvas, arrow keys move the selected object. Ctrl+scroll zooms at the pointer.",
                 "Connect at a sequence header joins a continuous row without moving anything. Then adjust Gap before to change spacing.",
                 "Undo: Ctrl+Z. Redo: Ctrl+Shift+Z or Ctrl+Y (Cmd on macOS).",
             ] {

@@ -21,6 +21,12 @@ Optional native macOS Bluetooth support is available in `ptouch-core` for the PT
 - Export to image (PNG, JPEG, BMP, GIF, TIFF, WebP) without a printer connected
 - Feed and cut tape without printing
 
+Use File to make, open, save or export a layout. Ctrl+S saves to the current
+file. Ctrl+Shift+S saves to another file. Use Cmd on macOS.
+
+Elements has its own scroll area and fixed action buttons. The Up and Down keys
+select rows in the list. Ctrl+scroll zooms around the pointer on the canvas.
+
 ## Supported Printers
 
 PT-9200DX, PT-2300, PT-2420PC, PT-9500PC, PT-9700PC, PT-2450PC, PT-18R,
@@ -166,7 +172,7 @@ Bluetooth devices. The preview uses the layout's saved design DPI.
 - Free-angle text rotation with auto font sizing
 - Mirror the whole label or a single element (horizontal/vertical)
 - Tape width selection
-- Save/Open layout (`.ptl`) with images embedded for portability
+- Save layouts (`.ptl`) with images embedded for portability
 - Print to connected printer or export to image file
 - Feed and cut tape without printing
 
@@ -282,11 +288,11 @@ retain their saved behaviour until positioning or sizing is explicitly changed.
 For an object that follows its allocation, clear **Follow allocation size**
 before you change the position mode.
 
-One complete mouse drag is one **Undo** step. **Esc** cancels the current drag;
+One complete mouse drag is one **Undo** step. **Esc** cancels the current drag.
 Ctrl+Z undoes and Ctrl+Shift+Z or Ctrl+Y redoes (Cmd on macOS). Text, formatting,
 geometry and ordering participate in document history. Hold Shift while rotating
-to snap to 15° increments. The optional 0.1 mm snap and arrow keys provide fine
-position adjustments; Shift moves 1 mm. Use **Duplicate**, its context menu entry,
+to snap to 15° increments. On the canvas, the optional 0.1 mm snap and arrow keys
+provide fine position adjustments. Shift moves 1 mm. Use **Duplicate**, its context menu entry,
 or Ctrl+D/Cmd+D to copy an object with its settings. Free-positioned copies are
 appended to the list and placed after the label's rightmost object. Sequence
 copies are inserted after the source and reflow the following objects.

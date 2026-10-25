@@ -59,6 +59,8 @@ pub fn show(ctx: &egui::Context, state: &mut AppState) {
         });
     state.positions_open = open;
     if let Some(element) = selected {
+        crate::editor_navigation::set_focus(ctx, crate::editor_navigation::EditorFocus::Elements);
+        crate::editor_navigation::request_canvas_reveal(ctx, element);
         state.select_canvas_target(Some(CanvasTarget {
             element,
             edit: CanvasEditTarget::Content,

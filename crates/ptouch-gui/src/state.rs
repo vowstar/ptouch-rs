@@ -134,6 +134,11 @@ pub use crate::scene_edit::LayerMove;
 
 /// Central application state shared across all panels.
 pub struct AppState {
+    pub document_session: crate::document_session::DocumentSession,
+    pub pending_file_action: Option<crate::file_workflow::FileAction>,
+    pub file_baseline_pending: bool,
+    pub close_approved: bool,
+    pub status_tooltip: Option<(String, String)>,
     /// UI-only help state, excluded from document history and serialization.
     pub info_open: bool,
     pub positions_open: bool,
@@ -234,7 +239,22 @@ pub struct AppState {
 
 impl Default for AppState {
     fn default() -> Self {
+        let initial = LabelDocument {
+            version: DEFAULT_DOCUMENT_VERSION,
+            tape_width_mm: 12,
+            dpi: 180,
+            font_name: "DejaVuSans".into(),
+            font_margin: 0,
+            flip_h: false,
+            flip_v: false,
+            elements: Vec::new(),
+        };
         Self {
+            document_session: crate::document_session::DocumentSession::new(&initial),
+            pending_file_action: None,
+            file_baseline_pending: false,
+            close_approved: false,
+            status_tooltip: None,
             info_open: false,
             positions_open: false,
             layers_view: false,
@@ -946,6 +966,18 @@ impl AppState {
         } else {
             self.design_dpi
         }
+    }
+
+    pub fn set_design_dpi(&mut self, dpi: u16) {
+        if self.design_dpi == dpi {
+            return;
+        }
+        self.design_dpi = dpi;
+        if !self.printer_connected {
+            self.preview_uses_printer = false;
+            self.update_tape_pixels();
+        }
+        self.mark_dirty();
     }
 
     pub fn document(&self) -> LabelDocument {

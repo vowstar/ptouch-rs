@@ -12,6 +12,10 @@
 
 mod alignment;
 mod app;
+mod canvas_zoom;
+mod document_session;
+mod editor_navigation;
+mod file_workflow;
 mod history;
 mod panels;
 mod positioning;
