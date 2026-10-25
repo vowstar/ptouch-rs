@@ -263,6 +263,24 @@ and adjust **Gap before** to change the spacing. Attached rows never count as
 layout predecessors. Switching to **Free positioning** unlinks only that object
 and leaves its neighbours in place.
 
+Use Ctrl-click or Cmd-click in Elements to add or remove an object from the
+selection. Shift-click selects a list range. On the canvas, use Shift-click or
+drag from an empty area to select several objects. Free objects can move together.
+Use Arrange selected to set sequence positions and gaps. Properties with
+different values show Different values. A copy or deletion includes attached
+objects and is one Undo step.
+
+Select one object and use Repeat to make a row. Total items includes the selected
+object. Enable Replace text with numbers to number the row from 1. Enable Print
+cut lines between items for separators. End line adds a separator after the last
+item. The [24-port example](examples/patch-panel-24-ports.ptl) has 14.5 mm items
+and 3.35 mm gaps.
+
+Gap center keeps an attached object in the gap after its host. The last item
+uses its saved End gap. A horizontal move changes the attachment to manual
+positioning. Gap center uses format v14. Older files keep their attachment
+positions until you enable this setting.
+
 Sequence reordering and connecting use format v13. Every object retains its own
 incoming gap, even while it is first in a sequence; moving it back restores its
 spacing. Older files keep their format and appearance until a structural edit.

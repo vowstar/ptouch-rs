@@ -258,6 +258,8 @@ impl PtouchApp {
             crate::file_workflow::request(&mut self.state, crate::file_workflow::FileAction::Close);
             commit_focus(&ctx);
         }
+        let selection = self.state.selected_indices();
+        self.state.history.set_selection_set(&selection);
         let revision = self.state.edit_revision;
         let rich_id = egui::Id::new((
             "inline_editor",
@@ -363,6 +365,7 @@ impl PtouchApp {
             });
 
         duplicate_shortcut(&ctx, &mut self.state);
+        crate::selection_canvas::shortcuts(&ctx, &mut self.state);
 
         // Commit the old selection's numeric input before selecting/reordering
         // another element. The panels keep their usual visual positions.
@@ -426,6 +429,10 @@ impl PtouchApp {
         }
 
         crate::file_workflow::finish_open(&mut self.state);
+        panels::repeat_tools::show(&ctx, &mut self.state);
+        if self.state.needs_rerender {
+            self.update_preview(&ctx);
+        }
 
         if !replayed
             && (self.state.edit_revision != revision || self.state.history.active_gesture())
@@ -460,6 +467,8 @@ impl PtouchApp {
         }
 
         panels::info::show(&ctx, &mut self.state.info_open);
+        let selection = self.state.selected_indices();
+        self.state.history.set_selection_set(&selection);
         panels::coordinates::show(&ctx, &mut self.state);
         crate::file_workflow::update_title(&ctx, &self.state);
 
@@ -528,6 +537,8 @@ fn file_shortcut(ctx: &egui::Context) -> Option<panels::toolbar::ToolbarAction> 
 fn duplicate_shortcut(ctx: &egui::Context, state: &mut AppState) {
     if state.pending_file_action.is_none()
         && !ctx.text_edit_focused()
+        && !egui::Popup::is_any_open(ctx)
+        && !panels::repeat_tools::is_open(ctx)
         && !ctx.input(|input| input.pointer.any_down())
         && ctx.input_mut(|input| input.consume_key(egui::Modifiers::COMMAND, egui::Key::D))
     {

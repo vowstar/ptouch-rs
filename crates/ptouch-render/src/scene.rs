@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     RenderError, Result,
-    document::{LabelDocument, LabelElement, PositionMode, TextBox},
+    document::{DOCUMENT_VERSION, LabelDocument, LabelElement, PositionMode, TextBox},
     object_layout::Placement,
 };
 
@@ -40,6 +40,25 @@ pub struct Anchor {
     pub vertical: f64,
     pub offset_x_mm: f64,
     pub offset_y_mm: f64,
+    /// Follow the center of the gap after the host. Absent keeps manual X.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gap_center: Option<GapCenter>,
+}
+
+/// Use the actual next gap, or this saved gap when the host has no successor.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GapCenter {
+    pub tail_gap_mm: f64,
+}
+
+impl GapCenter {
+    pub fn validate(&self) -> Result<()> {
+        if !self.tail_gap_mm.is_finite() || !(0.0..=10_000.0).contains(&self.tail_gap_mm) {
+            return Err(layout_error("Tail gap must be between 0 and 10000 mm."));
+        }
+        Ok(())
+    }
 }
 
 fn layout_error(message: &str) -> RenderError {
@@ -82,6 +101,14 @@ fn validate_metadata(
         let Some(anchor) = &scene.anchor else {
             continue;
         };
+        if let Some(gap) = &anchor.gap_center {
+            if version < 14 {
+                return Err(layout_error(
+                    "Gap center attachments require layout version 14.",
+                ));
+            }
+            gap.validate()?;
+        }
         if !anchor.horizontal.is_finite()
             || !(0.0..=1.0).contains(&anchor.horizontal)
             || !anchor.vertical.is_finite()
@@ -157,7 +184,7 @@ pub fn enable(elements: &mut [LabelElement]) -> Result<()> {
         .iter()
         .all(|element| element.as_object().unwrap().scene.is_some())
     {
-        return validate(elements, 12);
+        return validate(elements, DOCUMENT_VERSION);
     }
     if elements.len() > i32::MAX as usize {
         return Err(layout_error("scene layer limit reached"));
@@ -199,7 +226,7 @@ pub fn enable(elements: &mut [LabelElement]) -> Result<()> {
         scenes[index].as_mut().unwrap().layer = layer as i32;
     }
     let references: Vec<_> = scenes.iter().map(Option::as_ref).collect();
-    validate_metadata(elements, 12, &references)?;
+    validate_metadata(elements, DOCUMENT_VERSION, &references)?;
     for (element, scene) in elements.iter_mut().zip(scenes) {
         element.as_object_mut().unwrap().scene = scene.map(Box::new);
     }
@@ -223,8 +250,8 @@ pub fn paint_order(elements: &[LabelElement]) -> Vec<usize> {
 /// Compute absolute frames after content sizes have been resolved at design DPI.
 /// Attached children do not take part in either implicit or explicit flow.
 pub fn world_frames(elements: &[LabelElement]) -> Result<Vec<TextBox>> {
-    validate(elements, 12)?;
-    crate::sequence::validate(elements, 12)?;
+    validate(elements, DOCUMENT_VERSION)?;
+    crate::sequence::validate(elements, DOCUMENT_VERSION)?;
     let mut frames: Vec<_> = elements
         .iter()
         .map(|element| {
@@ -236,6 +263,7 @@ pub fn world_frames(elements: &[LabelElement]) -> Result<Vec<TextBox>> {
         .collect::<Result<_>>()?;
     let mut hosts = BTreeMap::new();
     let mut cursor = crate::sequence::LayoutCursor::default();
+    let mut successors = None;
     for (index, element) in elements.iter().enumerate() {
         let object = element.as_object().unwrap();
         if object.scene.as_ref().is_some_and(|s| s.anchor.is_some()) {
@@ -255,12 +283,22 @@ pub fn world_frames(elements: &[LabelElement]) -> Result<Vec<TextBox>> {
         else {
             continue;
         };
-        let host = &frames[*hosts
+        let host_index = *hosts
             .get(&anchor.target)
-            .ok_or_else(|| layout_error("attachment target has no world geometry"))?];
-        let x = host.x_mm
-            + anchor.horizontal * (host.width_mm - frames[index].width_mm)
-            + anchor.offset_x_mm;
+            .ok_or_else(|| layout_error("attachment target has no world geometry"))?;
+        let host = &frames[host_index];
+        let x = if let Some(gap_center) = &anchor.gap_center {
+            let next = successors.get_or_insert_with(|| layout_successors(elements))[host_index];
+            let gap = next
+                .map(|next| resolved_gap(&frames, host_index, next))
+                .transpose()?
+                .unwrap_or(gap_center.tail_gap_mm);
+            host.x_mm + host.width_mm + gap / 2.0 - frames[index].width_mm / 2.0
+        } else {
+            host.x_mm
+                + anchor.horizontal * (host.width_mm - frames[index].width_mm)
+                + anchor.offset_x_mm
+        };
         let y = host.y_mm
             + anchor.vertical * (host.height_mm - frames[index].height_mm)
             + anchor.offset_y_mm;
@@ -276,6 +314,65 @@ pub fn world_frames(elements: &[LabelElement]) -> Result<Vec<TextBox>> {
         return Err(layout_error("resolved scene geometry must be finite"));
     }
     Ok(frames)
+}
+
+/// Next host in the same sequence. Attached children never occupy a gap.
+pub fn next_layout_host(elements: &[LabelElement], index: usize) -> Option<usize> {
+    layout_successors(elements).get(index).copied().flatten()
+}
+
+/// Current physical gap after a host. None means the host is the last member.
+pub fn gap_after(elements: &[LabelElement], index: usize) -> Result<Option<f64>> {
+    let object = elements
+        .get(index)
+        .and_then(LabelElement::as_object)
+        .ok_or_else(|| layout_error("Select a layout object."))?;
+    if object.scene.as_ref().is_some_and(|s| s.anchor.is_some()) {
+        return Err(layout_error("Select a host object."));
+    }
+    let Some(next) = next_layout_host(elements, index) else {
+        return Ok(None);
+    };
+    let frames = world_frames(elements)?;
+    resolved_gap(&frames, index, next).map(Some)
+}
+
+fn layout_successors(elements: &[LabelElement]) -> Vec<Option<usize>> {
+    let mut successors = vec![None; elements.len()];
+    let mut previous_explicit = BTreeMap::new();
+    let mut previous_implicit = None;
+    for (index, element) in elements.iter().enumerate() {
+        let Some(object) = element.as_object() else {
+            previous_implicit = None;
+            continue;
+        };
+        if object.scene.as_ref().is_some_and(|s| s.anchor.is_some()) {
+            continue;
+        }
+        if let Some(sequence) = object.sequence {
+            if let Some(previous) = previous_explicit.insert(sequence, index) {
+                successors[previous] = Some(index);
+            }
+            previous_implicit = None;
+        } else {
+            if object.frame.position == PositionMode::Relative
+                && let Some(previous) = previous_implicit
+            {
+                successors[previous] = Some(index);
+            }
+            previous_implicit = Some(index);
+        }
+    }
+    successors
+}
+
+fn resolved_gap(frames: &[TextBox], host: usize, next: usize) -> Result<f64> {
+    let gap = frames[next].x_mm - frames[host].x_mm - frames[host].width_mm;
+    if !gap.is_finite() || gap < -1e-7 {
+        return Err(layout_error("Gap center needs a nonnegative gap."));
+    }
+    // Cancel only floating-point residue. Stored spacing is never changed.
+    Ok(gap.max(0.0))
 }
 
 /// Apply only derived attachment positions. The stored anchor is never clamped
@@ -316,9 +413,10 @@ pub fn children(elements: &[LabelElement], host_index: usize) -> Vec<usize> {
         .collect()
 }
 
-/// Retain alignment and identity while expressing a final world frame as offsets.
+/// Keep a final world frame as manual offsets, with the same host and Y alignment.
 pub fn offset_for_frame(anchor: &Anchor, child_world: &TextBox, host_world: &TextBox) -> Anchor {
     Anchor {
+        gap_center: None,
         offset_x_mm: child_world.x_mm
             - host_world.x_mm
             - anchor.horizontal * (host_world.width_mm - child_world.width_mm),
@@ -351,6 +449,7 @@ mod tests {
 
     fn anchor(target: u64) -> Anchor {
         Anchor {
+            gap_center: None,
             target,
             horizontal: 1.0,
             vertical: 0.0,

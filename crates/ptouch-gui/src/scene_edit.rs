@@ -38,6 +38,7 @@ pub(crate) struct SceneSnapshot {
     selection_revision: u64,
     editor_generation: u64,
     needs_rerender: bool,
+    selection: crate::selection::Selection,
 }
 
 impl SceneSnapshot {
@@ -53,6 +54,7 @@ impl SceneSnapshot {
             selection_revision: state.selection_revision,
             editor_generation: state.editor_generation,
             needs_rerender: state.needs_rerender,
+            selection: state.selection.clone(),
         }
     }
 
@@ -67,6 +69,7 @@ impl SceneSnapshot {
         state.selection_revision = self.selection_revision;
         state.editor_generation = self.editor_generation;
         state.needs_rerender = self.needs_rerender;
+        state.selection = self.selection;
     }
 }
 
@@ -121,16 +124,18 @@ impl AppState {
             .filter_map(LabelElement::as_object_mut)
         {
             object_layout::update_allocation(object);
-            object_layout::validate(object, 12).map_err(|error| error.to_string())?;
+            object_layout::validate(object, ptouch_render::document::DOCUMENT_VERSION)
+                .map_err(|error| error.to_string())?;
             object
-                .validate_features(12)
+                .validate_features(ptouch_render::document::DOCUMENT_VERSION)
                 .map_err(|error| error.to_string())?;
             object_layout::check_allocation(object).map_err(|error| error.to_string())?;
             if !object.rotation.is_finite() {
                 return Err("Object rotation must be finite".into());
             }
         }
-        scene::validate(&self.elements, 12).map_err(|error| error.to_string())?;
+        scene::validate(&self.elements, ptouch_render::document::DOCUMENT_VERSION)
+            .map_err(|error| error.to_string())?;
         let frames = scene::world_frames(&self.elements).map_err(|error| error.to_string())?;
         let height = self.printable_height_mm();
         for frame in &frames {
@@ -320,6 +325,7 @@ impl AppState {
                 .as_mut()
                 .unwrap()
                 .anchor = Some(Anchor {
+                gap_center: None,
                 target,
                 horizontal: 1.0,
                 vertical: 0.0,
@@ -495,6 +501,7 @@ impl AppState {
         object.sequence = None;
         object.layout = Some(free_layout());
         let anchor = Anchor {
+            gap_center: None,
             target,
             horizontal: 1.0,
             vertical: 0.0,
@@ -576,6 +583,9 @@ impl AppState {
             .as_mut()
             .unwrap()
             .anchor = Some(anchor);
+        self.document_version = self
+            .document_version
+            .max(self.elements[index].minimum_version());
         self.finish_scene_transaction(before, Some(index), "Overlay alignment updated")
     }
 
@@ -637,7 +647,7 @@ impl AppState {
                 .get_or_insert_with(ptouch_render::text::TextRenderer::new);
             object_layout::resolve_object(
                 &mut object,
-                12,
+                ptouch_render::document::DOCUMENT_VERSION,
                 self.design_dpi,
                 &self.font_name,
                 renderer,
@@ -660,8 +670,13 @@ impl AppState {
                 })
                 .ok_or("Overlay host is unavailable")?;
             let desired = object.frame.clone();
-            object.scene.as_mut().unwrap().anchor =
-                Some(scene::offset_for_frame(anchor, &desired, &world[host]));
+            let mut next = scene::offset_for_frame(anchor, &desired, &world[host]);
+            let old_center = world[index].x_mm + world[index].width_mm / 2.0;
+            let new_center = desired.x_mm + desired.width_mm / 2.0;
+            if (old_center - new_center).abs() < 1e-7 {
+                next.gap_center = anchor.gap_center.clone();
+            }
+            object.scene.as_mut().unwrap().anchor = Some(next);
         }
         if structural {
             let snapshot = SceneSnapshot::take(self);

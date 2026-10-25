@@ -9,6 +9,7 @@ use ptouch_render::document::LabelDocument;
 pub struct Snapshot {
     pub document: LabelDocument,
     pub selection: Option<usize>,
+    pub selection_set: Vec<usize>,
     pub time: f64,
 }
 
@@ -49,6 +50,12 @@ impl DocumentHistory {
         }
     }
 
+    pub fn set_selection_set(&mut self, selection: &[usize]) {
+        if let Some(current) = &mut self.current {
+            current.selection_set = selection.to_vec();
+        }
+    }
+
     pub fn observe(
         &mut self,
         document: LabelDocument,
@@ -61,6 +68,7 @@ impl DocumentHistory {
         let next = Snapshot {
             document,
             selection,
+            selection_set: selection.into_iter().collect(),
             time,
         };
         let mut next = next;
@@ -82,6 +90,7 @@ impl DocumentHistory {
                 self.gesture = down;
             } else {
                 next.time = current.time;
+                next.selection_set = current.selection_set.clone();
             }
         }
         self.current = Some(next);

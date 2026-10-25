@@ -19,6 +19,13 @@ use crate::state::{AppState, CanvasEditTarget, CanvasTarget, LabelElement};
 
 /// Render the right-side properties panel.
 pub fn show_properties(ui: &mut egui::Ui, state: &mut AppState) {
+    super::repeat_tools::buttons(ui, state);
+    if state.selected_indices().len() > 1 {
+        ui.push_id(("multiple_objects", state.selection_revision), |ui| {
+            super::selection_tools::show(ui, state)
+        });
+        return;
+    }
     // Loaded history or a completed relation edit can retain a previous layout
     // target. Apply the shared attachment selection rule before widget IDs.
     state.select_canvas_target(state.selected_canvas_target());

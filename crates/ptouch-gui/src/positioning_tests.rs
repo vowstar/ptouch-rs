@@ -74,6 +74,7 @@ fn line(id: u64, target: u64) -> LabelObject {
         id,
         layer: id as i32,
         anchor: Some(Anchor {
+            gap_center: None,
             target,
             horizontal: 1.0,
             vertical: 0.5,
@@ -464,6 +465,7 @@ fn every_content_type_and_multiple_attachments_keep_size_content_and_pixels() {
             second_child.rotation = 0.0;
             second_child.content_box.as_mut().unwrap().width_mm = 3.3;
             second_child.scene.as_mut().unwrap().anchor = Some(Anchor {
+                gap_center: None,
                 target: 3,
                 horizontal: 0.0,
                 vertical: 0.0,

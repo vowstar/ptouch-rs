@@ -6,7 +6,7 @@
 use ptouch_render::scene::Anchor;
 use ptouch_render::shape::ShapeKind;
 
-use crate::state::{AppState, CanvasEditTarget, CanvasTarget, LayerMove};
+use crate::state::{AppState, LayerMove};
 
 #[derive(Clone, Copy)]
 struct LayerDrag(usize);
@@ -29,9 +29,9 @@ pub fn show_layers(ui: &mut egui::Ui, state: &mut AppState) {
         return;
     }
     crate::editor_navigation::list_keyboard(ui, state, &order);
-    let can_arrange = state.is_free_layout();
-    let mut selection = None;
+    let can_arrange = state.is_free_layout() && state.selected_indices().len() <= 1;
     let mut action = None;
+    let selected_indices = state.selected_indices();
     for (position, &index) in order.iter().enumerate() {
         let name = state.elements[index].display_name();
         let response = ui
@@ -39,7 +39,7 @@ pub fn show_layers(ui: &mut egui::Ui, state: &mut AppState) {
                 ui.add_sized(
                     [ui.available_width().max(20.0), ui.spacing().interact_size.y],
                     egui::Button::selectable(
-                        state.selected_element == Some(index),
+                        selected_indices.contains(&index),
                         (&name, egui::Atom::grow()),
                     )
                     .truncate()
@@ -57,9 +57,23 @@ pub fn show_layers(ui: &mut egui::Ui, state: &mut AppState) {
             ));
         crate::editor_navigation::reveal_selected_row(ui, &response, state, index);
         if response.clicked() || response.drag_started() {
-            selection = Some(index);
+            let modifiers = ui.input(|input| input.modifiers);
+            if !response.drag_started() || !(modifiers.shift || modifiers.command || modifiers.ctrl)
+            {
+                state.select_list_item(index, modifiers, &order);
+                crate::editor_navigation::set_focus(
+                    ui.ctx(),
+                    crate::editor_navigation::EditorFocus::Elements,
+                );
+                crate::editor_navigation::request_canvas_reveal(ui.ctx(), index);
+            }
         }
-        if !can_arrange {
+        if !can_arrange
+            || selected_indices.len() > 1
+            || ui.input(|input| {
+                input.modifiers.shift || input.modifiers.command || input.modifiers.ctrl
+            })
+        {
             continue;
         }
         response.dnd_set_drag_payload(LayerDrag(index));
@@ -102,17 +116,6 @@ pub fn show_layers(ui: &mut egui::Ui, state: &mut AppState) {
             action = Some(LayerAction::Reorder(source.0, index));
         }
     }
-    if let Some(element) = selection {
-        state.select_canvas_target(Some(CanvasTarget {
-            element,
-            edit: CanvasEditTarget::Content,
-        }));
-        crate::editor_navigation::set_focus(
-            ui.ctx(),
-            crate::editor_navigation::EditorFocus::Elements,
-        );
-        crate::editor_navigation::request_canvas_reveal(ui.ctx(), element);
-    }
     if let Some(LayerAction::Reorder(from, to)) = action {
         state.reorder_layer(from, to);
     }
@@ -123,7 +126,7 @@ pub fn show_layer_actions(ui: &mut egui::Ui, state: &mut AppState) {
         .into_iter()
         .rev()
         .collect();
-    let can_arrange = state.is_free_layout();
+    let can_arrange = state.is_free_layout() && state.selected_indices().len() <= 1;
     let mut action = None;
     ui.add_space(4.0);
     let selected = state.selected_element.and_then(|index| {
@@ -240,36 +243,131 @@ pub fn show_attachment(ui: &mut egui::Ui, state: &mut AppState) -> bool {
                 }
                 ui.small("Tracks the layout box. Size and rotation stay independent.");
                 ui.add_space(4.0);
-                ui.label("Anchor");
-                egui::Grid::new(("overlay_alignment", index))
-                    .spacing(egui::vec2(2.0, 2.0))
-                    .show(ui, |ui| {
-                        for (row, symbols) in [["↖", "↑", "↗"], ["←", "•", "→"], ["↙", "↓", "↘"]]
-                            .iter()
-                            .enumerate()
-                        {
-                            for (column, symbol) in symbols.iter().enumerate() {
-                                let horizontal = column as f64 / 2.0;
-                                let vertical = row as f64 / 2.0;
-                                let selected = (anchor.horizontal - horizontal).abs() < 1e-7
-                                    && (anchor.vertical - vertical).abs() < 1e-7;
-                                if ui
-                                    .add_sized(
-                                        [24.0, 24.0],
-                                        egui::Button::selectable(selected, *symbol),
-                                    )
-                                    .on_hover_text(
-                                        "Choose the frame anchor without moving the object",
-                                    )
-                                    .clicked()
-                                    && !selected
-                                {
-                                    action = Some(AttachmentAction::Align(horizontal, vertical));
-                                }
-                            }
-                            ui.end_row();
-                        }
+                let mut centered = anchor.gap_center.is_some();
+                if ui
+                    .checkbox(&mut centered, "Gap center")
+                    .on_hover_text("The object stays at the center of the gap after its host.")
+                    .changed()
+                {
+                    if centered {
+                        let host = state.elements.iter().position(|element| {
+                            element
+                                .as_object()
+                                .and_then(|object| object.scene.as_ref())
+                                .is_some_and(|scene| scene.id == anchor.target)
+                        });
+                        let tail = host
+                            .and_then(|host| {
+                                ptouch_render::scene::gap_after(&state.elements, host)
+                                    .ok()
+                                    .flatten()
+                                    .or_else(|| {
+                                        state.elements[host]
+                                            .as_object()
+                                            .map(|object| object.frame.gap_mm)
+                                    })
+                            })
+                            .unwrap_or(3.35);
+                        anchor.gap_center =
+                            Some(ptouch_render::scene::GapCenter { tail_gap_mm: tail });
+                    } else if let Ok(frames) = ptouch_render::scene::world_frames(&state.elements)
+                        && let Some(host) = state.elements.iter().position(|element| {
+                            element
+                                .as_object()
+                                .and_then(|object| object.scene.as_ref())
+                                .is_some_and(|scene| scene.id == anchor.target)
+                        })
+                    {
+                        anchor = ptouch_render::scene::offset_for_frame(
+                            &anchor,
+                            &frames[index],
+                            &frames[host],
+                        );
+                    }
+                    action = Some(AttachmentAction::SetAnchor(anchor));
+                    return;
+                }
+                let actual_gap = state
+                    .elements
+                    .iter()
+                    .position(|element| {
+                        element
+                            .as_object()
+                            .and_then(|object| object.scene.as_ref())
+                            .is_some_and(|scene| scene.id == anchor.target)
+                    })
+                    .and_then(|host| {
+                        ptouch_render::scene::gap_after(&state.elements, host)
+                            .ok()
+                            .flatten()
                     });
+                if let Some(center) = &anchor.gap_center {
+                    let gap = actual_gap.unwrap_or(center.tail_gap_mm);
+                    if state.elements[index]
+                        .as_object()
+                        .is_some_and(|object| object.frame.width_mm > gap + 1e-7)
+                    {
+                        ui.colored_label(
+                            ui.visuals().warn_fg_color,
+                            "The object is wider than the gap.",
+                        );
+                    }
+                }
+                let mut tail_changed = false;
+                if let Some(center) = &mut anchor.gap_center
+                    && actual_gap.is_none()
+                {
+                    ui.horizontal(|ui| {
+                        ui.label("End gap");
+                        tail_changed = ui
+                            .add(
+                                crate::widgets::decimal_drag(&mut center.tail_gap_mm)
+                                    .range(0.0..=10_000.0)
+                                    .speed(0.1)
+                                    .suffix(" mm"),
+                            )
+                            .changed();
+                    });
+                }
+                if tail_changed {
+                    action = Some(AttachmentAction::SetAnchor(anchor.clone()));
+                    return;
+                }
+                let manual = anchor.gap_center.is_none();
+                ui.label("Anchor");
+                ui.add_enabled_ui(manual, |ui| {
+                    egui::Grid::new(("overlay_alignment", index))
+                        .spacing(egui::vec2(2.0, 2.0))
+                        .show(ui, |ui| {
+                            for (row, symbols) in
+                                [["↖", "↑", "↗"], ["←", "•", "→"], ["↙", "↓", "↘"]]
+                                    .iter()
+                                    .enumerate()
+                            {
+                                for (column, symbol) in symbols.iter().enumerate() {
+                                    let horizontal = column as f64 / 2.0;
+                                    let vertical = row as f64 / 2.0;
+                                    let selected = (anchor.horizontal - horizontal).abs() < 1e-7
+                                        && (anchor.vertical - vertical).abs() < 1e-7;
+                                    if ui
+                                        .add_sized(
+                                            [24.0, 24.0],
+                                            egui::Button::selectable(selected, *symbol),
+                                        )
+                                        .on_hover_text(
+                                            "Choose the frame anchor without moving the object",
+                                        )
+                                        .clicked()
+                                        && !selected
+                                    {
+                                        action =
+                                            Some(AttachmentAction::Align(horizontal, vertical));
+                                    }
+                                }
+                                ui.end_row();
+                            }
+                        })
+                });
                 if action.is_some() {
                     return;
                 }
@@ -281,6 +379,9 @@ pub fn show_attachment(ui: &mut egui::Ui, state: &mut AppState) -> bool {
                             ("Offset X", &mut anchor.offset_x_mm),
                             ("Offset Y", &mut anchor.offset_y_mm),
                         ] {
+                            if label == "Offset X" && !manual {
+                                continue;
+                            }
                             ui.label(label);
                             changed |= ui
                                 .add(
@@ -302,7 +403,7 @@ pub fn show_attachment(ui: &mut egui::Ui, state: &mut AppState) -> bool {
                 }
                 if ui
                     .add_enabled(
-                        anchor.offset_x_mm != 0.0 || anchor.offset_y_mm != 0.0,
+                        manual && (anchor.offset_x_mm != 0.0 || anchor.offset_y_mm != 0.0),
                         egui::Button::new("Align to anchor"),
                     )
                     .on_hover_text("Set both offsets to zero")
