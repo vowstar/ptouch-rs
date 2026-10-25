@@ -271,12 +271,12 @@ different values show Different values. A copy or deletion includes attached
 objects and is one Undo step.
 
 Select one object and use Repeat to make a row. Total items includes the selected
-object. Enable Replace text with numbers to number the row from 1. Enable Print
+object. Select Replace text with numbers to use numbers from 1. Enable Print
 cut lines between items for separators. End line adds a separator after the last
 item. The [24-port example](examples/patch-panel-24-ports.ptl) has 14.5 mm items
 and 3.35 mm gaps.
 
-Gap center keeps an attached object in the gap after its host. The last item
+Gap center keeps an attached object at the center of the gap after its host. The last item
 uses its saved End gap. A horizontal move changes the attachment to manual
 positioning. Gap center uses format v14. Older files keep their attachment
 positions until you enable this setting.
