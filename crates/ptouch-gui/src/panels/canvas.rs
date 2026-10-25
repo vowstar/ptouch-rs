@@ -305,6 +305,7 @@ pub fn show_canvas(ui: &mut egui::Ui, state: &mut AppState) {
                 egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1.0, 1.0)),
                 egui::Color32::WHITE,
             );
+            crate::output_tools::paint_range(painter, label_rect, state);
             painter.rect_stroke(
                 label_rect,
                 0.0,

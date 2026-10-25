@@ -126,7 +126,7 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &AppState) -> Option<ToolbarAction
         }
         ui.separator();
         let ready = state.printer_connected && !state.is_printer_busy();
-        let bitmap = state.preview_bitmap.is_some() && !state.needs_rerender;
+        let bitmap = crate::output_tools::preview_ready(state);
         if ui
             .add_enabled(ready && bitmap, egui::Button::new("Print"))
             .clicked()
@@ -204,17 +204,9 @@ pub fn execute_action(state: &mut AppState, action: ToolbarAction) {
             if !state.printer_connected || state.is_printer_busy() || state.needs_rerender {
                 return;
             }
-            if let Some(bitmap) = &state.preview_bitmap
-                && let Some(tx) = &state.printer_cmd_tx
-            {
-                let corrected = match ptouch_render::calibration::apply_calibration(
-                    bitmap,
-                    state.target_dpi(),
-                    state
-                        .calibration_enabled
-                        .then_some(state.calibration.offset_mm),
-                ) {
-                    Ok(bitmap) => bitmap,
+            if let Some(tx) = &state.printer_cmd_tx {
+                let raster_lines = match crate::output_tools::prepare(state, true) {
+                    Ok(output) => raster::bitmap_to_raster_lines(&output, state.printer_max_px),
                     Err(error) => {
                         state.status_message = error.to_string();
                         return;
@@ -223,7 +215,7 @@ pub fn execute_action(state: &mut AppState, action: ToolbarAction) {
                 let cancellation = ptouch_core::CancellationToken::default();
                 state.cancellation = Some(cancellation.clone());
                 let _ = tx.send(PrinterCommand::Print {
-                    raster_lines: raster::bitmap_to_raster_lines(&corrected, state.printer_max_px),
+                    raster_lines,
                     chain_print: !state.auto_cut,
                     auto_cut: state.auto_cut,
                     quality: state.print_quality,
@@ -297,6 +289,7 @@ pub(crate) fn apply_layout(state: &mut AppState, document: LabelDocument) -> Res
     state.editor_generation = state.editor_generation.wrapping_add(1);
     state.elements = document.elements;
     state.file_view_generation = state.file_view_generation.wrapping_add(1);
+    crate::output_tools::reset(state);
     state.select_canvas_target(None);
     state.selection.clear();
     state.selection_revision = state.selection_revision.wrapping_add(1);
@@ -306,10 +299,10 @@ pub(crate) fn apply_layout(state: &mut AppState, document: LabelDocument) -> Res
 
 /// Export the current label preview as an image file.
 fn do_export_image(state: &mut AppState) {
-    let bitmap = match state.preview_bitmap {
-        Some(ref bmp) => bmp,
-        None => {
-            state.status_message = "Nothing to export".to_string();
+    let bitmap = match crate::output_tools::prepare(state, false) {
+        Ok(bitmap) => bitmap,
+        Err(error) => {
+            state.status_message = error;
             return;
         }
     };
@@ -398,6 +391,50 @@ mod tests {
         }
     }
 
+    #[test]
+    fn range_print_sends_cropped_then_calibrated_raster_and_rejects_invalid_ranges() {
+        for dpi in [180, 360] {
+            for mirrored in [false, true] {
+                let (tx, rx) = std::sync::mpsc::channel();
+                let mut bitmap = ptouch_render::bitmap::LabelBitmap::new(600, 32);
+                bitmap.set_pixel(180, 3, true);
+                bitmap.set_pixel(400, 9, true);
+                let bitmap = bitmap.mirrored(mirrored, mirrored);
+                let mut state = AppState {
+                    design_dpi: dpi,
+                    printer_dpi: dpi,
+                    printer_connected: true,
+                    printer_max_px: 128,
+                    preview_bitmap: Some(bitmap.clone()),
+                    needs_rerender: false,
+                    calibration_enabled: true,
+                    printer_cmd_tx: Some(tx),
+                    ..Default::default()
+                };
+                state.output_range.enabled = true;
+                state.output_range.start_mm = 10.0;
+                state.output_range.end_mm = 30.0;
+                state.calibration.offset_mm = 1.0;
+                let before = state.document();
+                let expected = crate::output_tools::prepare(&state, true)
+                    .unwrap()
+                    .into_owned();
+                execute_action(&mut state, ToolbarAction::Print);
+                let PrinterCommand::Print { raster_lines, .. } = rx.try_recv().unwrap() else {
+                    panic!("expected cropped print");
+                };
+                assert_eq!(raster_lines, raster::bitmap_to_raster_lines(&expected, 128));
+                assert_eq!(state.document(), before);
+                state.operation_in_progress = false;
+                state.output_range.end_mm = 1000.0;
+                execute_action(&mut state, ToolbarAction::Print);
+                assert!(rx.try_recv().is_err());
+                assert!(!state.operation_in_progress);
+                assert!(state.status_message.contains("label end"));
+            }
+        }
+    }
+
     fn layout(tape_width_mm: u8) -> LabelDocument {
         let document = LabelDocument {
             version: ptouch_render::document::DOCUMENT_VERSION,
@@ -449,6 +486,21 @@ mod tests {
             let reopened = LabelDocument::from_toml_str(&saved.to_toml_string().unwrap()).unwrap();
             assert_eq!(reopened.version, version);
         }
+    }
+
+    #[test]
+    fn successful_open_resets_output_range_but_rejected_open_preserves_it() {
+        let mut state = AppState::default();
+        state.output_range.enabled = true;
+        state.output_range.start_mm = 10.0;
+        state.output_range.end_mm = 30.0;
+        let before = state.output_range.clone();
+        assert!(apply_layout(&mut state, layout(15)).is_err());
+        assert_eq!(state.output_range, before);
+        apply_layout(&mut state, layout(12)).unwrap();
+        assert_eq!(state.output_range, Default::default());
+        let encoded = state.document().to_toml_string().unwrap();
+        assert!(!encoded.contains("output_range"));
     }
 
     #[test]

@@ -28,6 +28,7 @@ use ptouch_core::transport::{PtouchDevice, UsbLocation};
 use ptouch_render::bitmap::LabelBitmap;
 use ptouch_render::document::{self, LabelDocument};
 use ptouch_render::image_loader;
+use ptouch_render::output_range::{OutputRange, apply_output_range};
 use ptouch_render::raster;
 use ptouch_render::text::{TextAlign, TextRenderer};
 
@@ -121,6 +122,10 @@ struct PrintArgs {
     /// Export to PNG file instead of printing
     #[arg(short = 'o', long)]
     output: Option<String>,
+
+    /// Print or export a ruler interval in millimeters after all label mirrors
+    #[arg(long, num_args = 2, value_names = ["START_MM", "END_MM"], allow_hyphen_values = true)]
+    range: Option<Vec<f64>>,
 
     /// Font name
     #[arg(short = 'f', long, default_value = "DejaVuSans")]
@@ -782,6 +787,8 @@ fn execute_info(args: &InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
 
 /// Build a label from a layout file or ad-hoc text/images, then print or save.
 fn execute_print(args: &PrintArgs, ignored: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    // Reject an invalid interval before loading profiles or opening a device.
+    resolve_output_range(args)?;
     // Resolve a file once so all copies/CSV rows use the same correction.
     let mut resolved_args = args.clone();
     resolved_args.offset_mm = resolve_calibration(args)?;
@@ -883,6 +890,30 @@ fn resolve_calibration(args: &PrintArgs) -> Result<Option<f64>, Box<dyn std::err
     Ok(args.offset_mm)
 }
 
+fn resolve_output_range(args: &PrintArgs) -> ptouch_render::Result<Option<OutputRange>> {
+    match args.range.as_deref() {
+        None => Ok(None),
+        Some([start, end]) => OutputRange::new(*start, *end).map(Some),
+        Some(_) => Err(ptouch_render::RenderError::Layout(
+            "A range must have a start and an end.".into(),
+        )),
+    }
+}
+
+/// Every single label and CSV row uses the same output order.
+fn prepare_output(
+    bitmap: &LabelBitmap,
+    args: &PrintArgs,
+    dpi: u16,
+) -> Result<LabelBitmap, Box<dyn std::error::Error>> {
+    let cropped = apply_output_range(bitmap, dpi, resolve_output_range(args)?)?;
+    Ok(ptouch_render::calibration::apply_calibration(
+        &cropped,
+        dpi,
+        args.offset_mm,
+    )?)
+}
+
 /// Reject combinations that the physically verified PT-P300BT path does not
 /// implement. Do this before opening the printer or rendering the label.
 fn validate_bluetooth_print_options(args: &PrintArgs) -> Result<(), PtouchError> {
@@ -972,18 +1003,15 @@ fn print_layout_batch(
     let (print_width, max_px, mut device) = resolve_layout_target(args, &doc)?;
     let target_dpi = device.as_ref().map_or(doc.dpi, |dev| dev.dpi());
 
-    let labels = rdr.records().map(|record| {
+    let labels = rdr.records().enumerate().map(|(index, record)| {
         let record = record?;
         let row: Vec<String> = record.iter().map(|s| s.to_string()).collect();
         let values = build_row_values(&base, &headers, &row);
         let mut row_doc = doc.clone();
         row_doc.apply_values(&values);
         let bitmap = render_layout(&row_doc, print_width, target_dpi)?;
-        Ok(ptouch_render::calibration::apply_calibration(
-            &bitmap,
-            target_dpi,
-            args.offset_mm,
-        )?)
+        prepare_output(&bitmap, args, target_dpi)
+            .map_err(|error| format!("CSV row {}: {error}", index + 1).into())
     });
     let count = emit_batch(labels, args, max_px, device.as_mut())?;
 
@@ -1127,7 +1155,7 @@ fn emit_label(
     dpi: u16,
     device: Option<&mut CliDevice>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let corrected = ptouch_render::calibration::apply_calibration(bitmap, dpi, args.offset_mm)?;
+    let corrected = prepare_output(bitmap, args, dpi)?;
     let bitmap = &corrected;
 
     if let Some(ref output_path) = args.output {
@@ -1395,6 +1423,196 @@ mod tests {
             },
         )
         .unwrap()
+    }
+
+    #[test]
+    fn invalid_output_ranges_fail_before_profiles_files_or_devices_are_opened() {
+        for values in [
+            ["-1", "2"],
+            ["2", "2"],
+            ["3", "2"],
+            ["NaN", "2"],
+            ["0", "inf"],
+        ] {
+            let args = batch_args(&[
+                "--range",
+                values[0],
+                values[1],
+                "--calibration",
+                "/path/that/must/not/be/read.toml",
+            ]);
+            let error = execute_print(&args, &[]).unwrap_err().to_string();
+            assert!(error.contains("Range"), "{error}");
+            assert!(!error.contains("No such file"), "{error}");
+        }
+        assert!(Cli::try_parse_from(["ptouch", "print", "--range", "0"]).is_err());
+        assert!(Cli::try_parse_from(["ptouch", "print", "--range", "bad", "2"]).is_err());
+    }
+
+    #[test]
+    fn range_exports_and_csv_use_the_final_mirror_and_then_calibration() {
+        let dir = std::env::temp_dir().join(format!("ptouch-range-exports-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        for dpi in [180, 360] {
+            for flip_h in [false, true] {
+                for flip_v in [false, true] {
+                    let mut object = LabelObject::text(
+                        "{{name}}",
+                        TextBox {
+                            width_mm: 40.0,
+                            height_mm: 9.0,
+                            ..Default::default()
+                        },
+                    );
+                    if let ObjectContent::Text { font_size, .. } = &mut object.content {
+                        *font_size = Some(8.0);
+                    }
+                    let document = LabelDocument {
+                        version: 3,
+                        tape_width_mm: 12,
+                        dpi,
+                        font_name: "DejaVuSans".into(),
+                        font_margin: 0,
+                        flip_h,
+                        flip_v,
+                        elements: vec![LabelElement::Object(object)],
+                    };
+                    let layout = dir.join("range.ptl");
+                    let csv = dir.join("range.csv");
+                    let image = dir.join("single.png");
+                    let pattern = dir.join("row-{n}.png");
+                    let saved = document.to_toml_string().unwrap();
+                    std::fs::write(&layout, &saved).unwrap();
+                    std::fs::write(&csv, "name\nPORT 01\nPORT 02\n").unwrap();
+                    let args = batch_args(&[
+                        "--layout",
+                        layout.to_str().unwrap(),
+                        "--range",
+                        "10",
+                        "30",
+                        "--offset-mm",
+                        "1.5",
+                        "--set",
+                        "name=PORT 01",
+                        "--output",
+                        image.to_str().unwrap(),
+                    ]);
+                    execute_print(&args, &[]).unwrap();
+                    let mut resolved = document.clone();
+                    resolved.apply_values(&BTreeMap::from([("name".into(), "PORT 01".into())]));
+                    let full =
+                        render_layout(&resolved, if dpi == 180 { 76 } else { 150 }, dpi).unwrap();
+                    let bounds = OutputRange::new(10.0, 30.0)
+                        .unwrap()
+                        .pixel_bounds(dpi, full.width())
+                        .unwrap();
+                    let mut expected = LabelBitmap::new(bounds.end - bounds.start, full.height());
+                    for x in 0..expected.width() {
+                        for y in 0..expected.height() {
+                            expected.set_pixel(x, y, full.get_pixel(x + bounds.start, y));
+                        }
+                    }
+                    let expected =
+                        ptouch_render::calibration::apply_calibration(&expected, dpi, Some(1.5))
+                            .unwrap();
+                    assert_eq!(load_export(&image), expected);
+                    let mut csv_args = args.clone();
+                    csv_args.set.clear();
+                    csv_args.csv = Some(csv.to_string_lossy().into_owned());
+                    csv_args.output = Some(pattern.to_string_lossy().into_owned());
+                    execute_print(&csv_args, &[]).unwrap();
+                    assert_eq!(
+                        std::fs::read(dir.join("row-1.png")).unwrap(),
+                        std::fs::read(&image).unwrap()
+                    );
+                    assert!(dir.join("row-2.png").exists());
+                    assert_eq!(std::fs::read_to_string(&layout).unwrap(), saved);
+                }
+            }
+        }
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn csv_range_error_names_the_short_row_and_keeps_prior_exports() {
+        let dir =
+            std::env::temp_dir().join(format!("ptouch-range-short-row-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let document = LabelDocument {
+            version: 1,
+            tape_width_mm: 12,
+            dpi: 180,
+            font_name: "DejaVuSans".into(),
+            font_margin: 0,
+            flip_h: false,
+            flip_v: false,
+            elements: vec![LabelElement::Text {
+                content: "{{name}}".into(),
+                font_size: Some(8.0),
+                align: TextAlign::Left,
+                rotation: 0.0,
+                flip_h: false,
+                flip_v: false,
+                text_box: None,
+            }],
+        };
+        let layout = dir.join("rows.ptl");
+        let csv = dir.join("rows.csv");
+        let pattern = dir.join("out-{n}.png");
+        std::fs::write(&layout, document.to_toml_string().unwrap()).unwrap();
+        std::fs::write(
+            &csv,
+            "name\nABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ\nI\n",
+        )
+        .unwrap();
+        let args = batch_args(&[
+            "--layout",
+            layout.to_str().unwrap(),
+            "--csv",
+            csv.to_str().unwrap(),
+            "--range",
+            "0",
+            "10",
+            "--output",
+            pattern.to_str().unwrap(),
+        ]);
+        let error = execute_print(&args, &[]).unwrap_err().to_string();
+        assert!(error.contains("CSV row 2"), "{error}");
+        assert!(error.contains("label end"), "{error}");
+        assert!(dir.join("out-1.png").exists());
+        assert!(!dir.join("out-2.png").exists());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn cropped_usb_and_bluetooth_jobs_use_the_selected_raster_columns() {
+        for bluetooth in [false, true] {
+            let args = batch_args(&["--range", "10", "20"]);
+            let labels = [LabelBitmap::new(300, 76), LabelBitmap::new(20, 76)]
+                .into_iter()
+                .enumerate()
+                .map(|(index, bitmap)| {
+                    prepare_output(&bitmap, &args, 180)
+                        .map_err(|error| format!("CSV row {}: {error}", index + 1).into())
+                });
+            let mut printer = RecordingPrinter {
+                bluetooth,
+                ..Default::default()
+            };
+            let error = emit_batch(labels, &args, 128, Some(&mut printer))
+                .unwrap_err()
+                .to_string();
+            assert!(error.contains("CSV row 2"), "{error}");
+            let expected = OutputRange::new(10.0, 20.0)
+                .unwrap()
+                .pixel_bounds(180, 300)
+                .unwrap();
+            assert_eq!(
+                printer.raster_lengths,
+                vec![(expected.end - expected.start) as usize]
+            );
+            assert_eq!(*printer.commands.borrow(), vec![0x1a]);
+        }
     }
 
     #[test]
@@ -2108,6 +2326,7 @@ mod tests {
         bluetooth: bool,
         print_calls: usize,
         fail_print_at: Option<usize>,
+        raster_lengths: Vec<usize>,
     }
 
     impl PrintDevice for RecordingPrinter {
@@ -2127,6 +2346,7 @@ mod tests {
             quality: PrintQuality,
         ) -> Result<(), PtouchError> {
             self.print_calls += 1;
+            self.raster_lengths.push(lines.len());
             if self.fail_print_at == Some(self.print_calls) {
                 return Err(PtouchError::Timeout);
             }

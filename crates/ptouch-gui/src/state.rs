@@ -144,6 +144,8 @@ pub struct AppState {
     /// UI-only help state, excluded from document history and serialization.
     pub info_open: bool,
     pub positions_open: bool,
+    /// The current output interval is excluded from layouts and undo history.
+    pub output_range: crate::output_tools::OutputSelection,
     /// Layers changes overlap; layout order retains sequence placement.
     pub layers_view: bool,
     pub history: crate::history::DocumentHistory,
@@ -261,6 +263,7 @@ impl Default for AppState {
             status_tooltip: None,
             info_open: false,
             positions_open: false,
+            output_range: Default::default(),
             layers_view: false,
             history: Default::default(),
             scene_measurement_renderer: None,
