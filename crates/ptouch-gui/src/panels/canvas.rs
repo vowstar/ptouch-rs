@@ -85,28 +85,48 @@ pub fn show_canvas(ui: &mut egui::Ui, state: &mut AppState) {
         state.canvas_drag_target = None;
     }
     state.canvas_hover_target = None;
+    let active_gesture = state.canvas_drag_target.is_some()
+        || ui
+            .ctx()
+            .data_mut(|data| data.get_temp::<CanvasPress>(press_id).is_some());
     let mut snap = ui
         .ctx()
         .data_mut(|data| data.get_temp::<bool>(snap_id).unwrap_or(true));
     ui.horizontal(|ui| {
-        if ui.button("Fit").clicked() {
+        if ui
+            .add_enabled(!active_gesture, egui::Button::new("Fit"))
+            .clicked()
+        {
             state.zoom_fit = true;
         }
-        if ui.button("1:1").clicked() {
+        if ui
+            .add_enabled(!active_gesture, egui::Button::new("1:1"))
+            .clicked()
+        {
             state.zoom = 1.0;
             state.zoom_fit = false;
         }
-        if ui.button("+").clicked() {
+        if ui
+            .add_enabled(!active_gesture, egui::Button::new("+"))
+            .clicked()
+        {
             state.zoom = (state.zoom * 1.25).min(20.0);
             state.zoom_fit = false;
         }
-        if ui.button("−").clicked() {
+        if ui
+            .add_enabled(!active_gesture, egui::Button::new("−"))
+            .clicked()
+        {
             state.zoom = (state.zoom / 1.25).max(0.001);
             state.zoom_fit = false;
         }
         ui.label(format!("Zoom: {:.0}%", state.zoom * 100.0));
-        ui.checkbox(&mut snap, "Snap 0.1 mm");
-        ui.toggle_value(&mut state.positions_open, "Positions");
+    });
+    ui.horizontal(|ui| {
+        ui.add_enabled_ui(!active_gesture, |ui| {
+            ui.checkbox(&mut snap, "Snap 0.1 mm");
+            ui.toggle_value(&mut state.positions_open, "Positions");
+        });
     });
     ui.ctx().data_mut(|data| data.insert_temp(snap_id, snap));
     ui.small(format!("{} mm tape · {:.2} mm printable · edge placement schematic",
@@ -114,7 +134,7 @@ pub fn show_canvas(ui: &mut egui::Ui, state: &mut AppState) {
         state.printable_height_mm()))
         .on_hover_text("Y measures the full tape. Dark bands cannot be printed. Exact top/bottom head offsets are not known; properties use the printable area's origin.");
     let can_edit = state.is_free_layout();
-    let can_drag = can_edit && !state.overall_flip_h;
+    let can_drag = can_edit && !state.overall_flip_h && state.pending_file_action.is_none();
     if let Some(diagnostic) = state.preview_diagnostics.first() {
         let message = if state.preview_diagnostics.len() > 1 {
             format!(
@@ -173,12 +193,6 @@ pub fn show_canvas(ui: &mut egui::Ui, state: &mut AppState) {
     {
         state.zoom = fit_zoom(original_size, canvas_size);
     }
-    let display_size = original_size * state.zoom;
-    let viewport_size = canvas_size - egui::vec2(RULER_WIDTH, RULER_HEIGHT);
-    let content_size = egui::vec2(
-        (display_size.x + PADDING * 2.0 + HANDLE_MARGIN).max(viewport_size.x - 12.0),
-        (display_size.y + PADDING * 2.0).max(viewport_size.y - 12.0),
-    );
     let texture_id = texture.id();
     let dpi = state.target_dpi();
     let (canvas_rect, _) = ui.allocate_exact_size(canvas_size, egui::Sense::hover());
@@ -193,8 +207,70 @@ pub fn show_canvas(ui: &mut egui::Ui, state: &mut AppState) {
             .id(ui.id().with("canvas_scroll"))
             .max_rect(viewport_rect),
     );
+    let scroll_id = canvas_ui.make_persistent_id("label_canvas");
+    let previous_offset = egui::scroll_area::State::load(ui.ctx(), scroll_id)
+        .unwrap_or_default()
+        .offset;
+    let mut requested_offset = None;
+    let zoom_delta = ui.input(|input| input.zoom_delta());
+    let pointer = ui.input(|input| input.pointer.hover_pos());
+    let inside = pointer.is_some_and(|pointer| {
+        viewport_rect.contains(pointer) && ui.ctx().layer_id_at(pointer) == Some(ui.layer_id())
+    });
+    let accept_zoom = crate::canvas_zoom::accepts_input(
+        ui.ctx(),
+        ui.id().with("zoom_guard"),
+        active_gesture
+            || ui.input(|input| input.pointer.any_down() || input.pointer.primary_pressed()),
+        inside,
+    );
+    if accept_zoom
+        && zoom_delta.is_finite()
+        && zoom_delta > 0.0
+        && zoom_delta != 1.0
+        && let Some(pointer) = pointer
+    {
+        let old_zoom = state.zoom;
+        let new_zoom = (old_zoom * zoom_delta).clamp(0.001, 20.0);
+        requested_offset = Some(crate::canvas_zoom::anchored_offset(
+            previous_offset,
+            pointer - viewport_rect.min - egui::vec2(PADDING, PADDING),
+            old_zoom,
+            new_zoom,
+        ));
+        state.zoom = new_zoom;
+        state.zoom_fit = false;
+        ui.ctx().request_repaint();
+    }
+    if !active_gesture
+        && let Some(index) = crate::editor_navigation::take_canvas_reveal(ui.ctx())
+        && let Some(bound) = state
+            .preview_bounds
+            .iter()
+            .find(|bound| bound.element_index == index)
+    {
+        let margin = (physical_height - printable_size.y) * state.zoom / 2.0;
+        let selected = egui::Rect::from_min_size(
+            egui::pos2(
+                PADDING + bound.x as f32 * state.zoom,
+                PADDING + margin + bound.y as f32 * state.zoom,
+            ),
+            egui::vec2(bound.width as f32, bound.height as f32) * state.zoom,
+        );
+        if requested_offset.is_none() {
+            requested_offset =
+                crate::canvas_zoom::reveal_offset(previous_offset, viewport_rect.size(), selected);
+        }
+    }
+    let display_size = original_size * state.zoom;
+    let viewport_size = canvas_size - egui::vec2(RULER_WIDTH, RULER_HEIGHT);
+    let content_size = egui::vec2(
+        (display_size.x + PADDING * 2.0 + HANDLE_MARGIN).max(viewport_size.x - 12.0),
+        (display_size.y + PADDING * 2.0).max(viewport_size.y - 12.0),
+    );
     let mut ruler_label = None;
-    let scroll = egui::ScrollArea::both()
+    let scroll = crate::canvas_zoom::scroll_area(requested_offset)
+        .id_salt("label_canvas")
         .auto_shrink([false, false])
         .scroll_source(egui::scroll_area::ScrollSource {
             drag: egui::scroll_area::DragScroll::Never,
@@ -277,6 +353,10 @@ pub fn show_canvas(ui: &mut egui::Ui, state: &mut AppState) {
                 && painter.clip_rect().contains(start)
                 && ui.ctx().layer_id_at(start) == Some(ui.layer_id())
             {
+                crate::editor_navigation::set_focus(
+                    ui.ctx(),
+                    crate::editor_navigation::EditorFocus::Canvas,
+                );
                 let press_hit = hit(start);
                 let drag = press_hit.filter(|_| can_drag).and_then(|hit| {
                     let index = hit.target.element;
@@ -1244,7 +1324,11 @@ fn dragged_frame(
 }
 
 fn keyboard_move(ui: &egui::Ui, state: &mut AppState, dpi: u16) {
-    if ui.ctx().egui_wants_keyboard_input() {
+    if crate::editor_navigation::focus(ui.ctx()) != crate::editor_navigation::EditorFocus::Canvas
+        || state.pending_file_action.is_some()
+        || egui::Popup::is_any_open(ui.ctx())
+        || ui.ctx().egui_wants_keyboard_input()
+    {
         return;
     }
     let delta = ui.input(|i| {

@@ -28,6 +28,7 @@ pub fn show_layers(ui: &mut egui::Ui, state: &mut AppState) {
         ui.weak("(no elements)");
         return;
     }
+    crate::editor_navigation::list_keyboard(ui, state, &order);
     let can_arrange = state.is_free_layout();
     let mut selection = None;
     let mut action = None;
@@ -54,6 +55,7 @@ pub fn show_layers(ui: &mut egui::Ui, state: &mut AppState) {
                 "{name}\nLayout element {}. Stacking changes keep X/Y and sequence order.",
                 index + 1
             ));
+        crate::editor_navigation::reveal_selected_row(ui, &response, state, index);
         if response.clicked() || response.drag_started() {
             selection = Some(index);
         }
@@ -105,7 +107,24 @@ pub fn show_layers(ui: &mut egui::Ui, state: &mut AppState) {
             element,
             edit: CanvasEditTarget::Content,
         }));
+        crate::editor_navigation::set_focus(
+            ui.ctx(),
+            crate::editor_navigation::EditorFocus::Elements,
+        );
+        crate::editor_navigation::request_canvas_reveal(ui.ctx(), element);
     }
+    if let Some(LayerAction::Reorder(from, to)) = action {
+        state.reorder_layer(from, to);
+    }
+}
+
+pub fn show_layer_actions(ui: &mut egui::Ui, state: &mut AppState) {
+    let order: Vec<_> = ptouch_render::scene::paint_order(&state.elements)
+        .into_iter()
+        .rev()
+        .collect();
+    let can_arrange = state.is_free_layout();
+    let mut action = None;
     ui.add_space(4.0);
     let selected = state.selected_element.and_then(|index| {
         order

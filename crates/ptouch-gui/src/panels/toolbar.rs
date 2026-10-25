@@ -31,6 +31,8 @@ pub enum ToolbarAction {
     Cancel,
     Export,
     Save,
+    SaveAs,
+    New,
     Open,
     Info,
 }
@@ -38,6 +40,9 @@ pub enum ToolbarAction {
 /// Render the toolbar without consuming a document that still has pending edits.
 pub fn show_toolbar(ui: &mut egui::Ui, state: &AppState) -> Option<ToolbarAction> {
     let mut action = None;
+    if ui.available_width() < 900.0 {
+        ui.set_min_height(ui.spacing().interact_size.y * 2.0 + ui.spacing().item_spacing.y);
+    }
     if !state.is_free_layout() {
         ui.horizontal_wrapped(|ui| {
             ui.label(format!("Legacy objects (format v{})", state.document_version));
@@ -47,7 +52,32 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &AppState) -> Option<ToolbarAction
             ui.small("Legacy spacing stays unchanged until converted.");
         });
     }
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
+        ui.menu_button("File", |ui| {
+            for (label, command) in [
+                ("New", ToolbarAction::New),
+                ("Open", ToolbarAction::Open),
+                ("Save", ToolbarAction::Save),
+                ("Save As", ToolbarAction::SaveAs),
+            ] {
+                if ui.button(label).clicked() {
+                    action = Some(command);
+                    ui.close();
+                }
+            }
+            ui.separator();
+            if ui
+                .add_enabled(
+                    state.preview_bitmap.is_some() && !state.needs_rerender,
+                    egui::Button::new("Export Image"),
+                )
+                .clicked()
+            {
+                action = Some(ToolbarAction::Export);
+                ui.close();
+            }
+        });
+        ui.separator();
         if ui
             .add_enabled(state.history.can_undo(), egui::Button::new("Undo"))
             .clicked()
@@ -118,19 +148,7 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &AppState) -> Option<ToolbarAction
         {
             action = Some(ToolbarAction::Cancel);
         }
-        if ui
-            .add_enabled(bitmap, egui::Button::new("Export Image"))
-            .clicked()
-        {
-            action = Some(ToolbarAction::Export);
-        }
         ui.separator();
-        if ui.button("Save Layout").clicked() {
-            action = Some(ToolbarAction::Save);
-        }
-        if ui.button("Open Layout").clicked() {
-            action = Some(ToolbarAction::Open);
-        }
         if ui.button("Info").clicked() {
             action = Some(ToolbarAction::Info);
         }
@@ -239,82 +257,22 @@ pub fn execute_action(state: &mut AppState, action: ToolbarAction) {
             state.status_message = "Cancelling; sent data may still print".into();
         }
         ToolbarAction::Export => do_export_image(state),
-        ToolbarAction::Save => do_save_layout(state),
-        ToolbarAction::Open => do_open_layout(state),
-    }
-}
-
-/// Save the current design to a `.ptl` layout file (TOML with embedded images).
-fn do_save_layout(state: &mut AppState) {
-    if state.elements.is_empty() {
-        state.status_message = "Nothing to save".to_string();
-        return;
-    }
-
-    let document = state.document();
-
-    let text = match document.to_toml_string() {
-        Ok(text) => text,
-        Err(e) => {
-            state.status_message = format!("Save error: {}", e);
-            error!("Layout serialize error: {}", e);
-            return;
+        ToolbarAction::Save => {
+            crate::file_workflow::save(state, crate::document_session::SaveKind::Save);
         }
-    };
-
-    if let Some(path) = crate::widgets::layout_file_dialog()
-        .set_file_name("label.ptl")
-        .save_file()
-    {
-        let save_path: PathBuf = if path.extension().is_none() {
-            path.with_extension("ptl")
-        } else {
-            path
-        };
-        match std::fs::write(&save_path, text) {
-            Ok(()) => {
-                state.status_message = format!("Saved to {}", save_path.display());
-                info!("Saved layout: {}", save_path.display());
-            }
-            Err(e) => {
-                state.status_message = format!("Save error: {}", e);
-                error!("Layout write error: {}", e);
-            }
+        ToolbarAction::SaveAs => {
+            crate::file_workflow::save(state, crate::document_session::SaveKind::SaveAs);
+        }
+        ToolbarAction::New => {
+            crate::file_workflow::request(state, crate::file_workflow::FileAction::New)
+        }
+        ToolbarAction::Open => {
+            crate::file_workflow::request(state, crate::file_workflow::FileAction::Open)
         }
     }
 }
 
-/// Open a `.ptl` layout file, replacing the current design.
-fn do_open_layout(state: &mut AppState) {
-    let Some(path) = crate::widgets::layout_file_dialog().pick_file() else {
-        return;
-    };
-
-    let text = match std::fs::read_to_string(&path) {
-        Ok(text) => text,
-        Err(e) => {
-            state.status_message = format!("Open error: {}", e);
-            error!("Layout read error: {}", e);
-            return;
-        }
-    };
-
-    match LabelDocument::from_toml_str(&text)
-        .map_err(|error| error.to_string())
-        .and_then(|document| apply_layout(state, document))
-    {
-        Ok(()) => {
-            state.status_message = format!("Opened {}", path.display());
-            info!("Opened layout: {}", path.display());
-        }
-        Err(e) => {
-            state.status_message = format!("Open error: {}", e);
-            error!("Layout parse error: {}", e);
-        }
-    }
-}
-
-fn apply_layout(state: &mut AppState, document: LabelDocument) -> Result<(), String> {
+pub(crate) fn apply_layout(state: &mut AppState, document: LabelDocument) -> Result<(), String> {
     // Reject before touching the current design: an unknown width must not
     // inherit the previous document's raster height or differ from CLI export.
     if ptouch_core::tape::find_tape(document.tape_width_mm, document.dpi).is_none() {
@@ -371,7 +329,7 @@ fn do_export_image(state: &mut AppState) {
         };
         match bitmap.save(&save_path) {
             Ok(()) => {
-                state.status_message = format!("Saved to {}", save_path.display());
+                crate::file_workflow::set_file_status(state, "Exported", &save_path);
                 info!("Exported image: {}", save_path.display());
             }
             Err(e) => {

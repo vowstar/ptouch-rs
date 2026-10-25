@@ -168,7 +168,14 @@ impl PtouchApp {
                     quality_modes,
                     tape_width_px,
                 } => {
+                    let initial_blank = self.state.elements.is_empty()
+                        && self.state.document_session.current_path().is_none()
+                        && !self
+                            .state
+                            .document_session
+                            .is_modified(&self.state.document());
                     let old_dpi = self.state.target_dpi();
+                    let old_width_mm = self.state.tape_width_mm;
                     self.state.printer_connected = true;
                     self.state.preview_uses_printer = true;
                     self.state.connecting = false;
@@ -190,8 +197,14 @@ impl PtouchApp {
                     // differs from the transfer width on the PT-P300BT.
                     let old_px = self.state.tape_width_px;
                     self.state.tape_width_px = u32::from(tape_width_px);
-                    if self.state.tape_width_px != old_px || self.state.target_dpi() != old_dpi {
+                    if self.state.tape_width_px != old_px
+                        || self.state.target_dpi() != old_dpi
+                        || self.state.tape_width_mm != old_width_mm
+                    {
                         self.state.mark_dirty();
+                    }
+                    if initial_blank {
+                        self.state.document_session.reset(&self.state.document());
                     }
                 }
                 PrinterResponse::ConnectionError(message) => {
@@ -240,6 +253,11 @@ impl PtouchApp {
         self.state
             .history
             .set_selection(self.state.selected_element);
+        if ctx.input(|input| input.viewport().close_requested()) && !self.state.close_approved {
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            crate::file_workflow::request(&mut self.state, crate::file_workflow::FileAction::Close);
+            commit_focus(&ctx);
+        }
         let revision = self.state.edit_revision;
         let rich_id = egui::Id::new((
             "inline_editor",
@@ -248,7 +266,15 @@ impl PtouchApp {
         ));
         let mut replayed = false;
         let rich_focused = ctx.memory(|m| m.has_focus(rich_id));
-        if (!ctx.text_edit_focused() || rich_focused)
+        let file_action = if self.state.pending_file_action.is_none()
+            && !crate::rich_text_editor::is_composing(&ctx, rich_id)
+        {
+            file_shortcut(&ctx)
+        } else {
+            None
+        };
+        if self.state.pending_file_action.is_none()
+            && (!ctx.text_edit_focused() || rich_focused)
             && !crate::rich_text_editor::is_composing(&ctx, rich_id)
             && !ctx.input(|i| i.pointer.primary_down())
         {
@@ -304,6 +330,18 @@ impl PtouchApp {
         let toolbar_action = egui::Panel::top("toolbar")
             .show(ui, |ui| panels::toolbar::show_toolbar(ui, &self.state))
             .inner;
+        let toolbar_action = file_action.or(toolbar_action);
+        if toolbar_action.is_some_and(|action| {
+            matches!(
+                action,
+                panels::toolbar::ToolbarAction::Save
+                    | panels::toolbar::ToolbarAction::SaveAs
+                    | panels::toolbar::ToolbarAction::New
+                    | panels::toolbar::ToolbarAction::Open
+            )
+        }) {
+            commit_focus(&ctx);
+        }
 
         // Bottom status bar
         egui::Panel::bottom("status_bar").show(ui, |ui| {
@@ -368,12 +406,6 @@ impl PtouchApp {
             if !pending {
                 panels::toolbar::execute_action(&mut self.state, action);
             }
-            if matches!(action, panels::toolbar::ToolbarAction::Open)
-                && self.state.edit_revision != revision
-            {
-                self.state.history = Default::default();
-                replayed = true;
-            }
         }
 
         // Numeric edits and pointer gestures can arrive in the same frame.
@@ -386,10 +418,14 @@ impl PtouchApp {
             panels::canvas::show_canvas(ui, &mut self.state);
         });
 
+        crate::file_workflow::show_pending(&ctx, &mut self.state);
+
         // Re-render preview if dirty
         if self.state.needs_rerender {
             self.update_preview(&ctx);
         }
+
+        crate::file_workflow::finish_open(&mut self.state);
 
         if !replayed
             && (self.state.edit_revision != revision || self.state.history.active_gesture())
@@ -425,6 +461,7 @@ impl PtouchApp {
 
         panels::info::show(&ctx, &mut self.state.info_open);
         panels::coordinates::show(&ctx, &mut self.state);
+        crate::file_workflow::update_title(&ctx, &self.state);
 
         // Periodic repaint so we pick up worker responses even when idle
         ctx.request_repaint_after(std::time::Duration::from_secs(1));
@@ -445,8 +482,52 @@ impl eframe::App for PtouchApp {
     }
 }
 
+fn commit_focus(ctx: &egui::Context) {
+    ctx.memory_mut(|memory| {
+        if let Some(focused) = memory.focused() {
+            memory.surrender_focus(focused);
+        }
+    });
+}
+
+fn file_shortcut(ctx: &egui::Context) -> Option<panels::toolbar::ToolbarAction> {
+    if ctx.input(|input| input.pointer.any_down()) || egui::Popup::is_any_open(ctx) {
+        return None;
+    }
+    for (modifiers, key, action) in [
+        (
+            egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+            egui::Key::S,
+            panels::toolbar::ToolbarAction::SaveAs,
+        ),
+        (
+            egui::Modifiers::COMMAND,
+            egui::Key::S,
+            panels::toolbar::ToolbarAction::Save,
+        ),
+        (
+            egui::Modifiers::COMMAND,
+            egui::Key::O,
+            panels::toolbar::ToolbarAction::Open,
+        ),
+        (
+            egui::Modifiers::COMMAND,
+            egui::Key::N,
+            panels::toolbar::ToolbarAction::New,
+        ),
+    ] {
+        if ctx
+            .input_mut(|input| input.consume_shortcut(&egui::KeyboardShortcut::new(modifiers, key)))
+        {
+            return Some(action);
+        }
+    }
+    None
+}
+
 fn duplicate_shortcut(ctx: &egui::Context, state: &mut AppState) {
-    if !ctx.text_edit_focused()
+    if state.pending_file_action.is_none()
+        && !ctx.text_edit_focused()
         && !ctx.input(|input| input.pointer.any_down())
         && ctx.input_mut(|input| input.consume_key(egui::Modifiers::COMMAND, egui::Key::D))
     {
@@ -1025,3 +1106,7 @@ mod tests {
         assert_eq!(app.state.document_version, 4);
     }
 }
+
+#[cfg(test)]
+#[path = "editor_workflow_tests.rs"]
+mod editor_workflow_tests;

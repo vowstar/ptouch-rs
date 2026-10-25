@@ -3126,6 +3126,7 @@ dependencies = [
  "ptouch-render",
  "rfd",
  "serde",
+ "tempfile",
  "winresource",
 ]
 

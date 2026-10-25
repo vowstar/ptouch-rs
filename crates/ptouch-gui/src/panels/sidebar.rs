@@ -12,17 +12,32 @@ use crate::state::{AppState, CanvasEditTarget, CanvasTarget, PrinterCommand};
 
 /// Render the left sidebar.
 pub fn show_sidebar(ui: &mut egui::Ui, state: &mut AppState) {
-    egui::ScrollArea::vertical().show(ui, |ui| {
-        show_printer_section(ui, state);
-        ui.separator();
-        show_tape_section(ui, state);
-        ui.separator();
-        show_print_options(ui, state);
-        ui.separator();
-        show_mirror_section(ui, state);
-        ui.separator();
-        show_elements_section(ui, state);
-    });
+    let rows = if state.layers_view { 3.0 } else { 2.0 };
+    let footer_height = rows * (ui.spacing().interact_size.y + ui.spacing().item_spacing.y) + 4.0;
+    egui::Panel::bottom("element_actions")
+        .exact_size(footer_height)
+        .show(ui, |ui| {
+            show_element_actions(ui, state);
+        });
+    let settings_height = (ui.available_height() * 0.4).clamp(80.0, 260.0);
+    egui::CollapsingHeader::new("Printer and tape")
+        .default_open(true)
+        .show(ui, |ui| {
+            egui::ScrollArea::vertical()
+                .id_salt("printer_settings")
+                .max_height(settings_height)
+                .show(ui, |ui| {
+                    show_printer_section(ui, state);
+                    ui.separator();
+                    show_tape_section(ui, state);
+                    ui.separator();
+                    show_print_options(ui, state);
+                    ui.separator();
+                    show_mirror_section(ui, state);
+                });
+        });
+    ui.separator();
+    show_elements_section(ui, state);
 }
 
 /// Printer connection section.
@@ -114,13 +129,10 @@ fn show_tape_section(ui: &mut egui::Ui, state: &mut AppState) {
     egui::ComboBox::from_label("Design DPI")
         .selected_text(state.design_dpi.to_string())
         .show_ui(ui, |ui| {
+            let mut selected_dpi = state.design_dpi;
             for dpi in [180, 360] {
-                if ui.selectable_value(&mut state.design_dpi, dpi, dpi.to_string()).changed()
-                    && !state.printer_connected
-                {
-                    state.preview_uses_printer = false;
-                    state.update_tape_pixels();
-                    state.mark_dirty();
+                if ui.selectable_value(&mut selected_dpi, dpi, dpi.to_string()).changed() {
+                    state.set_design_dpi(selected_dpi);
                 }
             }
         }).response.on_hover_text("Saved with the layout; used for offline preview and export. Connected printers use their own DPI.");
@@ -337,30 +349,61 @@ fn show_mirror_section(ui: &mut egui::Ui, state: &mut AppState) {
     }
 }
 
-/// Element list section with reorder and delete controls.
+/// Element rows scroll independently of settings and actions.
 fn show_elements_section(ui: &mut egui::Ui, state: &mut AppState) {
     ui.heading("Elements");
     ui.horizontal(|ui| {
-        ui.selectable_value(&mut state.layers_view, false, "Layout order");
-        ui.selectable_value(&mut state.layers_view, true, "Layers");
+        for (layers, label) in [(false, "Layout order"), (true, "Layers")] {
+            if ui
+                .selectable_value(&mut state.layers_view, layers, label)
+                .clicked()
+            {
+                crate::editor_navigation::set_focus(
+                    ui.ctx(),
+                    crate::editor_navigation::EditorFocus::Elements,
+                );
+            }
+        }
     });
-    if state.layers_view {
-        super::scene_tools::show_layers(ui, state);
-        return;
+    let scroll = egui::ScrollArea::vertical()
+        .id_salt(if state.layers_view {
+            "layer_rows"
+        } else {
+            "element_rows"
+        })
+        .auto_shrink([false, false])
+        .show(ui, |ui| {
+            if state.layers_view {
+                super::scene_tools::show_layers(ui, state);
+            } else {
+                ui.small("Drag rows to change their order.");
+                if state.elements.is_empty() {
+                    ui.label("(no elements)");
+                } else {
+                    show_element_rows(ui, state);
+                }
+            }
+        });
+    if ui.input(|input| input.pointer.primary_pressed())
+        && let Some(pointer) = ui.input(|input| input.pointer.interact_pos())
+        && scroll.inner_rect.contains(pointer)
+        && ui.ctx().layer_id_at(pointer) == Some(ui.layer_id())
+    {
+        crate::editor_navigation::set_focus(
+            ui.ctx(),
+            crate::editor_navigation::EditorFocus::Elements,
+        );
     }
-    ui.small("Select an object. Drag rows to reorder.");
-    ui.add_space(4.0);
+    crate::editor_navigation::scroll_drag_near_edge(ui, &scroll);
+}
 
-    if state.elements.is_empty() {
-        ui.label("(no elements)");
-        return;
-    }
-
+fn show_element_rows(ui: &mut egui::Ui, state: &mut AppState) {
     let mut action: Option<ElementAction> = None;
     let mut selection = None;
+    let order = state.layout_order();
+    crate::editor_navigation::list_keyboard(ui, state, &order);
     let selected = state.selected_canvas_target();
-
-    for (row, idx) in state.layout_order().into_iter().enumerate() {
+    for (row, idx) in order.into_iter().enumerate() {
         let element = &state.elements[idx];
         let object_target = CanvasTarget {
             element: idx,
@@ -451,6 +494,7 @@ fn show_elements_section(ui: &mut egui::Ui, state: &mut AppState) {
                 ))
             })
             .inner;
+        crate::editor_navigation::reveal_selected_row(ui, &response, state, idx);
         if response.clicked() || response.drag_started() {
             selection = Some(object_target);
         }
@@ -542,89 +586,79 @@ fn show_elements_section(ui: &mut egui::Ui, state: &mut AppState) {
     }
     if let Some(target) = selection {
         state.select_canvas_target(Some(target));
+        crate::editor_navigation::set_focus(
+            ui.ctx(),
+            crate::editor_navigation::EditorFocus::Elements,
+        );
+        crate::editor_navigation::request_canvas_reveal(ui.ctx(), target.element);
     }
 
-    ui.add_space(4.0);
-
-    ui.horizontal_wrapped(|ui| {
-        let has_selection = state.selected_element.is_some();
-        if ui
-            .add_enabled(has_selection, egui::Button::new("Duplicate"))
-            .on_hover_text(
-                "Copy with its settings: after the source in a sequence, or at the end for free positioning (Ctrl+D / Cmd+D)",
-            )
-            .clicked()
-            && let Some(idx) = state.selected_element
-        {
-            action = Some(ElementAction::Duplicate(idx));
-        }
-
-        if ui
-            .add_enabled(
-                state.selected_element.and_then(|i| state.layout_neighbor(i, false)).is_some(),
-                egui::Button::new("Up"),
-            )
-            .on_hover_text("Move with attachments within this sequence. Connect sequences to reorder them as one continuous row.")
-            .clicked()
-            && let Some(idx) = state.selected_element
-        {
-            action = Some(ElementAction::MoveUp(idx));
-        }
-
-        if ui
-            .add_enabled(
-                state.selected_element.and_then(|i| state.layout_neighbor(i, true)).is_some(),
-                egui::Button::new("Down"),
-            )
-            .on_hover_text("Move with attachments within this sequence. Connect sequences to reorder them as one continuous row.")
-            .clicked()
-            && let Some(idx) = state.selected_element
-        {
-            action = Some(ElementAction::MoveDown(idx));
-        }
-
-        if ui
-            .add_enabled(has_selection, egui::Button::new("Delete"))
-            .clicked()
-            && let Some(idx) = state.selected_element
-        {
-            action = Some(ElementAction::Delete(idx));
-        }
-    });
-
-    // Apply deferred action
-    if let Some(act) = action {
-        match act {
-            ElementAction::SwapPositions(index, previous) => {
-                state.swap_positions(index, previous);
-            }
-            ElementAction::SwapContent(index, previous) => {
-                state.swap_content(index, previous);
-            }
-            ElementAction::Connect(index) => {
-                state.connect_sequence(index);
-            }
-            ElementAction::Duplicate(idx) => {
-                state.duplicate_element(idx);
-            }
-            ElementAction::MoveUp(idx) => {
-                if let Some(previous) = state.layout_neighbor(idx, false) {
-                    move_element(state, idx, previous);
-                }
-            }
-            ElementAction::MoveDown(idx) => {
-                if let Some(next) = state.layout_neighbor(idx, true) {
-                    move_element(state, idx, next);
-                }
-            }
-            ElementAction::MoveTo(from, to) => move_element(state, from, to),
-            ElementAction::Delete(idx) => {
-                state.delete_element(idx);
-            }
-        }
+    if let Some(action) = action {
+        apply_element_action(state, action);
     }
 }
 
+fn show_element_actions(ui: &mut egui::Ui, state: &mut AppState) {
+    let mut action = None;
+    let selected = state.selected_element;
+    ui.horizontal(|ui| {
+        if ui
+            .add_enabled(selected.is_some(), egui::Button::new("Duplicate"))
+            .clicked()
+            && let Some(index) = selected
+        {
+            action = Some(ElementAction::Duplicate(index));
+        }
+        if ui
+            .add_enabled(selected.is_some(), egui::Button::new("Delete"))
+            .clicked()
+            && let Some(index) = selected
+        {
+            action = Some(ElementAction::Delete(index));
+        }
+    });
+    if state.layers_view {
+        super::scene_tools::show_layer_actions(ui, state);
+    } else {
+        ui.horizontal(|ui| {
+            for (label, forward) in [("Up", false), ("Down", true)] {
+                let next = selected.and_then(|index| state.layout_neighbor(index, forward));
+                if ui
+                    .add_enabled(next.is_some(), egui::Button::new(label))
+                    .on_hover_text("Change the order within this sequence")
+                    .clicked()
+                    && let (Some(index), Some(next)) = (selected, next)
+                {
+                    action = Some(ElementAction::MoveTo(index, next));
+                }
+            }
+        });
+    }
+    if let Some(action) = action {
+        apply_element_action(state, action);
+    }
+}
+
+fn apply_element_action(state: &mut AppState, act: ElementAction) {
+    match act {
+        ElementAction::SwapPositions(index, previous) => {
+            state.swap_positions(index, previous);
+        }
+        ElementAction::SwapContent(index, previous) => {
+            state.swap_content(index, previous);
+        }
+        ElementAction::Connect(index) => {
+            state.connect_sequence(index);
+        }
+        ElementAction::Duplicate(idx) => {
+            state.duplicate_element(idx);
+        }
+        ElementAction::MoveTo(from, to) => move_element(state, from, to),
+        ElementAction::Delete(idx) => {
+            state.delete_element(idx);
+        }
+    }
+}
 #[derive(Clone, Copy)]
 struct ElementDrag(usize);
 
@@ -638,8 +672,6 @@ enum ElementAction {
     SwapContent(usize, usize),
     Connect(usize),
     Duplicate(usize),
-    MoveUp(usize),
-    MoveDown(usize),
     MoveTo(usize, usize),
     Delete(usize),
 }
