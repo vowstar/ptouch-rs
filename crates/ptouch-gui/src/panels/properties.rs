@@ -14,6 +14,7 @@ use ptouch_render::image_loader;
 use ptouch_render::text::TextAlign;
 
 use crate::alignment::ContentAlignment;
+use crate::positioning::Positioning;
 use crate::state::{AppState, CanvasEditTarget, CanvasTarget, LabelElement};
 
 /// Render the right-side properties panel.
@@ -47,16 +48,39 @@ fn show_selected_properties(ui: &mut egui::Ui, state: &mut AppState) {
     if super::scene_tools::show_attachment(ui, state) {
         return;
     }
+    if let Some(frame) = state
+        .position_frames()
+        .get(selected)
+        .and_then(Option::as_ref)
+    {
+        ui.label("Position");
+        egui::Grid::new("resolved_position")
+            .num_columns(2)
+            .show(ui, |ui| {
+                for (name, value) in [
+                    ("X", frame.x_mm),
+                    ("Y", frame.y_mm),
+                    ("Right edge", frame.x_mm + frame.width_mm),
+                ] {
+                    ui.label(name);
+                    ui.label(format!("{value:.3} mm"));
+                    ui.end_row();
+                }
+            });
+        ui.small("Positions start at the upper left corner of the printable area.");
+        ui.separator();
+    }
 
     // We need to clone the element to avoid borrow issues, then write back.
     let scene_font_before = state.uses_scene().then(|| state.font_name.clone());
     let mut element = state.elements[selected].clone();
     let mut changed = false;
     let mut alignment = None;
+    let mut positioning = None;
 
     match &mut element {
         LabelElement::Object(object) => {
-            changed |= show_object_properties(ui, object, state, &mut alignment);
+            changed |= show_object_properties(ui, object, state, &mut alignment, &mut positioning);
         }
         LabelElement::Text {
             content,
@@ -171,11 +195,17 @@ fn show_selected_properties(ui: &mut egui::Ui, state: &mut AppState) {
         if let LabelElement::Object(object) = element {
             if let Err(message) = state.apply_object_edit(selected, object) {
                 state.status_message = message;
+                return;
             }
         } else {
             state.elements[selected] = element;
             state.mark_dirty();
         }
+    }
+    if let Some(choice) = positioning
+        && let Err(message) = state.set_positioning(selected, choice)
+    {
+        state.status_message = message;
     }
 }
 
@@ -280,7 +310,7 @@ fn show_text_properties(ui: &mut egui::Ui, props: TextProps, state: &mut AppStat
         changed = true;
     }
     if let Some(bounds) = text_box {
-        changed |= show_text_box(ui, bounds, state, true);
+        changed |= show_text_box(ui, bounds, state, true, None);
     } else {
         ui.small("Natural width; follows the previous element.");
     }
@@ -467,6 +497,7 @@ fn show_text_box(
     bounds: &mut TextBox,
     state: &mut AppState,
     show_alignment: bool,
+    mut positioning: Option<&mut Option<Positioning>>,
 ) -> bool {
     let mut changed = false;
     let selected = state.selected_element.unwrap_or(0);
@@ -495,6 +526,13 @@ fn show_text_box(
                 .selectable_label(bounds.position == mode, label)
                 .clicked()
             {
+                if let Some(positioning) = positioning.as_mut() {
+                    **positioning = Some(match mode {
+                        PositionMode::Absolute => Positioning::Absolute,
+                        PositionMode::Relative => Positioning::AfterPrevious,
+                    });
+                    continue;
+                }
                 match switch_position_mode(bounds, mode, previous_right) {
                     Ok(did_change) => changed |= did_change,
                     Err(message) => state.status_message = message.into(),
@@ -615,6 +653,7 @@ fn show_layout_properties(
     object: &mut LabelObject,
     resolved: &ContentBox,
     state: &mut AppState,
+    positioning: &mut Option<Positioning>,
 ) -> bool {
     use ptouch_render::object_layout::{LayoutOptions, Placement, WidthSizing};
     let mut changed = false;
@@ -628,58 +667,14 @@ fn show_layout_properties(
     }
     ui.horizontal(|ui| {
         if ui.selectable_label(free, "Free positioning").clicked() && !free {
-            let original = object.clone();
-            if let Some(index) = state.selected_element
-                && let Some((x, _, _, _)) = state.element_rect_mm(index)
-            {
-                object.frame.x_mm = x;
-            }
-            object.frame.position = PositionMode::Absolute;
-            object.content_box.get_or_insert_with(|| resolved.clone());
-            object.layout = Some(LayoutOptions::default());
-            let index = state.selected_element.unwrap();
-            let mut before = original.clone();
-            before.frame.x_mm = state
-                .element_rect_mm(index)
-                .map_or(before.frame.x_mm, |r| r.0);
-            match state.constrain_transform(index, &before, object) {
-                Ok(_) => changed = true,
-                Err(message) => {
-                    *object = original;
-                    state.status_message = message.into();
-                }
-            }
+            *positioning = Some(Positioning::Free);
         }
         if ui
             .selectable_label(!free && !legacy, "In sequence")
             .clicked()
             && (free || legacy)
         {
-            let index = state.selected_element.unwrap();
-            let current_x = state
-                .element_rect_mm(index)
-                .map_or(object.frame.x_mm, |r| r.0);
-            let height = state.printable_height_mm();
-            object.content_box.get_or_insert_with(|| resolved.clone());
-            object.layout.get_or_insert(LayoutOptions {
-                placement: Placement::Flow,
-                width: WidthSizing::Fixed,
-                constrain: false,
-                padding_mm: 0.0,
-            });
-            AppState::use_flow_allocation(object, height);
-            object.layout.as_mut().unwrap().placement = Placement::Flow;
-            object.layout.as_mut().unwrap().width = WidthSizing::Fixed;
-            if let Some(previous) = state.previous_layout_index(index) {
-                let previous_right = state
-                    .element_rect_mm(previous)
-                    .map_or(0.0, |(x, _, w, _)| x + w);
-                object.frame.position = PositionMode::Relative;
-                object.frame.gap_mm = (current_x - previous_right).max(0.0);
-                // Promoting a free predecessor to a flow anchor freezes its
-                // allocation. Its content and visible location are unchanged.
-            }
-            changed = true;
+            *positioning = Some(Positioning::Sequence);
         }
     });
     let free = object
@@ -736,7 +731,7 @@ fn show_layout_properties(
         });
     }
     let old_width = object.frame.width_mm;
-    let edited = show_text_box(ui, &mut object.frame, state, false);
+    let edited = show_text_box(ui, &mut object.frame, state, false, Some(positioning));
     if edited
         && object.frame.width_mm != old_width
         && let Some(policy) = &mut object.layout
@@ -982,6 +977,7 @@ fn show_object_properties(
     object: &mut LabelObject,
     state: &mut AppState,
     alignment: &mut Option<ContentAlignment>,
+    positioning: &mut Option<Positioning>,
 ) -> bool {
     // Resolve this before drawing any controls: the first transform of an old
     // auto-fit object must use the geometry from its previous angle.
@@ -1029,8 +1025,8 @@ fn show_object_properties(
             changed
         }
         CanvasEditTarget::Slot => {
-            ui.label("Layout — position and spacing");
-            let changed = show_layout_properties(ui, object, &resolved, state);
+            ui.label("Position and spacing");
+            let changed = show_layout_properties(ui, object, &resolved, state, positioning);
             ui.small("Allocation width and gap affect following objects. Rotation changes only this object's content.");
             changed
         }

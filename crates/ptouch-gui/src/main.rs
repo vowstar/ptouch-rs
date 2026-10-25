@@ -14,6 +14,9 @@ mod alignment;
 mod app;
 mod history;
 mod panels;
+mod positioning;
+#[cfg(test)]
+mod positioning_tests;
 mod printer_worker;
 mod rich_text_editor;
 mod scene_edit;
