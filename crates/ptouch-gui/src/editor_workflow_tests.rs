@@ -576,3 +576,42 @@ fn design_dpi_changes_are_saved_changes_with_or_without_a_printer() {
         }));
     }
 }
+
+#[test]
+fn repeat_modal_blocks_file_and_document_history_shortcuts() {
+    let context = egui::Context::default();
+    let mut app = app();
+    let size = egui::vec2(1400.0, 900.0);
+    app.state.add_text();
+    frame(&context, &mut app, size, Vec::new());
+    app.state.add_text();
+    let output = frame(&context, &mut app, size, Vec::new());
+    let repeat = text_rect(&output, "Repeat").center();
+    frame(&context, &mut app, size, click(repeat));
+    assert!(crate::panels::repeat_tools::is_open(&context));
+    let before = app.state.document();
+    let selection = app.state.selected_indices();
+    for command in [egui::Key::Z, egui::Key::Y, egui::Key::N] {
+        frame(&context, &mut app, size, vec![key(command, true)]);
+        assert_eq!(app.state.document(), before);
+        assert_eq!(app.state.selected_indices(), selection);
+        assert!(crate::panels::repeat_tools::is_open(&context));
+    }
+    for command in [egui::Key::O, egui::Key::S] {
+        let mut result = None;
+        let mut output = context.run_ui(
+            egui::RawInput {
+                events: vec![key(command, true)],
+                ..Default::default()
+            },
+            |ui| {
+                result = file_shortcut(ui.ctx());
+            },
+        );
+        output.textures_delta.clear();
+        assert!(result.is_none());
+    }
+    crate::file_workflow::new_document(&mut app.state);
+    frame(&context, &mut app, size, Vec::new());
+    assert!(!crate::panels::repeat_tools::is_open(&context));
+}

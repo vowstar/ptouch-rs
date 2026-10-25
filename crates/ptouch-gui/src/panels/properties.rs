@@ -21,7 +21,7 @@ use crate::state::{AppState, CanvasEditTarget, CanvasTarget, LabelElement};
 pub fn show_properties(ui: &mut egui::Ui, state: &mut AppState) {
     super::repeat_tools::buttons(ui, state);
     if state.selected_indices().len() > 1 {
-        ui.push_id(("multiple_objects", state.selection_revision), |ui| {
+        ui.push_id("multiple_objects", |ui| {
             super::selection_tools::show(ui, state)
         });
         return;
@@ -1830,5 +1830,82 @@ mod tests {
         let original = frame.clone();
         assert!(switch_position_mode(&mut frame, PositionMode::Relative, 15.0).is_err());
         assert_eq!(frame, original);
+    }
+}
+
+#[cfg(test)]
+mod multiple_selection_panel_tests {
+    use super::*;
+    fn frame(
+        ctx: &egui::Context,
+        state: &mut AppState,
+        events: Vec<egui::Event>,
+    ) -> Vec<(String, egui::Rect)> {
+        let mut output = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(400.0, 900.0),
+                )),
+                events,
+                ..Default::default()
+            },
+            |ui| show_properties(ui, state),
+        );
+        output.textures_delta.clear();
+        output
+            .shapes
+            .into_iter()
+            .filter_map(|shape| match shape.shape {
+                egui::Shape::Text(text) => Some((
+                    text.galley.text().into(),
+                    text.galley.rect.translate(text.pos.to_vec2()),
+                )),
+                _ => None,
+            })
+            .collect()
+    }
+    #[test]
+    fn common_dimensions_stay_open_when_history_changes_selection_revision() {
+        let ctx = egui::Context::default();
+        ctx.style_mut_of(egui::Theme::Dark, |style| style.animation_time = 0.0);
+        ctx.style_mut_of(egui::Theme::Light, |style| style.animation_time = 0.0);
+        let mut state = AppState::default();
+        state.add_text();
+        state.add_text();
+        state.set_selected_indices(&[0, 1], Some(0));
+        let text = frame(&ctx, &mut state, Vec::new());
+        let pos = text
+            .iter()
+            .find(|(text, _)| text == "Content dimensions")
+            .unwrap()
+            .1
+            .center();
+        frame(
+            &ctx,
+            &mut state,
+            vec![
+                egui::Event::PointerMoved(pos),
+                egui::Event::PointerButton {
+                    pos,
+                    button: egui::PointerButton::Primary,
+                    pressed: true,
+                    modifiers: Default::default(),
+                },
+                egui::Event::PointerButton {
+                    pos,
+                    button: egui::PointerButton::Primary,
+                    pressed: false,
+                    modifiers: Default::default(),
+                },
+            ],
+        );
+        let text = frame(&ctx, &mut state, Vec::new());
+        assert!(text.iter().any(|(text, _)| text == "Width"));
+        let document = state.document();
+        state.restore_document(document);
+        state.set_selected_indices(&[0, 1], Some(0));
+        let text = frame(&ctx, &mut state, Vec::new());
+        assert!(text.iter().any(|(text, _)| text == "Width"));
     }
 }

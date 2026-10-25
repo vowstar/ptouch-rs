@@ -1387,16 +1387,33 @@ fn keyboard_move(ui: &egui::Ui, state: &mut AppState, dpi: u16) {
     {
         return;
     }
-    let delta = ui.input(|i| {
-        let step = if i.modifiers.shift { 1.0 } else { 0.1 };
-        egui::vec2(
-            (i.key_pressed(egui::Key::ArrowRight) as i8 - i.key_pressed(egui::Key::ArrowLeft) as i8)
-                as f32
-                * step,
-            (i.key_pressed(egui::Key::ArrowDown) as i8 - i.key_pressed(egui::Key::ArrowUp) as i8)
-                as f32
-                * step,
-        )
+    let delta = ui.input(|input| {
+        input
+            .events
+            .iter()
+            .filter_map(|event| {
+                let egui::Event::Key {
+                    key,
+                    pressed: true,
+                    modifiers,
+                    ..
+                } = event
+                else {
+                    return None;
+                };
+                if modifiers.ctrl || modifiers.alt || modifiers.command {
+                    return None;
+                }
+                let step = if modifiers.shift { 1.0 } else { 0.1 };
+                Some(match key {
+                    egui::Key::ArrowRight => egui::vec2(step, 0.0),
+                    egui::Key::ArrowLeft => egui::vec2(-step, 0.0),
+                    egui::Key::ArrowDown => egui::vec2(0.0, step),
+                    egui::Key::ArrowUp => egui::vec2(0.0, -step),
+                    _ => return None,
+                })
+            })
+            .fold(egui::Vec2::ZERO, |total, step| total + step)
     });
     if delta == egui::Vec2::ZERO {
         return;
@@ -2866,6 +2883,32 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn quick_shift_arrow_uses_the_key_event_modifiers_after_shift_is_released() {
+        let context = egui::Context::default();
+        let mut state = AppState::default();
+        state.add_text();
+        let before = state.elements[0].as_object().unwrap().frame.x_mm;
+        let mut output = context.run_ui(
+            egui::RawInput {
+                events: vec![
+                    egui::Event::Key {
+                        key: egui::Key::ArrowRight,
+                        physical_key: None,
+                        pressed: true,
+                        repeat: false,
+                        modifiers: egui::Modifiers::SHIFT,
+                    },
+                    egui::Event::ModifiersChanged(egui::Modifiers::NONE),
+                ],
+                ..Default::default()
+            },
+            |ui| keyboard_move(ui, &mut state, 180),
+        );
+        output.textures_delta.clear();
+        assert!((state.elements[0].as_object().unwrap().frame.x_mm - before - 1.0).abs() < 1e-7);
     }
 
     #[test]

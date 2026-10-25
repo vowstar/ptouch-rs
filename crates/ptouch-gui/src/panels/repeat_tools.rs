@@ -10,6 +10,7 @@ use ptouch_render::document::ObjectContent;
 struct Request {
     arrange: bool,
     selection: Vec<usize>,
+    generation: u64,
 }
 #[derive(Clone)]
 struct Form {
@@ -27,8 +28,17 @@ fn form_id() -> egui::Id {
 }
 
 pub fn is_open(ctx: &egui::Context) -> bool {
-    ctx.data_mut(|data| data.get_temp::<Form>(form_id()))
-        .is_some()
+    ctx.data_mut(|data| {
+        data.get_temp::<Form>(form_id()).is_some()
+            || data.get_temp::<Request>(request_id()).is_some()
+    })
+}
+
+pub fn close(ctx: &egui::Context) {
+    ctx.data_mut(|data| {
+        data.remove::<Form>(form_id());
+        data.remove::<Request>(request_id());
+    });
 }
 
 pub fn buttons(ui: &mut egui::Ui, state: &AppState) {
@@ -62,6 +72,7 @@ pub fn buttons(ui: &mut egui::Ui, state: &AppState) {
                     Request {
                         arrange: false,
                         selection: selected.clone(),
+                        generation: state.editor_generation,
                     },
                 )
             });
@@ -77,6 +88,7 @@ pub fn buttons(ui: &mut egui::Ui, state: &AppState) {
                     Request {
                         arrange: true,
                         selection: selected.clone(),
+                        generation: state.editor_generation,
                     },
                 )
             });
@@ -87,6 +99,7 @@ pub fn buttons(ui: &mut egui::Ui, state: &AppState) {
 pub fn show(ctx: &egui::Context, state: &mut AppState) {
     if let Some(request) = ctx.data_mut(|data| data.remove_temp::<Request>(request_id()))
         && request.selection == state.selected_indices()
+        && request.generation == state.editor_generation
     {
         let first = state.layout_order().into_iter().find(|index| {
             request.selection.contains(index)
@@ -135,6 +148,10 @@ pub fn show(ctx: &egui::Context, state: &mut AppState) {
     let Some(mut form) = ctx.data_mut(|data| data.get_temp::<Form>(form_id())) else {
         return;
     };
+    if form.generation != state.editor_generation || state.pending_file_action.is_some() {
+        close(ctx);
+        return;
+    }
     let mut apply = false;
     let mut close = false;
     let response = egui::Modal::new(form_id()).show(ctx, |ui| {

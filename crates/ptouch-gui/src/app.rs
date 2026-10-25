@@ -255,6 +255,7 @@ impl PtouchApp {
             .set_selection(self.state.selected_element);
         if ctx.input(|input| input.viewport().close_requested()) && !self.state.close_approved {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            panels::repeat_tools::close(&ctx);
             crate::file_workflow::request(&mut self.state, crate::file_workflow::FileAction::Close);
             commit_focus(&ctx);
         }
@@ -276,6 +277,7 @@ impl PtouchApp {
             None
         };
         if self.state.pending_file_action.is_none()
+            && !panels::repeat_tools::is_open(&ctx)
             && (!ctx.text_edit_focused() || rich_focused)
             && !crate::rich_text_editor::is_composing(&ctx, rich_id)
             && !ctx.input(|i| i.pointer.primary_down())
@@ -500,7 +502,10 @@ fn commit_focus(ctx: &egui::Context) {
 }
 
 fn file_shortcut(ctx: &egui::Context) -> Option<panels::toolbar::ToolbarAction> {
-    if ctx.input(|input| input.pointer.any_down()) || egui::Popup::is_any_open(ctx) {
+    if ctx.input(|input| input.pointer.any_down())
+        || egui::Popup::is_any_open(ctx)
+        || panels::repeat_tools::is_open(ctx)
+    {
         return None;
     }
     for (modifiers, key, action) in [
