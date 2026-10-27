@@ -3,7 +3,7 @@
 Rust tool for Brother P-Touch USB label printers. CLI and GUI.
 Optional native macOS Bluetooth support is available in `ptouch-core` for the PT-P300BT.
 
-![Sequence editing with text, icons and shapes](https://github.com/user-attachments/assets/eb7f8caa-2d6c-4cb2-b3e2-2922f63f8291)
+![Label editor.](https://github.com/user-attachments/assets/32a6cc00-7376-401e-b39c-2a4cf2319bdb)
 
 ## Features
 
