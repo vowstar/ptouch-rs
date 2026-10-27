@@ -231,10 +231,9 @@ If a CSV row is too short, the program stops the job and keeps earlier output.
 ### Free layout and precise patch-panel labels
 
 Select an object on the canvas or in the element list. Its blue dashed frame
-has a square handle for proportional scaling and a round handle for rotation;
-both follow the rotated content. Click empty canvas space to clear selection.
-There is one selected object, with an explicit **Adjust layout…** action for
-positioning and spacing.
+has a square handle for proportional scaling and a round handle for rotation.
+Both follow the rotated content. Click empty canvas space to clear selection.
+With one object selected, use **Adjust layout…** to change its positioning and spacing.
 
 The properties panel shows X, Y, and the right edge. The Positions table shows
 these coordinates for all objects. Position mode changes keep content dimensions.
