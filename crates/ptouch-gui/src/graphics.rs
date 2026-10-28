@@ -3,7 +3,7 @@
 
 //! Native renderer setup, without an external Windows OpenGL driver.
 
-pub fn native_options(viewport: egui::ViewportBuilder) -> eframe::NativeOptions {
+pub fn native_options(viewport: egui::ViewportBuilder, software: bool) -> eframe::NativeOptions {
     #[cfg(windows)]
     {
         use eframe::egui_wgpu::{WgpuConfiguration, WgpuSetupCreateNew};
@@ -17,7 +17,7 @@ pub fn native_options(viewport: egui::ViewportBuilder) -> eframe::NativeOptions 
             .backend_options
             .dx12
             .shader_compiler = wgpu::Dx12Compiler::Fxc;
-        if std::env::args().any(|arg| arg == "--software-renderer") {
+        if software {
             setup.instance_descriptor.backends = wgpu::Backends::DX12;
             setup.native_adapter_selector = Some(std::sync::Arc::new(|adapters, surface| {
                 adapters
@@ -42,6 +42,7 @@ pub fn native_options(viewport: egui::ViewportBuilder) -> eframe::NativeOptions 
     }
     #[cfg(not(windows))]
     {
+        let _ = software;
         eframe::NativeOptions {
             viewport,
             renderer: eframe::Renderer::Glow,

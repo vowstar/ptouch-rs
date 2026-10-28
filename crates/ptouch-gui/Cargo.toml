@@ -52,7 +52,7 @@ eframe = { version = "0.36", default-features = false, features = ["glow"] }
 [target.'cfg(windows)'.dependencies]
 eframe = { version = "0.36", default-features = false, features = ["wgpu_no_default_features"] }
 wgpu = { version = "30.0", default-features = false, features = ["std", "dx12", "wgsl"] }
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_System_SystemInformation"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 ptouch-core = { path = "../ptouch-core", features = ["bluetooth"] }

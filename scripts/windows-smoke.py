@@ -137,17 +137,14 @@ def close_window(window):
         raise ctypes.WinError(ctypes.get_last_error())
 
 
-def check_gui_startup(gui, report_dir, name, arguments, expect_failure=False, interactive=False):
+def check_gui_startup(gui, report_dir, name, arguments, force_primary_failure=False, interactive=False):
     profile = report_dir / name
     profile.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env.update(LOCALAPPDATA=str(profile / "local"), APPDATA=str(profile / "roaming"), RUST_LOG="error")
     env.pop("WGPU_BACKEND", None)
-    if expect_failure:
-        # A browser-only backend is unavailable to this native Windows binary.
-        env["WGPU_BACKEND"] = "webgpu"
-    elif "--software-renderer" in arguments:
-        # Explicit recovery also overrides a stale backend override.
+    if force_primary_failure:
+        # Fail the first renderer. The ordinary launcher must recover itself.
         env["WGPU_BACKEND"] = "webgpu"
     stdout_path, stderr_path = profile / "stdout.txt", profile / "stderr.txt"
     with stdout_path.open("w") as stdout, stderr_path.open("w") as stderr:
@@ -155,7 +152,7 @@ def check_gui_startup(gui, report_dir, name, arguments, expect_failure=False, in
                                    stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr)
         try:
             if interactive:
-                title = "P-Touch error" if expect_failure else "P-Touch Label Printer"
+                title = "P-Touch Label Printer"
                 deadline = time.monotonic() + 40
                 window = None
                 while time.monotonic() < deadline and process.poll() is None:
@@ -165,11 +162,10 @@ def check_gui_startup(gui, report_dir, name, arguments, expect_failure=False, in
                     time.sleep(0.1)
                 if window is None:
                     raise RuntimeError(f"{name}: visible window not found, exit={process.poll()}")
-                if not expect_failure:
-                    # Exercise an ordinary startup, including its printer worker.
-                    time.sleep(2)
-                    if process.poll() is not None:
-                        raise RuntimeError(f"{name}: window closed immediately")
+                # Exercise an ordinary startup, including its printer worker.
+                time.sleep(2)
+                if process.poll() is not None:
+                    raise RuntimeError(f"{name}: window closed immediately")
                 close_window(window)
             process.wait(timeout=60)
         finally:
@@ -179,15 +175,12 @@ def check_gui_startup(gui, report_dir, name, arguments, expect_failure=False, in
     output, errors = stdout_path.read_text(errors="replace"), stderr_path.read_text(errors="replace")
     log_path = profile / "local" / "ptouch-rs" / "startup.log"
     log = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
-    if expect_failure:
-        if process.returncode == 0 or not any(marker in log for marker in ["Startup error:", "Panic:"]):
-            raise RuntimeError(f"{name}: failed startup did not retain its error\n{errors}\n{log}")
-    elif process.returncode != 0 or "Editor initialized" not in log or "Renderer: Dx12" not in log:
+    if process.returncode != 0 or "Editor initialized" not in log or "Renderer: Dx12" not in log:
         raise RuntimeError(f"{name}: startup failed, exit={process.returncode}\n{errors}\n{log}")
     elif not interactive and "PTOUCH_GUI_SMOKE_OK" not in output:
         raise RuntimeError(f"{name}: renderer did not finish its frames\n{errors}\n{log}")
-    if "--software-renderer" in arguments and "Adapter type: Cpu" not in log:
-        raise RuntimeError(f"{name}: software renderer was not used\n{log}")
+    if force_primary_failure and ("Adapter type: Cpu" not in log or "Trying Windows software rendering" not in log):
+        raise RuntimeError(f"{name}: automatic software fallback was not used\n{log}")
     print(f"{name}: passed")
 
 
@@ -227,8 +220,6 @@ if __name__ == "__main__":
         staged_gui = clean / f"ptouch-gui-windows-{suffix}.exe"
         shutil.copy2(gui, staged_gui)
         check_gui_startup(staged_gui, report_dir, "default-renderer", ["--offline", "--smoke-test"])
-        check_gui_startup(staged_gui, report_dir, "software-renderer", ["--offline", "--smoke-test", "--software-renderer"])
         check_gui_startup(staged_gui, report_dir, "normal-launch", [], interactive=True)
-        check_gui_startup(staged_gui, report_dir, "failed-startup", ["--offline", "--smoke-test"], expect_failure=True)
-        check_gui_startup(staged_gui, report_dir, "visible-startup-error", ["--offline"], expect_failure=True, interactive=True)
-    print("PE architecture, subsystem, icon, CLI startup, clean-folder GUI rendering and startup errors passed")
+        check_gui_startup(staged_gui, report_dir, "automatic-fallback", [], force_primary_failure=True, interactive=True)
+    print("PE architecture, subsystem, icon, CLI startup, clean-folder GUI and automatic fallback passed")
