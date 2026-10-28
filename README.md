@@ -670,6 +670,22 @@ through libusb. If a compatible driver is needed, the existing installation path
 After this the normal Brother software no longer sees the printer. Undo it any
 time by uninstalling or rolling back the driver in Device Manager.
 
+### Windows GUI startup
+
+Open `ptouch-gui-windows-arm64.exe` on Windows ARM64 or
+`ptouch-gui-windows-amd64.exe` on Windows x64. The `ptouch-windows-*.exe`
+files are command-line tools.
+
+The Windows GUI uses Direct3D 12. To use Windows software rendering, run:
+
+```powershell
+.\ptouch-gui-windows-arm64.exe --software-renderer
+```
+
+Startup errors appear in a native dialog and are recorded in
+`%LOCALAPPDATA%\ptouch-rs\startup.log`. Attach that file when reporting a
+startup failure.
+
 ### USB diagnostics and device selection
 
 ```sh

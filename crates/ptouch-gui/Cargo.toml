@@ -34,7 +34,6 @@ egui = "0.36"
 eframe = { version = "0.36", default-features = false, features = [
     "accesskit",
     "default_fonts",
-    "glow",
     "wayland",
     "x11",
     "persistence",
@@ -46,6 +45,14 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 env_logger = "0.11"
 image = { version = "0.25", default-features = false, features = ["default-formats"] }
+
+[target.'cfg(not(windows))'.dependencies]
+eframe = { version = "0.36", default-features = false, features = ["glow"] }
+
+[target.'cfg(windows)'.dependencies]
+eframe = { version = "0.36", default-features = false, features = ["wgpu_no_default_features"] }
+wgpu = { version = "30.0", default-features = false, features = ["std", "dx12", "wgsl"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 ptouch-core = { path = "../ptouch-core", features = ["bluetooth"] }
