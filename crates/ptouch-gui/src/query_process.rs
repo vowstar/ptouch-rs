@@ -11,9 +11,9 @@ use std::time::{Duration, Instant};
 const OUTPUT_LIMIT: usize = 64 * 1024;
 const POLL_INTERVAL: Duration = Duration::from_millis(10);
 
-struct QueryChild(Child);
+struct QueryChild<'a>(&'a mut Child);
 
-impl Drop for QueryChild {
+impl Drop for QueryChild<'_> {
     fn drop(&mut self) {
         // Every return path reaps the query, including reader/spawn errors.
         let _ = self.0.kill();
@@ -42,14 +42,17 @@ fn capture(
 
 pub fn run(mut command: Command, timeout: Duration) -> Result<String, String> {
     let started = Instant::now();
-    let mut child = QueryChild(
-        command
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|e| format!("Cannot start Bluetooth query: {e}"))?,
-    );
+    let mut child = command
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Cannot start Bluetooth query: {e}"))?;
+    collect(&mut child, started, timeout)
+}
+
+fn collect(child: &mut Child, started: Instant, timeout: Duration) -> Result<String, String> {
+    let child = QueryChild(child);
     let (tx, rx) = mpsc::channel();
     capture(
         child
@@ -188,12 +191,22 @@ mod tests {
 
     #[test]
     fn query_timeout_returns_without_waiting_for_the_child_operation() {
+        let mut process = child("sleep")
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
         let start = Instant::now();
-        assert!(
-            run(child("sleep"), Duration::from_millis(100))
-                .unwrap_err()
-                .contains("in time")
-        );
+        let result = collect(&mut process, start, Duration::from_millis(100));
+        let exited = process.try_wait().unwrap().is_some();
+        // Avoid leaking a child even if this regression fails.
+        if !exited {
+            let _ = process.kill();
+            let _ = process.wait();
+        }
+        assert!(result.unwrap_err().contains("in time"));
+        assert!(exited, "query child still runs after the timeout returned");
         assert!(start.elapsed() < Duration::from_secs(5));
     }
 }
