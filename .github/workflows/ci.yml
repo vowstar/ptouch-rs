@@ -103,13 +103,17 @@ jobs:
       if: runner.os == 'Windows'
       run: cargo clippy --workspace --all-targets --all-features --locked --target ${{ matrix.target }} -- -D warnings
 
-    - name: Provision Windows software OpenGL
-      if: runner.os == 'Windows'
-      run: ./scripts/windows-mesa.ps1 -Target ${{ matrix.target }} -Profile debug
-
     - name: Windows executable smoke tests
       if: runner.os == 'Windows'
       run: python scripts/windows-smoke.py --target ${{ matrix.target }} --profile debug
+
+    - name: Upload Windows startup diagnostics
+      if: failure() && runner.os == 'Windows'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      with:
+        name: startup-diagnostics-${{ matrix.target }}
+        path: target/${{ matrix.target }}/debug/windows-smoke/
+        if-no-files-found: ignore
 
     - name: Check packaging scripts
       if: runner.os == 'Linux'

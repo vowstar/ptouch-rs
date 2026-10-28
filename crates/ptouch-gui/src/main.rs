@@ -17,6 +17,7 @@ mod canvas_zoom;
 mod document_session;
 mod editor_navigation;
 mod file_workflow;
+mod graphics;
 mod history;
 mod output_tools;
 mod panels;
@@ -33,6 +34,7 @@ mod selection;
 mod selection_canvas;
 #[cfg(test)]
 mod selection_tests;
+mod startup;
 mod state;
 mod widgets;
 
@@ -52,20 +54,11 @@ fn load_window_icon() -> Option<egui::IconData> {
     })
 }
 
-fn main() -> eframe::Result<()> {
+fn main() -> std::process::ExitCode {
     #[cfg(windows)]
     {
         if let Some(code) = ptouch_core::usbprint::run_worker_from_args() {
             std::process::exit(code);
-        }
-        if let Err(error) = std::env::current_exe()
-            .map_err(|e| e.to_string())
-            .and_then(|path| {
-                ptouch_core::usbprint::configure_worker(path).map_err(|e| e.to_string())
-            })
-        {
-            eprintln!("Cannot configure USBPRINT: {error}");
-            std::process::exit(1);
         }
     }
     if let Some(exit_code) = printer_worker::run_bluetooth_helper_from_args() {
@@ -73,6 +66,30 @@ fn main() -> eframe::Result<()> {
     }
     env_logger::init();
     let smoke_test = std::env::args().any(|arg| arg == "--smoke-test");
+    let report = startup::StartupReport::new(!smoke_test);
+    report.install_panic_hook();
+    #[cfg(windows)]
+    {
+        if let Err(error) = std::env::current_exe()
+            .map_err(|e| e.to_string())
+            .and_then(|path| {
+                ptouch_core::usbprint::configure_worker(path).map_err(|e| e.to_string())
+            })
+        {
+            report.error(&format!("Cannot configure USBPRINT: {error}"));
+            return std::process::ExitCode::FAILURE;
+        }
+    }
+    match run_gui(smoke_test, &report) {
+        Ok(()) => std::process::ExitCode::SUCCESS,
+        Err(error) => {
+            report.error(&error.to_string());
+            std::process::ExitCode::FAILURE
+        }
+    }
+}
+
+fn run_gui(smoke_test: bool, report: &startup::StartupReport) -> eframe::Result<()> {
     // Offline mode leaves USB and Bluetooth untouched while editing/exporting.
     let offline = std::env::args().any(|arg| arg == "--offline");
 
@@ -86,14 +103,25 @@ fn main() -> eframe::Result<()> {
         viewport = viewport.with_icon(std::sync::Arc::new(icon));
     }
 
-    let options = eframe::NativeOptions {
-        viewport,
-        renderer: eframe::Renderer::Glow,
-        ..Default::default()
-    };
+    let options = graphics::native_options(viewport);
+    report.record("Creating renderer and window");
+    let report = report.clone();
     eframe::run_native(
         "P-Touch Label Printer",
         options,
-        Box::new(move |cc| Ok(Box::new(app::PtouchApp::new(cc, smoke_test, offline)))),
+        Box::new(move |cc| {
+            #[cfg(windows)]
+            if let Some(state) = &cc.wgpu_render_state {
+                let adapter = state.adapter.get_info();
+                report.record(&format!(
+                    "Renderer: {:?}\nAdapter: {}\nAdapter type: {:?}",
+                    adapter.backend, adapter.name, adapter.device_type
+                ));
+            }
+            report.record("Initializing editor");
+            let app = app::PtouchApp::new(cc, smoke_test, offline);
+            report.record("Editor initialized");
+            Ok(Box::new(app))
+        }),
     )
 }
