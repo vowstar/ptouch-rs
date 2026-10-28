@@ -92,6 +92,13 @@ jobs:
         cargo test -p ptouch-core --features bluetooth --all-targets --locked --target ${{ matrix.target }}
         cargo test -p ptouch-core --features bluetooth --doc --locked --target ${{ matrix.target }}
 
+    - name: Check macOS Bluetooth permission metadata
+      if: runner.os == 'macOS'
+      run: |
+        plutil -lint data/macos/Info.plist
+        bluetooth_usage="$(plutil -extract NSBluetoothAlwaysUsageDescription raw -o - data/macos/Info.plist)"
+        test -n "$bluetooth_usage"
+
     - name: Windows lint
       if: runner.os == 'Windows'
       run: cargo clippy --workspace --all-targets --all-features --locked --target ${{ matrix.target }} -- -D warnings

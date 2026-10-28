@@ -30,14 +30,16 @@ pub fn printer_worker(
     // An interrupted job can still be printing. Resume status requests only
     // after an explicit user operation, not the background polling timer.
     let mut poll_enabled = true;
-    discover_bluetooth(&resp_tx, &ctx);
     discover_usb(&resp_tx, &ctx);
 
     loop {
         match cmd_rx.recv_timeout(POLL_INTERVAL) {
+            #[cfg(any(target_os = "macos", test))]
             Ok(PrinterCommand::DiscoverBluetooth) => discover_bluetooth(&resp_tx, &ctx),
             Ok(PrinterCommand::Poll(target)) => {
-                discover_usb(&resp_tx, &ctx);
+                if !target.is_bluetooth() {
+                    discover_usb(&resp_tx, &ctx);
+                }
                 current_target = target;
                 poll_enabled = true;
                 do_poll(&current_target, &resp_tx, &ctx);
@@ -103,20 +105,23 @@ fn discover_usb(tx: &mpsc::Sender<PrinterEvent>, ctx: &egui::Context) {
     ctx.request_repaint();
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn discover_bluetooth(resp_tx: &mpsc::Sender<PrinterEvent>, ctx: &egui::Context) {
     #[cfg(target_os = "macos")]
-    let devices = run_helper(&["list"], None)
-        .map(|output| parse_bluetooth_devices(&output))
-        .unwrap_or_else(|message| {
+    let response = match run_query_helper(&["list"]) {
+        Ok(output) => PrinterResponse::BluetoothDevices(parse_bluetooth_devices(&output)),
+        Err(message) => {
             error!("Bluetooth discovery failed: {message}");
-            Vec::new()
-        });
+            PrinterResponse::BluetoothDiscoveryError(message)
+        }
+    };
     #[cfg(not(target_os = "macos"))]
-    let devices = Vec::new();
+    let response =
+        PrinterResponse::BluetoothDiscoveryError("Bluetooth is available on macOS only.".into());
 
     let _ = resp_tx.send(PrinterEvent {
         target: None,
-        response: PrinterResponse::BluetoothDevices(devices),
+        response,
     });
     ctx.request_repaint();
 }
@@ -177,7 +182,7 @@ fn poll_usb(target: &PrinterTarget) -> Result<PrinterResponse, String> {
 fn poll_bluetooth(address: &str) -> Result<PrinterResponse, String> {
     #[cfg(target_os = "macos")]
     {
-        let output = run_helper(&["status", address], None)?;
+        let output = run_query_helper(&["status", address])?;
         parse_bluetooth_status(&output)
     }
     #[cfg(not(target_os = "macos"))]
@@ -323,6 +328,14 @@ fn do_feed_and_cut(
     });
     ctx.request_repaint();
     completed
+}
+
+#[cfg(target_os = "macos")]
+fn run_query_helper(args: &[&str]) -> Result<String, String> {
+    let executable = std::env::current_exe().map_err(|e| e.to_string())?;
+    let mut command = Command::new(executable);
+    command.arg(HELPER_ARG).args(args);
+    crate::query_process::run(command, Duration::from_secs(30))
 }
 
 #[cfg(target_os = "macos")]

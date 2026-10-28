@@ -24,6 +24,8 @@ mod positioning;
 #[cfg(test)]
 mod positioning_tests;
 mod printer_worker;
+#[cfg(any(target_os = "macos", test))]
+mod query_process;
 mod repeat_edit;
 mod rich_text_editor;
 mod scene_edit;
