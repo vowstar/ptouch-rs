@@ -342,6 +342,17 @@ static DEVICE_TABLE: &[DeviceInfo] = &[
             .union(DeviceFlags::USE_INFO_CMD)
             .union(DeviceFlags::D460BT_MAGIC),
     },
+    // This model uses PackBits/P700 commands, without D460BT_MAGIC.
+    DeviceInfo {
+        vid: 0x04f9,
+        pid: 0x224a,
+        name: "PT-E720BT",
+        max_px: 128,
+        dpi: 180,
+        flags: DeviceFlags::RASTER_PACKBITS
+            .union(DeviceFlags::P700_INIT)
+            .union(DeviceFlags::HAS_PRECUT),
+    },
 ];
 
 /// Find a device by USB vendor and product ID.
@@ -379,7 +390,7 @@ mod tests {
 
     #[test]
     fn test_device_count() {
-        assert_eq!(supported_devices().len(), 31);
+        assert_eq!(supported_devices().len(), 32);
     }
 
     #[test]

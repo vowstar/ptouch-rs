@@ -12,7 +12,7 @@ mod windows;
 /// A diagnostic stage, including the underlying error when available.
 #[derive(Debug, Serialize)]
 pub struct Check {
-    /// `ok`, `error`, or `not_requested`.
+    /// `ok`, `error`, `not_requested`, or `not_attempted`.
     pub status: &'static str,
     /// Human-readable result; not intended as a stable error code.
     pub detail: String,
@@ -35,6 +35,21 @@ impl Check {
         Self {
             status: "not_requested",
             detail: "Use --probe to test opening and claiming; no print commands are sent".into(),
+        }
+    }
+
+    fn before_probe(requested: bool, supported: bool) -> Self {
+        if !requested {
+            return Self::skipped();
+        }
+        Self {
+            status: "not_attempted",
+            detail: if supported {
+                "An earlier stage did not succeed"
+            } else {
+                "This model is not supported. USB probe was skipped."
+            }
+            .into(),
         }
     }
 }
@@ -210,16 +225,17 @@ pub fn doctor(probe: bool) -> DoctorReport {
         if desc.vendor_id() != BROTHER_VENDOR_ID {
             continue;
         }
+        let model = device::find_device(desc.vendor_id(), desc.product_id()).map(|info| info.name);
         let mut diagnostic = UsbDiagnostic {
             location: UsbLocation::of(&usb),
             vid: format!("{:04x}", desc.vendor_id()),
             pid: format!("{:04x}", desc.product_id()),
-            model: device::find_device(desc.vendor_id(), desc.product_id()).map(|info| info.name),
+            model,
             configuration_error: None,
             endpoints: None,
-            open: Check::skipped(),
-            claim: Check::skipped(),
-            release: Check::skipped(),
+            open: Check::before_probe(probe, model.is_some()),
+            claim: Check::before_probe(probe, model.is_some()),
+            release: Check::before_probe(probe, model.is_some()),
         };
         match usb
             .active_config_descriptor()
@@ -230,16 +246,6 @@ pub fn doctor(probe: bool) -> DoctorReport {
             Err(error) => diagnostic.configuration_error = Some(error.to_string()),
         }
         if probe && diagnostic.model.is_some() {
-            for stage in [
-                &mut diagnostic.open,
-                &mut diagnostic.claim,
-                &mut diagnostic.release,
-            ] {
-                *stage = Check {
-                    status: "not_attempted",
-                    detail: "An earlier stage did not succeed".into(),
-                };
-            }
             match usb.open() {
                 Ok(handle) => {
                     diagnostic.open = Check::result(Ok(()));
@@ -254,4 +260,22 @@ pub fn doctor(probe: bool) -> DoctorReport {
         report.devices.push(diagnostic);
     }
     report
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn requested_probe_explains_an_unsupported_model() {
+        let check = Check::before_probe(true, false);
+        assert_eq!(check.status, "not_attempted");
+        assert!(check.detail.contains("not supported"));
+        assert!(!check.detail.contains("Use --probe"));
+        assert_eq!(Check::before_probe(false, false).status, "not_requested");
+        assert_eq!(
+            Check::before_probe(true, true).detail,
+            "An earlier stage did not succeed"
+        );
+    }
 }
