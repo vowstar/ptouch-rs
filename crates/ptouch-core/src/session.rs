@@ -1017,6 +1017,55 @@ mod tests {
             },
         )
     }
+
+    #[test]
+    fn e720bt_24mm_status_and_complete_usb_job_use_the_reported_protocol() {
+        let info = crate::device::find_device(0x04f9, 0x224a).unwrap();
+        let transport = ScriptedTransport::new();
+        let mut status = status_packet(0, 0);
+        status[..13]
+            .copy_from_slice(&[0x80, 0x20, 0x42, 0x30, 0x81, 0x30, 0, 0, 0, 0, 24, 0x14, 1]);
+        transport.status_reply.set(Some(status));
+        let mut session = PrinterSession::new(transport, info.into());
+        session.init().unwrap();
+        assert_eq!(session.raster_width_px(), 128);
+        assert_eq!(session.tape_width_px(), Some(128));
+        assert_eq!(session.profile.dpi, 180);
+        assert_eq!(session.status().unwrap().model_code, 0x81);
+        assert_eq!(
+            *session.transport.writes.borrow(),
+            vec![protocol::cmd_init(), vec![0x1b, 0x69, 0x53]]
+        );
+
+        session.transport.writes.borrow_mut().clear();
+        status[18] = 1;
+        session
+            .transport
+            .reads
+            .borrow_mut()
+            .extend([status[..7].to_vec(), status[7..].to_vec()]);
+        session
+            .print_raster(
+                &[vec![0xff; 16], vec![0; 16]],
+                false,
+                true,
+                protocol::PrintQuality::Standard,
+            )
+            .unwrap();
+        let mut raster = vec![0x47, 0x11, 0, 0x0f];
+        raster.extend([0xff; 16]);
+        assert_eq!(
+            *session.transport.writes.borrow(),
+            vec![
+                vec![0x1b, 0x69, 0x61, 1],
+                vec![0x1b, 0x69, 0x4d, 0x40],
+                vec![0x4d, 2],
+                raster,
+                vec![0x5a],
+                vec![0x1a],
+            ]
+        );
+    }
     fn p300bt_packet(kind: u8, phase: u8) -> [u8; STATUS_PACKET_SIZE] {
         let mut packet = status_packet(kind, phase);
         packet[2] = 0x42;
