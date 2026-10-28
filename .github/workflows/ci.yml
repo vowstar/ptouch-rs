@@ -107,6 +107,15 @@ jobs:
       if: runner.os == 'Windows'
       run: python scripts/windows-smoke.py --target ${{ matrix.target }} --profile debug
 
+    - name: Upload Windows preview GUI
+      if: runner.os == 'Windows' && github.event_name == 'pull_request'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      with:
+        name: ptouch-gui-${{ matrix.target }}
+        path: target/${{ matrix.target }}/debug/ptouch-gui.exe
+        retention-days: 7
+        if-no-files-found: error
+
     - name: Upload Windows startup diagnostics
       if: failure() && runner.os == 'Windows'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

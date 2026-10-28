@@ -676,15 +676,9 @@ Open `ptouch-gui-windows-arm64.exe` on Windows ARM64 or
 `ptouch-gui-windows-amd64.exe` on Windows x64. The `ptouch-windows-*.exe`
 files are command-line tools.
 
-The Windows GUI uses Direct3D 12. To use Windows software rendering, run:
-
-```powershell
-.\ptouch-gui-windows-arm64.exe --software-renderer
-```
-
-Startup errors appear in a native dialog and are recorded in
-`%LOCALAPPDATA%\ptouch-rs\startup.log`. Attach that file when reporting a
-startup failure.
+The Windows GUI uses Direct3D 12 and automatically retries with Windows software
+rendering if graphics initialization fails. Double-click the GUI executable to
+start it. If both attempts fail, the error dialog can show the saved report.
 
 ### USB diagnostics and device selection
 

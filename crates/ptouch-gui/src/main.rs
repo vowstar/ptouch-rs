@@ -80,7 +80,14 @@ fn main() -> std::process::ExitCode {
             return std::process::ExitCode::FAILURE;
         }
     }
-    match run_gui(smoke_test, &report) {
+    #[cfg(windows)]
+    let result = report.run_with_renderer_fallback(
+        |software| run_gui(smoke_test, &report, software),
+        |error| matches!(error, eframe::Error::Wgpu(_)),
+    );
+    #[cfg(not(windows))]
+    let result = run_gui(smoke_test, &report, false);
+    match result {
         Ok(()) => std::process::ExitCode::SUCCESS,
         Err(error) => {
             report.error(&error.to_string());
@@ -89,7 +96,11 @@ fn main() -> std::process::ExitCode {
     }
 }
 
-fn run_gui(smoke_test: bool, report: &startup::StartupReport) -> eframe::Result<()> {
+fn run_gui(
+    smoke_test: bool,
+    report: &startup::StartupReport,
+    software: bool,
+) -> eframe::Result<()> {
     // Offline mode leaves USB and Bluetooth untouched while editing/exporting.
     let offline = std::env::args().any(|arg| arg == "--offline");
 
@@ -99,11 +110,15 @@ fn run_gui(smoke_test: bool, report: &startup::StartupReport) -> eframe::Result<
         .with_app_id("io.github.vowstar.ptouch-gui")
         .with_inner_size([1200.0, 700.0])
         .with_min_inner_size([800.0, 500.0]);
+    #[cfg(windows)]
+    {
+        viewport = viewport.with_visible(false);
+    }
     if let Some(icon) = load_window_icon() {
         viewport = viewport.with_icon(std::sync::Arc::new(icon));
     }
 
-    let options = graphics::native_options(viewport);
+    let options = graphics::native_options(viewport, software);
     report.record("Creating renderer and window");
     let report = report.clone();
     eframe::run_native(
@@ -120,7 +135,13 @@ fn run_gui(smoke_test: bool, report: &startup::StartupReport) -> eframe::Result<
             }
             report.record("Initializing editor");
             let app = app::PtouchApp::new(cc, smoke_test, offline);
-            report.record("Editor initialized");
+            report.editor_ready();
+            #[cfg(windows)]
+            {
+                cc.egui_ctx
+                    .send_viewport_cmd(egui::ViewportCommand::Visible(true));
+                cc.egui_ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+            }
             Ok(Box::new(app))
         }),
     )

@@ -6,11 +6,16 @@
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 
 #[derive(Clone)]
 pub struct StartupReport {
     path: Option<PathBuf>,
     show_dialog: bool,
+    editor_initialized: Arc<AtomicBool>,
 }
 
 impl StartupReport {
@@ -25,6 +30,7 @@ impl StartupReport {
         let report = Self {
             path,
             show_dialog: show_dialog && cfg!(windows),
+            editor_initialized: Default::default(),
         };
         report.record(&format!(
             "\nP-Touch {}\nArchitecture: {}\nStarting GUI",
@@ -39,6 +45,31 @@ impl StartupReport {
             && let Err(error) = append_record(path, text)
         {
             eprintln!("Cannot write startup log: {error}");
+        }
+    }
+
+    pub fn editor_ready(&self) {
+        self.editor_initialized.store(true, Ordering::Release);
+        self.record("Editor initialized");
+    }
+
+    #[cfg(any(windows, test))]
+    pub fn run_with_renderer_fallback<E: std::fmt::Display>(
+        &self,
+        mut attempt: impl FnMut(bool) -> Result<(), E>,
+        is_renderer_error: impl FnOnce(&E) -> bool,
+    ) -> Result<(), E> {
+        match attempt(false) {
+            Err(error)
+                if !self.editor_initialized.load(Ordering::Acquire)
+                    && is_renderer_error(&error) =>
+            {
+                self.record(&format!(
+                    "Default renderer failed: {error}\nTrying Windows software rendering"
+                ));
+                attempt(true)
+            }
+            result => result,
         }
     }
 
@@ -69,17 +100,21 @@ impl StartupReport {
     fn dialog(&self, text: &str) {
         #[cfg(windows)]
         {
-            use windows_sys::Win32::UI::WindowsAndMessaging::{MB_ICONERROR, MB_OK, MessageBoxW};
-            let location = self
-                .path
-                .as_ref()
-                .filter(|path| path.is_file())
-                .map(|path| format!("\n\nStartup log: {}", path.display()))
-                .unwrap_or_default();
-            let message = format!(
-                "P-Touch {} encountered an error.\n\n{text}{location}\n\nFor a graphics error, you can try starting with --software-renderer.",
-                env!("CARGO_PKG_VERSION")
-            );
+            use windows_sys::Win32::UI::WindowsAndMessaging::{
+                IDOK, MB_ICONERROR, MB_OK, MB_OKCANCEL, MessageBoxW,
+            };
+            let report = self.path.as_ref().filter(|path| path.is_file());
+            let message = if report.is_some() {
+                format!(
+                    "P-Touch {} could not continue.\n\nSelect OK to show the error report, or Cancel to close.",
+                    env!("CARGO_PKG_VERSION")
+                )
+            } else {
+                format!(
+                    "P-Touch {} could not continue.\n\n{text}",
+                    env!("CARGO_PKG_VERSION")
+                )
+            };
             let wide = |text: &str| {
                 text.replace('\0', " ")
                     .encode_utf16()
@@ -89,13 +124,41 @@ impl StartupReport {
             let title = wide("P-Touch error");
             let message = wide(&message);
             // Both strings remain allocated until this synchronous dialog closes.
-            unsafe {
+            let choice = unsafe {
                 MessageBoxW(
                     std::ptr::null_mut(),
                     message.as_ptr(),
                     title.as_ptr(),
-                    MB_OK | MB_ICONERROR,
-                );
+                    (if report.is_some() { MB_OKCANCEL } else { MB_OK }) | MB_ICONERROR,
+                )
+            };
+            if choice == IDOK
+                && let Some(path) = report
+            {
+                let mut directory = vec![0u16; 32768];
+                // Query the OS path rather than searching the download directory.
+                let length = unsafe {
+                    windows_sys::Win32::System::SystemInformation::GetWindowsDirectoryW(
+                        directory.as_mut_ptr(),
+                        directory.len() as u32,
+                    )
+                } as usize;
+                if length > 0 && length < directory.len() {
+                    use std::os::windows::ffi::OsStringExt;
+                    let explorer =
+                        PathBuf::from(std::ffi::OsString::from_wide(&directory[..length]))
+                            .join("explorer.exe");
+                    if let Err(error) = std::process::Command::new(explorer)
+                        .arg("/select,")
+                        .arg(path)
+                        .stdin(std::process::Stdio::null())
+                        .stdout(std::process::Stdio::null())
+                        .stderr(std::process::Stdio::null())
+                        .spawn()
+                    {
+                        self.record(&format!("Cannot show error report: {error}"));
+                    }
+                }
             }
         }
         #[cfg(not(windows))]
@@ -115,6 +178,14 @@ fn append_record(path: &Path, text: &str) -> io::Result<()> {
 mod tests {
     use super::*;
 
+    fn isolated_report() -> StartupReport {
+        StartupReport {
+            path: None,
+            show_dialog: false,
+            editor_initialized: Default::default(),
+        }
+    }
+
     #[test]
     fn diagnostics_preserve_prior_startup_and_unicode_errors() {
         let directory = tempfile::tempdir().unwrap();
@@ -123,6 +194,7 @@ mod tests {
         let report = StartupReport {
             path: Some(path.clone()),
             show_dialog: false,
+            editor_initialized: Default::default(),
         };
         report.error("Cannot create renderer: 字体");
         let log = fs::read_to_string(path).unwrap();
@@ -139,8 +211,89 @@ mod tests {
         let report = StartupReport {
             path: Some(parent.join("startup.log")),
             show_dialog: false,
+            editor_initialized: Default::default(),
         };
         report.error("Original renderer failure");
         assert_eq!(fs::read_to_string(parent).unwrap(), "existing file");
+    }
+
+    #[test]
+    fn graphics_failure_retries_software_without_user_input() {
+        let report = isolated_report();
+        let mut attempts = Vec::new();
+        let result = report.run_with_renderer_fallback(
+            |software| {
+                attempts.push(software);
+                if software {
+                    Ok(())
+                } else {
+                    Err("graphics unavailable")
+                }
+            },
+            |_| true,
+        );
+        assert_eq!(result, Ok(()));
+        assert_eq!(attempts, [false, true]);
+    }
+
+    #[test]
+    fn healthy_startup_and_non_graphics_errors_are_not_restarted() {
+        for first in [Ok(()), Err("invalid editor state")] {
+            let report = isolated_report();
+            let mut attempts = 0;
+            let result = report.run_with_renderer_fallback(
+                |_| {
+                    attempts += 1;
+                    first
+                },
+                |_| false,
+            );
+            assert_eq!(result, first);
+            assert_eq!(attempts, 1);
+        }
+    }
+
+    #[test]
+    fn an_initialized_editor_is_never_recreated_after_an_error() {
+        let report = isolated_report();
+        let mut attempts = 0;
+        let result = report.run_with_renderer_fallback(
+            |_| {
+                attempts += 1;
+                report.editor_ready();
+                Err("device lost after editing started")
+            },
+            |_| true,
+        );
+        assert_eq!(result, Err("device lost after editing started"));
+        assert_eq!(attempts, 1);
+    }
+
+    #[test]
+    fn failed_fallback_is_bounded_and_preserves_both_errors() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("startup.log");
+        let report = StartupReport {
+            path: Some(path.clone()),
+            show_dialog: false,
+            editor_initialized: Default::default(),
+        };
+        let mut attempts = 0;
+        let result = report.run_with_renderer_fallback(
+            |software| {
+                attempts += 1;
+                Err(if software {
+                    "software unavailable"
+                } else {
+                    "hardware unavailable"
+                })
+            },
+            |_| true,
+        );
+        assert_eq!(result, Err("software unavailable"));
+        report.error(result.unwrap_err());
+        let log = fs::read_to_string(path).unwrap();
+        assert!(log.contains("hardware unavailable") && log.contains("software unavailable"));
+        assert_eq!(attempts, 2);
     }
 }
