@@ -79,6 +79,7 @@ impl PrinterTarget {
 /// Commands sent from the UI thread to the printer worker.
 pub enum PrinterCommand {
     /// Find paired Bluetooth printers supported by this application.
+    #[cfg(any(target_os = "macos", test))]
     DiscoverBluetooth,
     /// Poll for a connected printer (query status only, no init).
     Poll(PrinterTarget),
@@ -107,7 +108,11 @@ pub struct PrinterEvent {
 /// Responses sent from the printer worker back to the UI thread.
 pub enum PrinterResponse {
     /// Paired PT-P300BT printers found by macOS.
+    #[cfg(any(target_os = "macos", test))]
     BluetoothDevices(Vec<PrinterTarget>),
+    /// Bluetooth discovery failed, without changing the USB connection.
+    #[cfg(any(target_os = "macos", test))]
+    BluetoothDiscoveryError(String),
     /// Detected USB locations for explicit selection.
     UsbDevices(Vec<PrinterTarget>),
     /// A printer was found and its status queried.
@@ -222,6 +227,8 @@ pub struct AppState {
     pub printer_target: PrinterTarget,
     /// Paired PT-P300BT targets discovered on macOS.
     pub bluetooth_targets: Vec<PrinterTarget>,
+    pub bluetooth_discovering: bool,
+    pub bluetooth_discovery_error: Option<String>,
     /// Whether a printer operation (print, feed & cut) is in progress.
     pub operation_in_progress: bool,
     pub cancellation: Option<ptouch_core::CancellationToken>,
@@ -309,6 +316,8 @@ impl Default for AppState {
             printer_connected: false,
             printer_target: PrinterTarget::Usb,
             bluetooth_targets: Vec::new(),
+            bluetooth_discovering: false,
+            bluetooth_discovery_error: None,
             operation_in_progress: false,
             cancellation: None,
             usb_targets: Vec::new(),
@@ -1550,7 +1559,51 @@ impl AppState {
     }
 
     pub fn is_printer_busy(&self) -> bool {
-        self.operation_in_progress || self.connecting
+        self.operation_in_progress || self.connecting || self.bluetooth_discovering
+    }
+
+    pub fn request_printer_status(&mut self) {
+        if self.is_printer_busy() || self.printer_cmd_tx.is_none() {
+            return;
+        }
+        self.connecting = true;
+        if self
+            .printer_cmd_tx
+            .as_ref()
+            .unwrap()
+            .send(PrinterCommand::Poll(self.printer_target.clone()))
+            .is_err()
+        {
+            self.connecting = false;
+            self.printer_connected = false;
+            self.printer_model = None;
+            self.printer_status =
+                Some("Printer connection is unavailable. Restart the program.".into());
+        }
+    }
+
+    #[cfg(any(target_os = "macos", test))]
+    pub fn request_bluetooth_discovery(&mut self) {
+        if self.is_printer_busy() || self.printer_cmd_tx.is_none() {
+            return;
+        }
+        self.bluetooth_discovery_error = None;
+        self.bluetooth_discovering = true;
+        if self
+            .printer_cmd_tx
+            .as_ref()
+            .unwrap()
+            .send(PrinterCommand::DiscoverBluetooth)
+            .is_err()
+        {
+            self.bluetooth_discovering = false;
+            self.bluetooth_discovery_error =
+                Some("Bluetooth is unavailable. Restart the program.".into());
+            self.printer_connected = false;
+            self.printer_model = None;
+            self.printer_status =
+                Some("Printer connection is unavailable. Restart the program.".into());
+        }
     }
 
     /// Update the tape width in pixels based on the current tape_width_mm

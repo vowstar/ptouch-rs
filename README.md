@@ -32,7 +32,10 @@ select rows in the list. Ctrl+scroll zooms around the pointer on the canvas.
 PT-9200DX, PT-2300, PT-2420PC, PT-9500PC, PT-9700PC, PT-2450PC, PT-18R,
 PT-1950, PT-2700, PT-1230PC, PT-2430PC, PT-2730, PT-H500, PT-E500, PT-E550W,
 PT-P700, PT-P750W, PT-D410, PT-D450, PT-D460BT, PT-D600, PT-D610BT,
-PT-P710BT, PT-E310BT, PT-E560BT and more.
+PT-P710BT, PT-E310BT, PT-E560BT, PT-E720BT and more.
+
+The PT-E720BT USB profile follows [reported hardware tests](https://github.com/adaptyvbio/ptouch-print/commit/da9f5dd38d7c6c09d274c7c4bc45ede6128299b7).
+It still needs a print check with this program.
 
 Tape widths: 3.5mm, 6mm, 9mm, 12mm, 18mm, 24mm, 36mm.
 
@@ -165,6 +168,8 @@ ptouch-gui
 
 Use `ptouch-gui --offline` to edit and export without opening or polling USB or
 Bluetooth devices. The preview uses the layout's saved design DPI.
+On macOS, use Find Bluetooth printers to list paired PT-P300BT printers.
+USB startup and Refresh do not scan Bluetooth devices.
 **Info** shows the running version and a short editing guide.
 
 - Live label preview with zoom

@@ -8,7 +8,7 @@ use log::info;
 use ptouch_core::protocol::PrintQuality;
 use ptouch_core::tape;
 
-use crate::state::{AppState, CanvasEditTarget, CanvasTarget, PrinterCommand};
+use crate::state::{AppState, CanvasEditTarget, CanvasTarget};
 
 /// Render the left sidebar.
 pub fn show_sidebar(ui: &mut egui::Ui, state: &mut AppState) {
@@ -68,11 +68,25 @@ fn show_printer_section(ui: &mut egui::Ui, state: &mut AppState) {
         state.mark_dirty();
         state.printer_model = None;
         state.printer_status = Some("Connecting...".to_string());
-        state.connecting = true;
         state.auto_cut = !state.printer_target.is_bluetooth();
-        if let Some(ref tx) = state.printer_cmd_tx {
-            let _ = tx.send(PrinterCommand::Poll(state.printer_target.clone()));
-        }
+        state.request_printer_status();
+    }
+
+    #[cfg(any(target_os = "macos", test))]
+    if ui
+        .add_enabled(
+            !state.is_printer_busy() && state.printer_cmd_tx.is_some(),
+            egui::Button::new("Find Bluetooth printers"),
+        )
+        .clicked()
+    {
+        state.request_bluetooth_discovery();
+    }
+    if state.bluetooth_discovering {
+        ui.label("Finding Bluetooth printers...");
+    }
+    if let Some(message) = &state.bluetooth_discovery_error {
+        ui.label(format!("Bluetooth: {message}"));
     }
 
     let model_text = state.printer_model.as_deref().unwrap_or("Not connected");
@@ -88,11 +102,8 @@ fn show_printer_section(ui: &mut egui::Ui, state: &mut AppState) {
             egui::Button::new("Refresh"),
         )
         .clicked()
-        && let Some(ref tx) = state.printer_cmd_tx
     {
-        state.connecting = true;
-        let _ = tx.send(PrinterCommand::Poll(state.printer_target.clone()));
-        let _ = tx.send(PrinterCommand::DiscoverBluetooth);
+        state.request_printer_status();
         info!("Manual printer refresh requested");
     }
 }
@@ -732,6 +743,73 @@ mod tests {
                 _ => None,
             })
             .unwrap_or_else(|| panic!("missing text: {text}"))
+    }
+
+    fn printer_frame(
+        context: &egui::Context,
+        state: &mut AppState,
+        events: Vec<egui::Event>,
+    ) -> egui::FullOutput {
+        let mut output = context.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(320.0, 500.0),
+                )),
+                events,
+                ..Default::default()
+            },
+            |ui| show_printer_section(ui, state),
+        );
+        output.textures_delta.clear();
+        output
+    }
+
+    fn click_printer(context: &egui::Context, state: &mut AppState, label: &str) {
+        let output = printer_frame(context, state, vec![]);
+        let pos = text_position(&output, label);
+        printer_frame(
+            context,
+            state,
+            vec![
+                egui::Event::PointerMoved(pos),
+                pointer_event(pos, egui::PointerButton::Primary, true),
+            ],
+        );
+        printer_frame(
+            context,
+            state,
+            vec![pointer_event(pos, egui::PointerButton::Primary, false)],
+        );
+    }
+
+    #[test]
+    fn usb_refresh_and_bluetooth_discovery_are_explicit_separate_actions() {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let mut state = AppState {
+            printer_cmd_tx: Some(tx),
+            ..AppState::default()
+        };
+        let before = state.document().to_toml_string().unwrap();
+        let context = egui::Context::default();
+        click_printer(&context, &mut state, "Refresh");
+        assert!(matches!(
+            rx.try_recv().unwrap(),
+            crate::state::PrinterCommand::Poll(crate::state::PrinterTarget::Usb)
+        ));
+        assert!(rx.try_recv().is_err());
+        click_printer(&context, &mut state, "Refresh");
+        assert!(rx.try_recv().is_err());
+        state.connecting = false;
+        click_printer(&context, &mut state, "Find Bluetooth printers");
+        assert!(matches!(
+            rx.try_recv().unwrap(),
+            crate::state::PrinterCommand::DiscoverBluetooth
+        ));
+        assert!(rx.try_recv().is_err());
+        click_printer(&context, &mut state, "Refresh");
+        assert!(rx.try_recv().is_err());
+        assert_eq!(state.document().to_toml_string().unwrap(), before);
     }
 
     #[test]

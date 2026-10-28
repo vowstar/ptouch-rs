@@ -156,8 +156,16 @@ impl PtouchApp {
                 PrinterResponse::UsbDevices(devices) => {
                     self.state.usb_targets = devices;
                 }
+                #[cfg(any(target_os = "macos", test))]
                 PrinterResponse::BluetoothDevices(devices) => {
                     self.state.bluetooth_targets = devices;
+                    self.state.bluetooth_discovering = false;
+                    self.state.bluetooth_discovery_error = None;
+                }
+                #[cfg(any(target_os = "macos", test))]
+                PrinterResponse::BluetoothDiscoveryError(message) => {
+                    self.state.bluetooth_discovering = false;
+                    self.state.bluetooth_discovery_error = Some(message);
                 }
                 PrinterResponse::Connected {
                     model_name,
@@ -898,6 +906,59 @@ mod tests {
         assert!(app.state.printer_connected);
         assert!(!app.state.is_printer_busy());
         assert_eq!(app.state.tape_width_px, 64);
+    }
+
+    #[test]
+    fn bluetooth_discovery_failure_preserves_usb_connection_and_document() {
+        let (mut app, tx) = app(AppState {
+            printer_connected: true,
+            printer_model: Some("PT-E720BT".into()),
+            bluetooth_discovering: true,
+            elements: vec![ptouch_render::document::LabelElement::Object(
+                ptouch_render::document::LabelObject::text("PORT 1", Default::default()),
+            )],
+            ..AppState::default()
+        });
+        let document = app.state.document().to_toml_string().unwrap();
+        tx.send(PrinterEvent {
+            target: None,
+            response: PrinterResponse::BluetoothDiscoveryError(
+                "Bluetooth did not respond in time.".into(),
+            ),
+        })
+        .unwrap();
+        app.drain_printer_responses();
+        assert!(app.state.printer_connected);
+        assert_eq!(app.state.printer_model.as_deref(), Some("PT-E720BT"));
+        assert!(!app.state.is_printer_busy());
+        assert!(app.state.bluetooth_discovery_error.is_some());
+        assert_eq!(app.state.document().to_toml_string().unwrap(), document);
+        tx.send(PrinterEvent {
+            target: None,
+            response: PrinterResponse::BluetoothDevices(Vec::new()),
+        })
+        .unwrap();
+        app.drain_printer_responses();
+        assert!(app.state.bluetooth_discovery_error.is_none());
+        assert!(app.state.printer_connected);
+    }
+
+    #[test]
+    fn a_closed_worker_channel_does_not_leave_refresh_busy() {
+        let (command_tx, command_rx) = mpsc::channel();
+        drop(command_rx);
+        let mut state = AppState {
+            printer_connected: true,
+            printer_cmd_tx: Some(command_tx),
+            ..AppState::default()
+        };
+        state.request_printer_status();
+        assert!(!state.is_printer_busy());
+        assert!(!state.printer_connected);
+        assert!(state.printer_status.as_deref().unwrap().contains("Restart"));
+        state.request_bluetooth_discovery();
+        assert!(!state.is_printer_busy());
+        assert!(state.bluetooth_discovery_error.is_some());
     }
 
     #[test]

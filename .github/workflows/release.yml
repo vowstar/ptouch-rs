@@ -133,6 +133,9 @@ jobs:
           chmod +x "$app/Contents/MacOS/ptouch-gui"
           cp data/macos/ptouch-gui.icns "$app/Contents/Resources/ptouch-gui.icns"
           sed "s/__VERSION__/${version}/g" data/macos/Info.plist > "$app/Contents/Info.plist"
+          plutil -lint "$app/Contents/Info.plist"
+          bluetooth_usage="$(plutil -extract NSBluetoothAlwaysUsageDescription raw -o - "$app/Contents/Info.plist")"
+          test -n "$bluetooth_usage"
           ditto -c -k --keepParent "$app" "ptouch-gui-${{ matrix.asset_suffix }}.app.zip"
 
       - name: Upload macOS .app bundle
