@@ -86,7 +86,7 @@ pub fn prepare(state: &AppState, calibrated: bool) -> Result<Cow<'_, LabelBitmap
 pub fn show_controls(ui: &mut egui::Ui, state: &mut AppState) {
     ui.add_space(4.0);
     ui.label("Output");
-    ui.add_enabled_ui(!state.is_printer_busy(), |ui| {
+    ui.scope(|ui| {
         let mut enabled = state.output_range.enabled;
         ui.horizontal(|ui| {
             ui.selectable_value(&mut enabled, false, "Entire label");
@@ -467,5 +467,121 @@ mod tests {
             panic!("expected a cropped print command");
         };
         assert_eq!(raster_lines.len(), 142);
+    }
+
+    #[test]
+    fn range_remains_editable_across_busy_states_and_window_focus_changes() {
+        for busy in 0..3 {
+            let mut state = state(180);
+            state.operation_in_progress = busy == 0;
+            state.connecting = busy == 1;
+            state.bluetooth_discovering = busy == 2;
+            let original = state.document();
+            let ctx = egui::Context::default();
+            let frame = |state: &mut AppState, events| {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(300.0, 500.0),
+                        )),
+                        events,
+                        ..Default::default()
+                    },
+                    |ui| show_controls(ui, state),
+                );
+                output.textures_delta.clear();
+                output
+                    .shapes
+                    .into_iter()
+                    .filter_map(|shape| match shape.shape {
+                        egui::Shape::Text(text) => Some((
+                            text.galley.text().to_owned(),
+                            text.galley.rect.translate(text.pos.to_vec2()),
+                        )),
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>()
+            };
+            frame(&mut state, vec![]);
+            frame(&mut state, vec![egui::Event::WindowFocused(false)]);
+            let text = frame(&mut state, vec![egui::Event::WindowFocused(true)]);
+            let label = text.iter().find(|(text, _)| text == "End").unwrap().1;
+            let pos = text
+                .iter()
+                .find(|(text, rect)| {
+                    text.ends_with(" mm")
+                        && rect.left() > label.right()
+                        && (rect.center().y - label.center().y).abs() < 3.0
+                })
+                .unwrap()
+                .1
+                .center();
+            frame(
+                &mut state,
+                vec![
+                    egui::Event::PointerMoved(pos),
+                    egui::Event::PointerButton {
+                        pos,
+                        button: egui::PointerButton::Primary,
+                        pressed: true,
+                        modifiers: Default::default(),
+                    },
+                    egui::Event::PointerButton {
+                        pos,
+                        button: egui::PointerButton::Primary,
+                        pressed: false,
+                        modifiers: Default::default(),
+                    },
+                ],
+            );
+            frame(
+                &mut state,
+                vec![
+                    egui::Event::Key {
+                        key: egui::Key::A,
+                        physical_key: None,
+                        pressed: true,
+                        repeat: false,
+                        modifiers: egui::Modifiers::COMMAND,
+                    },
+                    egui::Event::Text("25,5".into()),
+                ],
+            );
+            frame(
+                &mut state,
+                vec![egui::Event::Key {
+                    key: egui::Key::Enter,
+                    physical_key: None,
+                    pressed: true,
+                    repeat: false,
+                    modifiers: Default::default(),
+                }],
+            );
+            assert_eq!(state.output_range.end_mm, 25.5, "busy state {busy}");
+            assert!(state.is_printer_busy());
+            assert_eq!(state.document(), original);
+        }
+    }
+
+    #[test]
+    fn editing_next_range_cannot_change_a_queued_print_or_submit_another() {
+        use crate::panels::toolbar::{ToolbarAction, execute_action};
+        let mut state = state(180);
+        state.printer_connected = true;
+        state.printer_max_px = 128;
+        let (tx, rx) = std::sync::mpsc::channel();
+        state.printer_cmd_tx = Some(tx);
+        execute_action(&mut state, ToolbarAction::Print);
+        assert!(state.operation_in_progress);
+        state.output_range.end_mm = 30.0;
+        assert_eq!(prepare(&state, false).unwrap().width(), 142);
+        execute_action(&mut state, ToolbarAction::Print);
+        let crate::state::PrinterCommand::Print { raster_lines, .. } = rx.try_recv().unwrap()
+        else {
+            panic!("expected print")
+        };
+        assert_eq!(raster_lines.len(), 71);
+        assert!(rx.try_recv().is_err());
     }
 }
