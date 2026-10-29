@@ -225,6 +225,8 @@ In Print Options, select Range and set Start and End. The values use the preview
 X ruler after label mirrors. Print and Export corrected image apply any enabled
 calibration after the range. Export Image uses the range without calibration.
 New and Open select Entire label.
+Range settings remain editable during printing. A submitted print keeps the
+range captured when Print was clicked.
 
 ```sh
 ptouch print --layout label.ptl --range 10 30
@@ -287,6 +289,8 @@ drag from an empty area to select several objects. Free objects can move togethe
 Use Arrange selected to set sequence positions and gaps. Properties with
 different values show Different values. A copy or deletion includes attached
 objects and is one Undo step.
+Content dimensions edits Width and Height separately. Enable Keep proportions
+to scale both dimensions together. Use Item width to change sequence spacing.
 
 Select one object and use Repeat to make a row. Total items includes the selected
 object. Select Replace text with numbers to use numbers from 1. Enable Print
