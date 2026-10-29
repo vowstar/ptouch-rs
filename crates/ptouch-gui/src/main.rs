@@ -37,6 +37,7 @@ mod selection_tests;
 mod startup;
 mod state;
 mod widgets;
+mod window_state;
 
 /// Decode the embedded application icon for the running window.
 ///

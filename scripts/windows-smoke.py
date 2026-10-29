@@ -137,6 +137,25 @@ def close_window(window):
         raise ctypes.WinError(ctypes.get_last_error())
 
 
+def check_window_size(window):
+    from ctypes import wintypes
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    user32.GetClientRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
+    user32.GetDpiForWindow.argtypes = [wintypes.HWND]
+    user32.GetDpiForWindow.restype = wintypes.UINT
+    rect = wintypes.RECT()
+    if not user32.GetClientRect(window, ctypes.byref(rect)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    dpi = user32.GetDpiForWindow(window)
+    if not dpi:
+        raise RuntimeError("Window DPI is unavailable")
+    width = (rect.right - rect.left) * 96 / dpi
+    height = (rect.bottom - rect.top) * 96 / dpi
+    if width < 799 or height < 499:
+        raise RuntimeError(f"GUI opened too small: {width:.1f} by {height:.1f} logical pixels")
+    print(f"Usable GUI window: {width:.1f} by {height:.1f} logical pixels")
+
+
 def check_gui_startup(gui, report_dir, name, arguments, force_primary_failure=False, interactive=False):
     profile = report_dir / name
     profile.mkdir(parents=True, exist_ok=True)
@@ -166,6 +185,7 @@ def check_gui_startup(gui, report_dir, name, arguments, force_primary_failure=Fa
                 time.sleep(2)
                 if process.poll() is not None:
                     raise RuntimeError(f"{name}: window closed immediately")
+                check_window_size(window)
                 close_window(window)
             process.wait(timeout=60)
         finally:

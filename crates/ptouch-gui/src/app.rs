@@ -247,6 +247,7 @@ impl PtouchApp {
 impl PtouchApp {
     fn show_editor(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
+        crate::window_state::recover_startup(&ctx);
         ctx.data_mut(|d| d.insert_temp(egui::Id::new("document_history"), true));
         if !self.state.history.initialized() {
             let doc = self.state.document();
