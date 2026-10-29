@@ -224,6 +224,153 @@ fn multi_delete_removes_selected_hosts_with_their_attachments_once() {
 }
 
 #[test]
+fn shared_dimensions_edit_one_axis_and_preserve_free_origins_at_the_tape_edge() {
+    for proportional in [false, true] {
+        let mut state = fixture();
+        let selected = [index(&state, 8), index(&state, 10)];
+        for (offset, index) in selected.iter().enumerate() {
+            let object = state.elements[*index].as_object_mut().unwrap();
+            object.frame.x_mm = offset as f64 * 28.682_222_222_222_22;
+            object.frame.y_mm = 0.0;
+        }
+        state.set_selected_indices(&selected, Some(selected[0]));
+        let before = state.document();
+        assert!(
+            state.apply_shared_edit(SharedEdit::Width(12.0, proportional)),
+            "{}",
+            state.status_message
+        );
+        for index in selected {
+            let old = before.elements[index].as_object().unwrap();
+            let object = state.elements[index].as_object().unwrap();
+            let dimensions = object.content_box.as_ref().unwrap();
+            assert_eq!(dimensions.width_mm, 12.0);
+            assert_eq!(dimensions.height_mm, if proportional { 4.5 } else { 3.0 });
+            assert_eq!(object.frame.x_mm, old.frame.x_mm);
+            assert_eq!(object.frame.y_mm, old.frame.y_mm);
+            let ObjectContent::Text { font_size, .. } = object.content else {
+                unreachable!()
+            };
+            assert_eq!(font_size, Some(if proportional { 9.0 } else { 6.0 }));
+        }
+        let edited = state.document();
+        assert!(
+            state.apply_shared_edit(SharedEdit::Height(2.0, false)),
+            "{}",
+            state.status_message
+        );
+        for index in selected {
+            let dimensions = state.elements[index]
+                .as_object()
+                .unwrap()
+                .content_box
+                .as_ref()
+                .unwrap();
+            assert_eq!(dimensions.height_mm, 2.0);
+            assert_eq!(
+                dimensions.width_mm,
+                edited.elements[index]
+                    .as_object()
+                    .unwrap()
+                    .content_box
+                    .as_ref()
+                    .unwrap()
+                    .width_mm
+            );
+        }
+    }
+}
+
+#[test]
+fn rejected_shared_size_restores_earlier_objects_selection_and_revision() {
+    let mut state = fixture();
+    let selected = [index(&state, 8), index(&state, 1)];
+    state.elements[selected[1]]
+        .as_object_mut()
+        .unwrap()
+        .layout
+        .as_mut()
+        .unwrap()
+        .constrain = true;
+    state.set_selected_indices(&selected, Some(selected[0]));
+    let before = fingerprint(&state);
+    assert!(!state.apply_shared_edit(SharedEdit::Width(18.0, false)));
+    assert_eq!(fingerprint(&state), before);
+    assert!(state.status_message.starts_with("Object "));
+}
+
+#[test]
+fn independent_box_edits_cover_rotations_mirrors_and_every_content_type() {
+    let source = image::RgbaImage::from_fn(3, 2, |x, y| {
+        image::Rgba([0, 0, 0, if x == y { 255 } else { 0 }])
+    });
+    let mut encoded = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::ImageRgba8(source)
+        .write_to(&mut encoded, image::ImageFormat::Png)
+        .unwrap();
+    let contents = [
+        host(1, None, 0.0, false, 3.0).content,
+        ObjectContent::Image {
+            path: None,
+            image_data: encoded.into_inner(),
+            bitmap: None,
+            preserve_alpha: true,
+            coverage: None,
+        },
+        ObjectContent::Line {
+            pattern: Default::default(),
+        },
+        ObjectContent::Shape {
+            style: ShapeStyle::default(),
+        },
+        ObjectContent::CutMark,
+        ObjectContent::Padding,
+    ];
+    for content in contents {
+        for rotation in [0.0, 30.0, 90.0] {
+            for (flip_h, flip_v) in [(false, false), (true, false), (false, true), (true, true)] {
+                let mut state = fixture();
+                state.elements = [0.0, 30.0]
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, x)| {
+                        let mut object = host(index as u64 + 1, None, x, false, 3.0);
+                        object.content = content.clone();
+                        object.rotation = rotation;
+                        object.flip_h = flip_h;
+                        object.flip_v = flip_v;
+                        object.frame.y_mm = 0.0;
+                        object_layout::update_allocation(&mut object);
+                        LabelElement::Object(object)
+                    })
+                    .collect();
+                state.set_selected_indices(&[0, 1], Some(0));
+                let before = state.document();
+                assert!(
+                    state.apply_shared_edit(SharedEdit::Width(9.0, false)),
+                    "{content:?}, {rotation}, {flip_h}, {flip_v}: {}",
+                    state.status_message
+                );
+                for (index, element) in state.elements.iter().enumerate() {
+                    let object = element.as_object().unwrap();
+                    assert_eq!(object.content_box.as_ref().unwrap().width_mm, 9.0);
+                    assert_eq!(object.content_box.as_ref().unwrap().height_mm, 3.0);
+                    assert_eq!(
+                        object.frame.x_mm,
+                        before.elements[index].as_object().unwrap().frame.x_mm
+                    );
+                    assert_eq!(object.frame.y_mm, 0.0);
+                    assert_eq!(
+                        object.content,
+                        before.elements[index].as_object().unwrap().content
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn deleting_all_objects_has_no_dangling_selection_or_anchors() {
     let mut state = fixture();
     state.select_all_objects();

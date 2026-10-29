@@ -146,6 +146,9 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         });
     let mut changes = Vec::new();
     let revision = state.selection_revision;
+    let feedback_id = ui
+        .id()
+        .with(("shared_edit_error", revision, state.editor_generation));
     if all_flow {
         ui.label("Sequence");
         if let Some(value) = number(
@@ -298,6 +301,12 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     }
     if same_type {
         ui.collapsing("Content dimensions", |ui| {
+            let proportions_id = ui.id().with("keep_proportions");
+            let mut proportional = ui
+                .data(|data| data.get_temp::<bool>(proportions_id))
+                .unwrap_or(false);
+            ui.checkbox(&mut proportional, "Keep proportions");
+            ui.data_mut(|data| data.insert_temp(proportions_id, proportional));
             let dimensions: Vec<_> = indices
                 .iter()
                 .filter_map(|index| state.resolved_content_box(*index))
@@ -313,7 +322,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                         .collect::<Vec<_>>(),
                     "Different values",
                 ) {
-                    changes.push(SharedEdit::Width(value));
+                    changes.push(SharedEdit::Width(value, proportional));
                 }
                 if let Some(value) = number(
                     ui,
@@ -325,9 +334,8 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                         .collect::<Vec<_>>(),
                     "Different values",
                 ) {
-                    changes.push(SharedEdit::Height(value));
+                    changes.push(SharedEdit::Height(value, proportional));
                 }
-                ui.small("The object proportions stay the same.");
             }
         });
     }
@@ -348,7 +356,12 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         }
     }
     for change in changes {
-        state.apply_shared_edit(change);
+        let error = (!state.apply_shared_edit(change)).then(|| state.status_message.clone());
+        ui.data_mut(|data| data.insert_temp(feedback_id, error));
+    }
+    if let Some(Some(message)) = ui.data(|data| data.get_temp::<Option<String>>(feedback_id)) {
+        ui.colored_label(ui.visuals().error_fg_color, message);
+        ui.small("No objects changed.");
     }
     apply_action(state, action);
 }
