@@ -16,8 +16,8 @@ use crate::{scene_edit::SceneSnapshot, state::AppState};
 
 #[derive(Clone, Debug)]
 pub enum SharedEdit {
-    Width(f64),
-    Height(f64),
+    Width(f64, bool),
+    Height(f64, bool),
     ItemWidth(f64),
     Gap(f64),
     Rotation(f32),
@@ -522,27 +522,35 @@ impl AppState {
                     .clone();
                 let mut object = before.clone();
                 match &edit {
-                    SharedEdit::Width(value) | SharedEdit::Height(value) => {
+                    SharedEdit::Width(value, proportional)
+                    | SharedEdit::Height(value, proportional) => {
                         if !value.is_finite() || *value <= 0.0 || *value > 10_000.0 {
                             return Err("Enter valid object dimensions.".into());
                         }
                         let mut dimensions = self
                             .resolved_content_box(index)
                             .ok_or("The object dimensions are not available.")?;
-                        let ratio = if matches!(edit, SharedEdit::Width(_)) {
+                        let ratio = if matches!(edit, SharedEdit::Width(..)) {
                             *value / dimensions.width_mm
                         } else {
                             *value / dimensions.height_mm
                         };
-                        dimensions.width_mm *= ratio;
-                        dimensions.height_mm *= ratio;
+                        if *proportional {
+                            dimensions.width_mm *= ratio;
+                            dimensions.height_mm *= ratio;
+                        } else if matches!(edit, SharedEdit::Width(..)) {
+                            dimensions.width_mm = *value;
+                        } else {
+                            dimensions.height_mm = *value;
+                        }
                         object.content_box = Some(dimensions);
                         if let Some(layout) = object.layout.as_mut() {
                             layout.width = WidthSizing::Fixed;
                         }
-                        if let ObjectContent::Text {
-                            font_size, styles, ..
-                        } = &mut object.content
+                        if *proportional
+                            && let ObjectContent::Text {
+                                font_size, styles, ..
+                            } = &mut object.content
                         {
                             if let Some(size) = font_size {
                                 *size *= ratio as f32;
@@ -644,14 +652,39 @@ impl AppState {
                 }
                 let needs_transform = matches!(
                     edit,
-                    SharedEdit::Width(_) | SharedEdit::Height(_) | SharedEdit::Rotation(_)
+                    SharedEdit::Width(..) | SharedEdit::Height(..) | SharedEdit::Rotation(_)
                 );
+                // Numeric size edits grow a free object's box from its origin.
+                // Pointer transforms and attached objects retain their own anchors.
+                let mut origin = before.clone();
+                let resize_from_origin =
+                    matches!(edit, SharedEdit::Width(..) | SharedEdit::Height(..))
+                        && object
+                            .layout
+                            .as_ref()
+                            .is_some_and(|layout| layout.placement == Placement::Free)
+                        && object
+                            .scene
+                            .as_ref()
+                            .is_none_or(|scene| scene.anchor.is_none());
+                if resize_from_origin {
+                    ptouch_render::object_layout::update_allocation(&mut object);
+                    origin.frame.width_mm = object.frame.width_mm;
+                    origin.frame.height_mm = object.frame.height_mm;
+                }
                 if needs_transform
                     && self
-                        .constrain_transform(index, &before, &mut object)
-                        .map_err(str::to_string)?
+                        .constrain_transform(index, &origin, &mut object)
+                        .map_err(|error| format!("Object {}: {error}", index + 1))?
                 {
-                    return Err("An object cannot keep its position at this size.".into());
+                    return Err(format!(
+                        "Object {} cannot keep its position at this size.",
+                        index + 1
+                    ));
+                }
+                if resize_from_origin {
+                    object.frame.x_mm = before.frame.x_mm;
+                    object.frame.y_mm = before.frame.y_mm;
                 }
                 self.apply_object_edit(index, object)?;
             }
