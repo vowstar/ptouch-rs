@@ -1,0 +1,72 @@
+name: Windows startup
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-startup-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  startup:
+    name: Release startup (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Test published Windows GUIs
+        run: python scripts/windows-startup.py --target ${{ matrix.target }} --references-only
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Restore dependencies
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release GUI
+        run: cargo build --release -p ptouch-gui --locked --target ${{ matrix.target }}
+
+      - name: Test release GUI startup and saved settings
+        run: python scripts/windows-startup.py --target ${{ matrix.target }}
+
+      - name: Upload startup results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: startup-regression-${{ matrix.target }}
+          path: |
+            target/${{ matrix.target }}/release/startup-regression/**/result.json
+            target/${{ matrix.target }}/release/startup-regression/**/startup.log
+            target/${{ matrix.target }}/release/startup-regression/**/stdout.txt
+            target/${{ matrix.target }}/release/startup-regression/**/stderr.txt
+          if-no-files-found: ignore
+
+      - name: Upload Windows release preview
+        if: success() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ptouch-gui-release-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/ptouch-gui.exe
+          if-no-files-found: error
