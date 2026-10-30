@@ -140,9 +140,9 @@ The release workflow publishes downloads on the
 Windows and Linux ARM64 assets are available from v0.8.4. macOS ARM64 assets
 already exist in v0.8.3. Check the selected release's asset list.
 
-The GUI requires OpenGL 2.0 or later. Windows CI uses a pinned Mesa software
-renderer because hosted machines lack a suitable graphics driver. That CI-only
-DLL is not shipped. Native CI rendering does not validate a physical host's GPU driver.
+The Windows GUI uses Direct3D 12 with automatic software fallback. Linux and
+macOS use OpenGL 2.0 or later. Native CI rendering does not validate a physical
+host's GPU driver.
 
 | Platform | Rust target | Native CI runner | Hardware validation |
 | --- | --- | --- | --- |
@@ -683,6 +683,8 @@ files are command-line tools.
 The Windows GUI uses Direct3D 12 and automatically retries with Windows software
 rendering if graphics initialization fails. Double-click the GUI executable to
 start it. If both attempts fail, the error dialog can show the saved report.
+The report is saved at `%LOCALAPPDATA%\ptouch-rs\startup.log`, with
+`%TEMP%\ptouch-rs\startup.log` as a fallback if that location is unavailable.
 
 ### USB diagnostics and device selection
 
