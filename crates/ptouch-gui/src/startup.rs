@@ -20,23 +20,37 @@ pub struct StartupReport {
 
 impl StartupReport {
     pub fn new(show_dialog: bool) -> Self {
+        let initial = format!(
+            "\nP-Touch {}\nArchitecture: {}\nStarting GUI",
+            env!("CARGO_PKG_VERSION"),
+            std::env::consts::ARCH
+        );
         #[cfg(windows)]
-        let path = std::env::var_os("LOCALAPPDATA")
-            .filter(|value| !value.is_empty())
-            .map(PathBuf::from)
-            .map(|path| path.join("ptouch-rs").join("startup.log"));
+        let path = initialize_log(
+            std::env::var_os("LOCALAPPDATA")
+                .filter(|value| !value.is_empty())
+                .map(PathBuf::from)
+                .map(|path| path.join("ptouch-rs").join("startup.log")),
+            std::env::temp_dir().join("ptouch-rs").join("startup.log"),
+            &initial,
+        );
         #[cfg(not(windows))]
-        let path = None;
+        let path = {
+            let _ = initial;
+            None
+        };
         let report = Self {
             path,
             show_dialog: show_dialog && cfg!(windows),
             editor_initialized: Default::default(),
         };
-        report.record(&format!(
-            "\nP-Touch {}\nArchitecture: {}\nStarting GUI",
-            env!("CARGO_PKG_VERSION"),
-            std::env::consts::ARCH
-        ));
+        if let Ok(executable) = std::env::current_exe() {
+            report.record(&format!(
+                "Process: {}\nExecutable: {}",
+                std::process::id(),
+                executable.display()
+            ));
+        }
         report
     }
 
@@ -166,6 +180,17 @@ impl StartupReport {
     }
 }
 
+#[cfg(any(windows, test))]
+fn initialize_log(primary: Option<PathBuf>, fallback: PathBuf, text: &str) -> Option<PathBuf> {
+    for path in primary.into_iter().chain(Some(fallback)) {
+        match append_record(&path, text) {
+            Ok(()) => return Some(path),
+            Err(error) => eprintln!("Cannot write startup log at {}: {error}", path.display()),
+        }
+    }
+    None
+}
+
 fn append_record(path: &Path, text: &str) -> io::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
@@ -215,6 +240,46 @@ mod tests {
         };
         report.error("Original renderer failure");
         assert_eq!(fs::read_to_string(parent).unwrap(), "existing file");
+    }
+
+    #[test]
+    fn startup_log_falls_back_without_overwriting_unavailable_primary() {
+        let directory = tempfile::tempdir().unwrap();
+        let blocked = directory.path().join("blocked");
+        fs::write(&blocked, "existing file").unwrap();
+        let fallback = directory.path().join("temporary").join("startup.log");
+        assert_eq!(
+            initialize_log(Some(blocked.join("startup.log")), fallback.clone(), "start"),
+            Some(fallback.clone())
+        );
+        assert_eq!(fs::read_to_string(blocked).unwrap(), "existing file");
+        assert_eq!(fs::read_to_string(fallback).unwrap(), "start\n");
+    }
+
+    #[test]
+    fn startup_log_prefers_primary_and_appends_each_launch() {
+        let directory = tempfile::tempdir().unwrap();
+        let primary = directory.path().join("local").join("startup.log");
+        let fallback = directory.path().join("temporary").join("startup.log");
+        for message in ["first", "second"] {
+            assert_eq!(
+                initialize_log(Some(primary.clone()), fallback.clone(), message),
+                Some(primary.clone())
+            );
+        }
+        assert_eq!(fs::read_to_string(primary).unwrap(), "first\nsecond\n");
+        assert!(!fallback.exists());
+    }
+
+    #[test]
+    fn startup_log_handles_missing_and_unavailable_locations() {
+        let directory = tempfile::tempdir().unwrap();
+        let fallback = directory.path().join("startup.log");
+        assert_eq!(
+            initialize_log(None, fallback.clone(), "start"),
+            Some(fallback.clone())
+        );
+        assert!(initialize_log(None, fallback.join("not-a-directory"), "start").is_none());
     }
 
     #[test]

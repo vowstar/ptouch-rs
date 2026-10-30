@@ -65,10 +65,18 @@ fn main() -> std::process::ExitCode {
     if let Some(exit_code) = printer_worker::run_bluetooth_helper_from_args() {
         std::process::exit(exit_code);
     }
-    env_logger::init();
     let smoke_test = std::env::args().any(|arg| arg == "--smoke-test");
     let report = startup::StartupReport::new(!smoke_test);
     report.install_panic_hook();
+    if let Err(error) = env_logger::try_init() {
+        report.record(&format!("Logger setup: {error}"));
+    }
+    run_application(smoke_test, &report)
+}
+
+// Keep GUI setup and its stack frames out of the diagnostic entry point.
+#[inline(never)]
+fn run_application(smoke_test: bool, report: &startup::StartupReport) -> std::process::ExitCode {
     #[cfg(windows)]
     {
         if let Err(error) = std::env::current_exe()
@@ -83,11 +91,11 @@ fn main() -> std::process::ExitCode {
     }
     #[cfg(windows)]
     let result = report.run_with_renderer_fallback(
-        |software| run_gui(smoke_test, &report, software),
+        |software| run_gui(smoke_test, report, software),
         |error| matches!(error, eframe::Error::Wgpu(_)),
     );
     #[cfg(not(windows))]
-    let result = run_gui(smoke_test, &report, false);
+    let result = run_gui(smoke_test, report, false);
     match result {
         Ok(()) => std::process::ExitCode::SUCCESS,
         Err(error) => {
@@ -97,6 +105,7 @@ fn main() -> std::process::ExitCode {
     }
 }
 
+#[inline(never)]
 fn run_gui(
     smoke_test: bool,
     report: &startup::StartupReport,

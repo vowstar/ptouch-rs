@@ -10,6 +10,11 @@
 fn main() {
     #[cfg(target_os = "windows")]
     {
+        // Leave headroom for GUI initialization on the Windows main thread.
+        // Reserve address space only; keep the linker's normal initial commit.
+        if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
+            println!("cargo:rustc-link-arg-bin=ptouch-gui=/STACK:8388608");
+        }
         // build.rs runs with the crate root as the working directory.
         let icon = "../../data/windows/ptouch-gui.ico";
         println!("cargo:rerun-if-changed={icon}");

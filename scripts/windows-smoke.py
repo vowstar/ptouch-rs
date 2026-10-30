@@ -156,16 +156,24 @@ def check_window_size(window):
     print(f"Usable GUI window: {width:.1f} by {height:.1f} logical pixels")
 
 
-def check_gui_startup(gui, report_dir, name, arguments, force_primary_failure=False, interactive=False):
-    profile = report_dir / name
-    profile.mkdir(parents=True, exist_ok=True)
+def check_gui_startup(gui, report_dir, name, arguments, force_primary_failure=False,
+                      interactive=False, profile=None, hold_seconds=5):
+    run_dir = report_dir / name
+    run_dir.mkdir(parents=True, exist_ok=True)
+    profile = profile or run_dir / "profile"
+    for folder in ("local", "roaming", "temporary"):
+        (profile / folder).mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
-    env.update(LOCALAPPDATA=str(profile / "local"), APPDATA=str(profile / "roaming"), RUST_LOG="error")
+    env.update(LOCALAPPDATA=str(profile / "local"), APPDATA=str(profile / "roaming"),
+               TEMP=str(profile / "temporary"), TMP=str(profile / "temporary"), RUST_LOG="error")
     env.pop("WGPU_BACKEND", None)
     if force_primary_failure:
         # Fail the first renderer. The ordinary launcher must recover itself.
         env["WGPU_BACKEND"] = "webgpu"
-    stdout_path, stderr_path = profile / "stdout.txt", profile / "stderr.txt"
+    logs = [profile / folder / "ptouch-rs" / "startup.log" for folder in ("local", "temporary")]
+    offsets = {path: path.stat().st_size if path.is_file() else 0 for path in logs}
+    stdout_path, stderr_path = run_dir / "stdout.txt", run_dir / "stderr.txt"
+    failure = None
     with stdout_path.open("w") as stdout, stderr_path.open("w") as stderr:
         process = subprocess.Popen([str(gui), *arguments], cwd=gui.parent, env=env,
                                    stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr)
@@ -182,26 +190,34 @@ def check_gui_startup(gui, report_dir, name, arguments, force_primary_failure=Fa
                 if window is None:
                     raise RuntimeError(f"{name}: visible window not found, exit={process.poll()}")
                 # Exercise an ordinary startup, including its printer worker.
-                time.sleep(2)
+                time.sleep(hold_seconds)
                 if process.poll() is not None:
                     raise RuntimeError(f"{name}: window closed immediately")
                 check_window_size(window)
                 close_window(window)
             process.wait(timeout=60)
+        except Exception as error:
+            failure = error
         finally:
             if process.poll() is None:
                 process.kill()
                 process.wait(timeout=10)
     output, errors = stdout_path.read_text(errors="replace"), stderr_path.read_text(errors="replace")
-    log_path = profile / "local" / "ptouch-rs" / "startup.log"
-    log = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
-    if process.returncode != 0 or "Editor initialized" not in log or "Renderer: Dx12" not in log:
-        raise RuntimeError(f"{name}: startup failed, exit={process.returncode}\n{errors}\n{log}")
+    log = "\n".join(path.read_bytes()[offsets[path]:].decode("utf-8", errors="replace")
+                    for path in logs if path.is_file())
+    (run_dir / "startup.log").write_text(log, encoding="utf-8")
+    result = {"executable": str(gui), "exit_code": process.returncode,
+              "exit_hex": f"0x{process.returncode & 0xffffffff:08X}",
+              "fresh_log": bool(log), "failure": str(failure) if failure else None}
+    (run_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+    if failure or process.returncode != 0 or "Editor initialized" not in log or "Renderer: Dx12" not in log:
+        raise RuntimeError(f"{name}: startup failed, exit={result['exit_hex']}, {failure}\n{errors}\n{log}")
     elif not interactive and "PTOUCH_GUI_SMOKE_OK" not in output:
         raise RuntimeError(f"{name}: renderer did not finish its frames\n{errors}\n{log}")
     if force_primary_failure and ("Adapter type: Cpu" not in log or "Trying Windows software rendering" not in log):
         raise RuntimeError(f"{name}: automatic software fallback was not used\n{log}")
     print(f"{name}: passed")
+    return result
 
 
 if __name__ == "__main__":
