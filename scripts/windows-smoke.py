@@ -3,6 +3,7 @@
 """Check Windows executable architecture, subsystem, icons, and native startup."""
 
 import argparse
+from contextlib import contextmanager
 import ctypes
 import json
 import os
@@ -156,6 +157,41 @@ def check_window_size(window):
     print(f"Usable GUI window: {width:.1f} by {height:.1f} logical pixels")
 
 
+@contextmanager
+def isolated_settings(profile):
+    """Swap only this application's settings; eframe ignores the APPDATA override."""
+    if os.name != "nt":
+        yield
+        return
+    from ctypes import wintypes
+    shell32 = ctypes.WinDLL("shell32", use_last_error=True)
+    shell32.SHGetFolderPathW.argtypes = [wintypes.HWND, ctypes.c_int, wintypes.HANDLE,
+                                       wintypes.DWORD, wintypes.LPWSTR]
+    shell32.SHGetFolderPathW.restype = wintypes.LONG
+    directory = ctypes.create_unicode_buffer(32768)
+    if shell32.SHGetFolderPathW(None, 0x1A, None, 0, directory) != 0:  # CSIDL_APPDATA
+        raise RuntimeError("Cannot locate native roaming application data")
+    relative = Path("io.github.vowstar.ptouch-gui") / "data" / "app.ron"
+    actual = Path(directory.value) / relative
+    saved = profile / "roaming" / relative
+    original = actual.read_bytes() if actual.is_file() else None
+    actual.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        if saved.is_file():
+            actual.write_bytes(saved.read_bytes())
+        else:
+            actual.unlink(missing_ok=True)
+        yield
+    finally:
+        if actual.is_file():
+            saved.parent.mkdir(parents=True, exist_ok=True)
+            saved.write_bytes(actual.read_bytes())
+        if original is None:
+            actual.unlink(missing_ok=True)
+        else:
+            actual.write_bytes(original)
+
+
 def check_gui_startup(gui, report_dir, name, arguments, force_primary_failure=False,
                       interactive=False, profile=None, hold_seconds=5):
     run_dir = report_dir / name
@@ -174,7 +210,7 @@ def check_gui_startup(gui, report_dir, name, arguments, force_primary_failure=Fa
     offsets = {path: path.stat().st_size if path.is_file() else 0 for path in logs}
     stdout_path, stderr_path = run_dir / "stdout.txt", run_dir / "stderr.txt"
     failure = None
-    with stdout_path.open("w") as stdout, stderr_path.open("w") as stderr:
+    with isolated_settings(profile), stdout_path.open("w") as stdout, stderr_path.open("w") as stderr:
         process = subprocess.Popen([str(gui), *arguments], cwd=gui.parent, env=env,
                                    stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr)
         try:
