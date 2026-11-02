@@ -138,6 +138,86 @@ def close_window(window):
         raise ctypes.WinError(ctypes.get_last_error())
 
 
+def check_cli_launches(cli, report_dir):
+    """A missing command must not block scripts or an existing shell."""
+    report_dir.mkdir(parents=True, exist_ok=True)
+    options = dict(stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=15)
+    for name, arguments, shell in (
+        ("redirected", [str(cli)], False),
+        ("cmd", [str(cli)], True),
+        ("powershell", ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+                        "& '" + str(cli).replace("'", "''") + "'; exit $LASTEXITCODE"], False),
+    ):
+        result = subprocess.run(arguments, shell=shell, **options)
+        (report_dir / f"{name}.txt").write_text(result.stdout + result.stderr, encoding="utf-8")
+        if result.returncode != 2 or "Usage:" not in result.stdout + result.stderr:
+            raise RuntimeError(f"{name}: no-argument CLI must show help and exit 2")
+    instructions = subprocess.check_output([str(cli), "gui"], text=True, timeout=15)
+    suffix = "arm64" if "arm64" in cli.name else "amd64"
+    if f"ptouch-gui-windows-{suffix}.exe" not in instructions:
+        raise RuntimeError("GUI instructions point to the wrong executable")
+    # Create a real standalone console without inheriting the CI runner's pipes.
+    # This is the classic Explorer double-click case.
+    from ctypes import wintypes
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+
+    class StartupInfo(ctypes.Structure):
+        _fields_ = [("cb", wintypes.DWORD), ("reserved", wintypes.LPWSTR),
+                    ("desktop", wintypes.LPWSTR), ("title", wintypes.LPWSTR),
+                    ("x", wintypes.DWORD), ("y", wintypes.DWORD),
+                    ("width", wintypes.DWORD), ("height", wintypes.DWORD),
+                    ("x_chars", wintypes.DWORD), ("y_chars", wintypes.DWORD),
+                    ("fill", wintypes.DWORD), ("flags", wintypes.DWORD),
+                    ("show", wintypes.WORD), ("reserved_size", wintypes.WORD),
+                    ("reserved_bytes", ctypes.c_void_p), ("stdin", wintypes.HANDLE),
+                    ("stdout", wintypes.HANDLE), ("stderr", wintypes.HANDLE)]
+
+    class ProcessInfo(ctypes.Structure):
+        _fields_ = [("process", wintypes.HANDLE), ("thread", wintypes.HANDLE),
+                    ("pid", wintypes.DWORD), ("tid", wintypes.DWORD)]
+
+    kernel32.CreateProcessW.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, ctypes.c_void_p,
+                                      ctypes.c_void_p, wintypes.BOOL, wintypes.DWORD,
+                                      ctypes.c_void_p, wintypes.LPCWSTR,
+                                      ctypes.POINTER(StartupInfo), ctypes.POINTER(ProcessInfo)]
+    kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    kernel32.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+    kernel32.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    startup, process = StartupInfo(), ProcessInfo()
+    startup.cb = ctypes.sizeof(startup)
+    command = ctypes.create_unicode_buffer(subprocess.list2cmdline([str(cli)]))
+    if not kernel32.CreateProcessW(str(cli), command, None, None, False, 0x10,
+                                  None, str(cli.parent), ctypes.byref(startup), ctypes.byref(process)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        deadline = time.monotonic() + 20
+        window = None
+        while time.monotonic() < deadline:
+            window = owned_window(process.pid, "P-Touch command-line tool")
+            if window or kernel32.WaitForSingleObject(process.process, 0) == 0:
+                break
+            time.sleep(0.1)
+        if window is None:
+            raise RuntimeError("Standalone CLI launch did not display the editor download guide")
+        # Choosing No must close just the guide, without opening a browser.
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+        user32.PostMessageW(window, 0x0111, 7, 0)  # WM_COMMAND, IDNO
+        if kernel32.WaitForSingleObject(process.process, 10000) != 0:
+            raise RuntimeError("CLI download guide did not close")
+        code = wintypes.DWORD()
+        if not kernel32.GetExitCodeProcess(process.process, ctypes.byref(code)) or code.value != 2:
+            raise RuntimeError("Desktop guidance changed the missing-command exit status")
+        (report_dir / "desktop.txt").write_text("Download guide displayed and closed, exit 2.\n")
+    finally:
+        if kernel32.WaitForSingleObject(process.process, 0) != 0:
+            kernel32.TerminateProcess(process.process, 1)
+            kernel32.WaitForSingleObject(process.process, 10000)
+        kernel32.CloseHandle(process.thread)
+        kernel32.CloseHandle(process.process)
+
+
 def check_window_size(window):
     from ctypes import wintypes
     user32 = ctypes.WinDLL("user32", use_last_error=True)
@@ -290,7 +370,10 @@ if __name__ == "__main__":
     with tempfile.TemporaryDirectory(prefix="ptouch-启动-") as temporary:
         clean = Path(temporary)
         staged_gui = clean / f"ptouch-gui-windows-{suffix}.exe"
+        staged_cli = clean / f"ptouch-windows-{suffix}.exe"
         shutil.copy2(gui, staged_gui)
+        shutil.copy2(cli, staged_cli)
+        check_cli_launches(staged_cli, report_dir / "cli-launches")
         check_gui_startup(staged_gui, report_dir, "default-renderer", ["--offline", "--smoke-test"])
         check_gui_startup(staged_gui, report_dir, "normal-launch", [], interactive=True)
         check_gui_startup(staged_gui, report_dir, "automatic-fallback", [], force_primary_failure=True, interactive=True)

@@ -32,12 +32,14 @@ use ptouch_render::output_range::{OutputRange, apply_output_range};
 use ptouch_render::raster;
 use ptouch_render::text::{TextAlign, TextRenderer};
 
+mod launch_help;
+
 // ---------------------------------------------------------------------------
 // CLI argument definitions
 // ---------------------------------------------------------------------------
 
 #[derive(Parser)]
-#[command(name = "ptouch", version, about = "Brother P-Touch label printer tool")]
+#[command(name = "ptouch", version, about = "Brother P-Touch command-line tool", after_help = launch_help::HELP)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -65,7 +67,7 @@ enum Commands {
     },
     /// List devices paired in macOS Bluetooth settings
     BluetoothList,
-    /// Launch GUI mode
+    /// Show how to open the label editor
     Gui,
 }
 
@@ -427,6 +429,9 @@ fn main() {
         if let Some(code) = ptouch_core::usbprint::run_worker_from_args() {
             process::exit(code);
         }
+        if launch_help::show_for_desktop_launch() {
+            process::exit(2);
+        }
         if let Err(error) = std::env::current_exe()
             .map_err(|e| e.to_string())
             .and_then(|path| {
@@ -719,7 +724,7 @@ fn format_flags(dev: &DeviceInfo) -> String {
 
 /// Print a message directing users to the GUI application.
 fn execute_gui() {
-    println!("Use ptouch-gui for the graphical interface.");
+    println!("{}", launch_help::gui_instructions());
 }
 
 // ---------------------------------------------------------------------------
