@@ -14,7 +14,9 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 import tomllib
+import uuid
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -133,6 +135,23 @@ def verify(archive, report):
         identity = command(["codesign", "--display", "--verbose=4", app], report, "identity").stdout
         if "Signature=adhoc" not in identity or f"Identifier={BUNDLE_ID}" not in identity:
             raise ValueError("Expected complete ad-hoc app signature")
+        # Assess an untouched copy before any rendering or negative tests. Do not
+        # let a successful local launch or changed resources contaminate policy evidence.
+        policy_app = unpacked / "policy" / APP_NAME
+        shutil.copytree(app, policy_app)
+        quarantine = f"0083;{int(time.time()):x};ptouch-ci;{uuid.uuid4()}"
+        command(["xattr", "-w", "com.apple.quarantine", quarantine, policy_app])
+        assessment = command(["syspolicy_check", "distribution", policy_app], report, "gatekeeper", check=False)
+        result["gatekeeper_exit_code"] = assessment.returncode
+        result["gatekeeper_accepted"] = assessment.returncode == 0
+        result["gatekeeper_internal_error"] = "Internal Xprotect Error" in assessment.stdout
+        with (report / "policy-log.txt").open("w") as stream:
+            try:
+                subprocess.run(["log", "show", "--last", "1m", "--style", "compact", "--info",
+                                "--predicate", "process == 'syspolicyd'"],
+                               stdout=stream, stderr=subprocess.STDOUT, timeout=15, check=False)
+            except subprocess.TimeoutExpired:
+                stream.write("Policy log collection timed out.\n")
         direct = command([executable, "--offline", "--smoke-test"], report, "renderer")
         if "PTOUCH_GUI_SMOKE_OK" not in direct.stdout:
             raise RuntimeError("Packaged GUI did not render its frames")
@@ -145,20 +164,19 @@ def verify(archive, report):
         finally:
             stop_owned_app(executable)
         # Confirm that changing a signed resource really invalidates this app.
-        icon = app / "Contents/Resources/ptouch-gui.icns"
+        changed_app = unpacked / "changed" / APP_NAME
+        shutil.copytree(app, changed_app)
+        icon = changed_app / "Contents/Resources/ptouch-gui.icns"
         original = icon.read_bytes()
         icon.write_bytes(original + b"changed")
         try:
-            damaged = command(["codesign", "--verify", "--deep", "--strict", app],
+            damaged = command(["codesign", "--verify", "--deep", "--strict", changed_app],
                               report, "changed-resource", check=False)
             if damaged.returncode == 0:
                 raise RuntimeError("Changed resource still passed signature verification")
         finally:
             icon.write_bytes(original)
         command(["codesign", "--verify", "--deep", "--strict", app])
-        command(["xattr", "-w", "com.apple.quarantine", "0083;00000000;ptouch-ci;", app])
-        assessment = command(["syspolicy_check", "distribution", app], report, "gatekeeper", check=False)
-        result["gatekeeper_exit_code"] = assessment.returncode
         result["renderer"] = result["launch_services"] = result["changed_resource_rejected"] = True
         result["gatekeeper_note"] = "Ad-hoc signing does not establish Developer ID or notarization."
     (report / "result.json").write_text(json.dumps(result, indent=2) + "\n")
