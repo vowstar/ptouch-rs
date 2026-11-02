@@ -197,9 +197,13 @@ jobs:
       - name: Prepare and verify release assets
         run: python3 scripts/release-assets.py --artifacts artifacts --output release
 
+      - name: Write download instructions
+        run: python3 scripts/release-downloads.py --tag "$GITHUB_REF_NAME" --output target/release-notes.md
+
       - name: Create Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           files: release/*
+          body_path: target/release-notes.md
           generate_release_notes: true
           fail_on_unmatched_files: true

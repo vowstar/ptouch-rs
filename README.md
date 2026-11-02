@@ -3,6 +3,17 @@
 Rust tool for Brother P-Touch USB label printers. CLI and GUI.
 Optional native macOS Bluetooth support is available in `ptouch-core` for the PT-P300BT.
 
+Download the label editor for your computer:
+
+| Computer | Download |
+| --- | --- |
+| Windows Intel or AMD (x64) | [Label editor](https://github.com/vowstar/ptouch-rs/releases/latest/download/ptouch-gui-windows-amd64.exe) |
+| Windows ARM or Snapdragon | [Label editor](https://github.com/vowstar/ptouch-rs/releases/latest/download/ptouch-gui-windows-arm64.exe) |
+| Mac with Apple silicon | [Label editor](https://github.com/vowstar/ptouch-rs/releases/latest/download/ptouch-gui-macos-arm64.app.zip) |
+
+For Linux packages and command-line tools, see [Prebuilt Packages](#prebuilt-packages).
+For Mac setup, see [macOS installation](#macos-installation).
+
 ![Label editor.](https://github.com/user-attachments/assets/32a6cc00-7376-401e-b39c-2a4cf2319bdb)
 
 ## Features
@@ -34,8 +45,9 @@ PT-1950, PT-2700, PT-1230PC, PT-2430PC, PT-2730, PT-H500, PT-E500, PT-E550W,
 PT-P700, PT-P750W, PT-D410, PT-D450, PT-D460BT, PT-D600, PT-D610BT,
 PT-P710BT, PT-E310BT, PT-E560BT, PT-E720BT and more.
 
-The PT-E720BT USB profile follows [reported hardware tests](https://github.com/adaptyvbio/ptouch-print/commit/da9f5dd38d7c6c09d274c7c4bc45ede6128299b7).
-It still needs a print check with this program.
+PT-E720BT USB printing with 24 mm laminated tape and automatic cutting was
+[confirmed on Apple silicon](https://github.com/vowstar/ptouch-rs/issues/49#issuecomment-6564949140)
+with v0.15.0.
 
 Tape widths: 3.5mm, 6mm, 9mm, 12mm, 18mm, 24mm, 36mm.
 
@@ -130,11 +142,11 @@ The release workflow publishes downloads on the
   the icon, and the udev rule (the post-install step reloads udev), plus the raw
   binaries.
 - **macOS**: `ptouch-gui-macos-arm64.app.zip` (a `.app` bundle with the icon)
-  and the raw `ptouch` CLI binary. The app is unsigned, so on first launch
-  right-click the app and choose Open, or run
-  `xattr -dr com.apple.quarantine ptouch-gui.app`.
+  and the raw `ptouch` CLI binary. The app is ad-hoc signed and not notarized.
+  Follow the [macOS installation steps](#macos-installation).
 - **Windows amd64 / arm64**: `ptouch-windows-{arch}.exe` and
-  `ptouch-gui-windows-{arch}.exe` (the icon is embedded).
+  `ptouch-gui-windows-{arch}.exe`. Open the `ptouch-gui-*` file for the label editor.
+  The other executable is the command-line tool.
 - **Integrity**: `SHA256SUMS` covers every binary and package.
 
 Windows and Linux ARM64 assets are available from v0.8.4. macOS ARM64 assets
@@ -150,7 +162,7 @@ host's GPU driver.
 | Linux ARM64 | `aarch64-unknown-linux-gnu` | `ubuntu-24.04-arm` | PT-P710BT acceptance pending |
 | Windows x64 | `x86_64-pc-windows-msvc` | `windows-latest` | Separate from CI |
 | Windows ARM64 | `aarch64-pc-windows-msvc` | `windows-11-arm` | PT-P710BT single-label printing confirmed |
-| macOS ARM64 | `aarch64-apple-darwin` | `macos-latest` | PT-P300BT Bluetooth verified; USB tested separately |
+| macOS ARM64 | `aarch64-apple-darwin` | `macos-latest` | PT-P300BT Bluetooth verified; PT-E720BT USB and cutting confirmed |
 
 CI builds and tests each target natively, validates binary architecture, and
 runs CLI startup and GUI rendering checks. These checks do not exercise a printer.
@@ -159,6 +171,21 @@ Nix checks cover both Linux architectures.
 
 `ptouch-gui --smoke-test` renders three frames and exits without starting the
 printer worker. This mode requires a working display and OpenGL context.
+
+### macOS installation
+
+Extract `ptouch-gui-macos-arm64.app.zip`, move `ptouch-gui.app` to Applications,
+and open it. This download is for Macs with Apple silicon.
+
+The app is not notarized. If macOS blocks it, follow
+[Apple's instructions for opening an app from an unidentified developer](https://support.apple.com/en-us/102445).
+The Open Anyway option is in System Settings, Privacy & Security, when available.
+Managed Macs may require help from the organization's administrator.
+
+If macOS reports that the app is damaged, download it again and compare it with
+the release's `SHA256SUMS`. A matching checksum confirms the downloaded bytes,
+but does not grant permission to run the app. Include the exact message when
+reporting an installation problem.
 
 ## GUI
 
@@ -824,11 +851,10 @@ establishes bidirectional communication and resource cleanup under failure.
 
 ## USB Driver (macOS)
 
-No driver replacement is needed. Install libusb and it works directly:
-
-```sh
-brew install libusb
-```
+The prebuilt app includes libusb. Connect a supported printer by USB, open the
+label editor and click Refresh. The app selects the model's USB settings
+automatically. No Brother driver, Homebrew package or system print queue is
+required for this connection.
 
 If claiming the device fails with a busy or access error, make sure the
 printer is not added as a print queue in System Settings.
