@@ -7,9 +7,12 @@ Download the label editor for your computer:
 
 | Computer | Download |
 | --- | --- |
-| Windows Intel or AMD (x64) | [Label editor](https://github.com/vowstar/ptouch-rs/releases/latest/download/ptouch-gui-windows-amd64.exe) |
-| Windows ARM or Snapdragon | [Label editor](https://github.com/vowstar/ptouch-rs/releases/latest/download/ptouch-gui-windows-arm64.exe) |
+| Windows Intel or AMD (x64) | [Label editor](https://github.com/vowstar/ptouch-rs/releases/latest/download/ptouch-windows-amd64.zip) |
+| Windows ARM or Snapdragon | [Label editor](https://github.com/vowstar/ptouch-rs/releases/latest/download/ptouch-windows-arm64.zip) |
 | Mac with Apple silicon | [Label editor](https://github.com/vowstar/ptouch-rs/releases/latest/download/ptouch-gui-macos-arm64.app.zip) |
+
+On Windows, extract the ZIP and open `ptouch-gui.exe`. The command-line tool is
+in `cli/ptouch.exe`.
 
 For Linux packages and command-line tools, see [Prebuilt Packages](#prebuilt-packages).
 For Mac setup, see [macOS installation](#macos-installation).
@@ -144,9 +147,10 @@ The release workflow publishes downloads on the
 - **macOS**: `ptouch-gui-macos-arm64.app.zip` (a `.app` bundle with the icon)
   and the raw `ptouch` CLI binary. The app is ad-hoc signed and not notarized.
   Follow the [macOS installation steps](#macos-installation).
-- **Windows amd64 / arm64**: `ptouch-windows-{arch}.exe` and
-  `ptouch-gui-windows-{arch}.exe`. Open the `ptouch-gui-*` file for the label editor.
-  The other executable is the command-line tool.
+- **Windows amd64 / arm64**: `ptouch-windows-{arch}.zip` includes the label
+  editor `ptouch-gui.exe` and the command-line tool `cli/ptouch.exe`. Extract
+  the ZIP before opening the editor. Separate executables remain available
+  for command-line users and existing download scripts.
 - **Integrity**: `SHA256SUMS` covers every binary and package.
 
 Windows and Linux ARM64 assets are available from v0.8.4. macOS ARM64 assets
@@ -703,9 +707,9 @@ time by uninstalling or rolling back the driver in Device Manager.
 
 ### Windows GUI startup
 
-Open `ptouch-gui-windows-arm64.exe` on Windows ARM64 or
-`ptouch-gui-windows-amd64.exe` on Windows x64. The `ptouch-windows-*.exe`
-files are command-line tools.
+Extract `ptouch-windows-arm64.zip` on Windows ARM64 or
+`ptouch-windows-amd64.zip` on Windows x64, then open `ptouch-gui.exe`.
+The command-line tool is in `cli/ptouch.exe`.
 
 The Windows GUI uses Direct3D 12 and automatically retries with Windows software
 rendering if graphics initialization fails. Double-click the GUI executable to

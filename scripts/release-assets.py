@@ -17,6 +17,8 @@ def asset_map(version):
             assets[f"{binary}-{suffix}/{binary}{extension}"] = f"{binary}-{suffix}{extension}"
     assets["ptouch-gui-macos-arm64-app/ptouch-gui-macos-arm64.app.zip"] = "ptouch-gui-macos-arm64.app.zip"
     for arch in ("amd64", "arm64"):
+        assets[f"ptouch-windows-{arch}-portable/ptouch-windows-{arch}.zip"] = f"ptouch-windows-{arch}.zip"
+    for arch in ("amd64", "arm64"):
         assets[f"usbprint-probe-windows-{arch}/usbprint_probe.exe"] = f"usbprint-probe-windows-{arch}.exe"
     for arch, rpm_arch in (("amd64", "x86_64"), ("arm64", "aarch64")):
         for filename in (f"ptouch_{version}_{arch}.deb", f"ptouch-{version}.{rpm_arch}.rpm"):

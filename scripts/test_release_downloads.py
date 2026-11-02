@@ -24,5 +24,6 @@ class ReleaseDownloadsTest(unittest.TestCase):
             self.assertIn(filename, assets)
         editor, advanced = notes.split("<details>")
         self.assertIn("not notarized", editor)
-        self.assertNotIn("/ptouch-windows-", editor)
+        self.assertIn("/ptouch-windows-arm64.zip", editor)
+        self.assertNotIn("/ptouch-windows-arm64.exe", editor)
         self.assertIn("/ptouch-windows-arm64.exe", advanced)

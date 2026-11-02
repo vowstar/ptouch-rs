@@ -8,13 +8,13 @@ import ctypes
 import json
 import os
 from pathlib import Path
-import shutil
 import struct
 import subprocess
 import sys
 import tempfile
 import threading
 import time
+import zipfile
 
 
 def check_pe(path, machine, require_icon=False, subsystem=3):
@@ -139,7 +139,7 @@ def close_window(window):
         raise ctypes.WinError(ctypes.get_last_error())
 
 
-def check_cli_launches(cli, report_dir):
+def check_cli_launches(cli, report_dir, suffix):
     """A missing command must not block scripts or an existing shell."""
     report_dir.mkdir(parents=True, exist_ok=True)
     options = dict(stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=15)
@@ -154,8 +154,7 @@ def check_cli_launches(cli, report_dir):
         if result.returncode != 2 or "Usage:" not in result.stdout + result.stderr:
             raise RuntimeError(f"{name}: no-argument CLI must show help and exit 2")
     instructions = subprocess.check_output([str(cli), "gui"], text=True, timeout=15)
-    suffix = "arm64" if "arm64" in cli.name else "amd64"
-    if f"ptouch-gui-windows-{suffix}.exe" not in instructions:
+    if f"ptouch-windows-{suffix}.zip" not in instructions:
         raise RuntimeError("GUI instructions point to the wrong executable")
     # Create a real standalone console without inheriting the CI runner's pipes.
     # This is the classic Explorer double-click case.
@@ -193,26 +192,12 @@ def check_cli_launches(cli, report_dir):
                                   None, str(cli.parent), ctypes.byref(startup), ctypes.byref(process)):
         raise ctypes.WinError(ctypes.get_last_error())
     try:
-        deadline = time.monotonic() + 20
-        window = None
-        while time.monotonic() < deadline:
-            window = owned_window(process.pid, "P-Touch command-line tool")
-            if window or kernel32.WaitForSingleObject(process.process, 0) == 0:
-                break
-            time.sleep(0.1)
-        if window is None:
-            raise RuntimeError("Standalone CLI launch did not display the editor download guide")
-        capture_guide(window, report_dir)
-        # Choosing No must close just the guide, without opening a browser.
-        user32 = ctypes.WinDLL("user32", use_last_error=True)
-        user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
-        user32.PostMessageW(window, 0x0111, 7, 0)  # WM_COMMAND, IDNO
-        if kernel32.WaitForSingleObject(process.process, 10000) != 0:
-            raise RuntimeError("CLI download guide did not close")
+        if kernel32.WaitForSingleObject(process.process, 15000) != 0:
+            raise RuntimeError("Standalone CLI blocked instead of exiting without a dialog")
         code = wintypes.DWORD()
         if not kernel32.GetExitCodeProcess(process.process, ctypes.byref(code)) or code.value != 2:
-            raise RuntimeError("Desktop guidance changed the missing-command exit status")
-        (report_dir / "desktop.txt").write_text("Download guide displayed and closed, exit 2.\n")
+            raise RuntimeError("Standalone CLI changed the missing-command exit status")
+        (report_dir / "desktop.txt").write_text("Standalone console exited 2 without a dialog.\n")
     finally:
         if kernel32.WaitForSingleObject(process.process, 0) != 0:
             kernel32.TerminateProcess(process.process, 1)
@@ -323,29 +308,6 @@ def check_pseudoconsole_cli(cli, kernel32, startup_type, process_type, report_di
     (report_dir / "conpty.txt").write_text(output, encoding="utf-8")
     if "Usage:" not in output:
         raise RuntimeError("ConPTY did not receive command-line help")
-
-
-def capture_guide(window, report_dir):
-    """Capture only the owned download guide for visual review."""
-    path = str(report_dir / "download-guide.png").replace("'", "''")
-    script = """Add-Type -AssemblyName System.Drawing
-Add-Type 'using System; using System.Runtime.InteropServices; public class CaptureGuide {
-[DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint flags);
-[DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out Rect rect);
-public struct Rect { public int Left, Top, Right, Bottom; }
-}'
-$rect = New-Object CaptureGuide+Rect
-[void][CaptureGuide]::GetWindowRect([IntPtr]WINDOW_HANDLE, [ref]$rect)
-$image = New-Object System.Drawing.Bitmap -ArgumentList ($rect.Right - $rect.Left), ($rect.Bottom - $rect.Top)
-$graphics = [System.Drawing.Graphics]::FromImage($image)
-$dc = $graphics.GetHdc()
-try { if (-not [CaptureGuide]::PrintWindow([IntPtr]WINDOW_HANDLE, $dc, 2)) { throw 'PrintWindow failed' } }
-finally { $graphics.ReleaseHdc($dc) }
-$image.Save('IMAGE_PATH', [System.Drawing.Imaging.ImageFormat]::Png)
-$graphics.Dispose()
-$image.Dispose()
-""".replace("WINDOW_HANDLE", str(window)).replace("IMAGE_PATH", path)
-    subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script], check=True, timeout=20)
 
 
 def check_window_size(window):
@@ -470,6 +432,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", required=True, choices=("x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc"))
     parser.add_argument("--profile", required=True, choices=("debug", "release"))
+    parser.add_argument("--package", type=Path, required=True, help="Portable ZIP to extract and test")
     parser.add_argument("--probe", action="store_true", help="Also validate the experimental USBPRINT executable")
     args = parser.parse_args()
     directory = Path("target") / args.target / args.profile
@@ -495,15 +458,25 @@ if __name__ == "__main__":
         raise RuntimeError("Windows GUI still imports OpenGL")
     report_dir = (directory / "windows-smoke").resolve()
     suffix = "arm64" if args.target.startswith("aarch64") else "amd64"
-    # Only the distributed executables go into this folder. In particular, no
-    # CI-only graphics DLL from the build directory can make these checks pass.
-    with tempfile.TemporaryDirectory(prefix="ptouch-启动-") as temporary:
-        clean = Path(temporary)
-        staged_gui = clean / f"ptouch-gui-windows-{suffix}.exe"
-        staged_cli = clean / f"ptouch-windows-{suffix}.exe"
-        shutil.copy2(gui, staged_gui)
-        shutil.copy2(cli, staged_cli)
-        check_cli_launches(staged_cli, report_dir / "cli-launches")
+    # Test the actual ZIP in a Unicode path containing spaces, using Windows'
+    # native extractor. No build-directory DLL can hide a missing dependency.
+    with tempfile.TemporaryDirectory(prefix="ptouch 启动 ") as temporary:
+        clean = Path(temporary) / "extracted package"
+        with zipfile.ZipFile(args.package) as bundle:
+            expected = {"ptouch-gui.exe": gui, "cli/ptouch.exe": cli}
+            if set(bundle.namelist()) != set(expected) or len(bundle.infolist()) != len(expected):
+                raise RuntimeError("Portable ZIP must contain only the editor and cli/ptouch.exe")
+            for member, source in expected.items():
+                if bundle.read(member) != source.read_bytes():
+                    raise RuntimeError(f"Portable ZIP contains the wrong executable: {member}")
+        subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+                        "Expand-Archive -LiteralPath '" + str(args.package.resolve()).replace("'", "''")
+                        + "' -DestinationPath '" + str(clean).replace("'", "''") + "'"], check=True, timeout=60)
+        staged_gui = clean / "ptouch-gui.exe"
+        staged_cli = clean / "cli" / "ptouch.exe"
+        for executable in (staged_cli, staged_gui):
+            check_usbprint_worker(executable)
+        check_cli_launches(staged_cli, report_dir / "cli-launches", suffix)
         check_gui_startup(staged_gui, report_dir, "default-renderer", ["--offline", "--smoke-test"])
         check_gui_startup(staged_gui, report_dir, "normal-launch", [], interactive=True)
         check_gui_startup(staged_gui, report_dir, "automatic-fallback", [], force_primary_failure=True, interactive=True)

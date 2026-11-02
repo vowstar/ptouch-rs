@@ -78,11 +78,15 @@ jobs:
         shell: bash
         run: python scripts/release-assets.py --check-version "$GITHUB_REF_NAME"
 
+      - name: Package Windows portable download
+        if: runner.os == 'Windows'
+        run: python scripts/windows-package.py --target ${{ matrix.target }} --profile release
+
       - name: Windows executable smoke tests
         if: runner.os == 'Windows'
         run: |
           cargo build -p ptouch-core --example usbprint_probe --release --locked --target ${{ matrix.target }}
-          python scripts/windows-smoke.py --target ${{ matrix.target }} --profile release --probe
+          python scripts/windows-smoke.py --target ${{ matrix.target }} --profile release --probe --package target/windows-package/ptouch-${{ matrix.asset_suffix }}.zip
 
       - name: Upload Windows startup diagnostics
         if: failure() && runner.os == 'Windows'
@@ -143,6 +147,14 @@ jobs:
         with:
           name: ptouch-gui-${{ matrix.asset_suffix }}-app
           path: target/macos-package/ptouch-gui-macos-arm64.app.zip
+          if-no-files-found: error
+
+      - name: Upload Windows portable download
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ptouch-${{ matrix.asset_suffix }}-portable
+          path: target/windows-package/ptouch-${{ matrix.asset_suffix }}.zip
           if-no-files-found: error
 
       # Linux: build .deb and .rpm with nfpm; they install the binaries, the
