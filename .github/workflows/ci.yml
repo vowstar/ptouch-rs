@@ -107,6 +107,14 @@ jobs:
       if: runner.os == 'Windows'
       run: python scripts/windows-smoke.py --target ${{ matrix.target }} --profile debug
 
+    - name: Upload desktop launch checks
+      if: always() && runner.os == 'Windows'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      with:
+        name: desktop-launch-${{ matrix.target }}
+        path: target/${{ matrix.target }}/debug/windows-smoke/cli-launches/
+        if-no-files-found: warn
+
     - name: Upload Windows preview GUI
       if: runner.os == 'Windows' && github.event_name == 'pull_request'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

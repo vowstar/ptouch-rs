@@ -13,6 +13,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 
 
@@ -184,6 +185,7 @@ def check_cli_launches(cli, report_dir):
     kernel32.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
     kernel32.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
     kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    check_pseudoconsole_cli(cli, kernel32, StartupInfo, ProcessInfo, report_dir)
     startup, process = StartupInfo(), ProcessInfo()
     startup.cb = ctypes.sizeof(startup)
     command = ctypes.create_unicode_buffer(subprocess.list2cmdline([str(cli)]))
@@ -200,6 +202,7 @@ def check_cli_launches(cli, report_dir):
             time.sleep(0.1)
         if window is None:
             raise RuntimeError("Standalone CLI launch did not display the editor download guide")
+        capture_guide(window, report_dir)
         # Choosing No must close just the guide, without opening a browser.
         user32 = ctypes.WinDLL("user32", use_last_error=True)
         user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
@@ -216,6 +219,115 @@ def check_cli_launches(cli, report_dir):
             kernel32.WaitForSingleObject(process.process, 10000)
         kernel32.CloseHandle(process.thread)
         kernel32.CloseHandle(process.process)
+
+
+def check_pseudoconsole_cli(cli, kernel32, startup_type, process_type, report_dir):
+    """A lone ConPTY client, as used by modern terminals, must not show a dialog."""
+    from ctypes import wintypes
+
+    class Coord(ctypes.Structure):
+        _fields_ = [("x", ctypes.c_short), ("y", ctypes.c_short)]
+
+    class ExtendedStartup(ctypes.Structure):
+        _fields_ = [("startup", startup_type), ("attributes", ctypes.c_void_p)]
+
+    kernel32.CreatePipe.argtypes = [ctypes.POINTER(wintypes.HANDLE), ctypes.POINTER(wintypes.HANDLE), ctypes.c_void_p, wintypes.DWORD]
+    kernel32.CreatePseudoConsole.argtypes = [Coord, wintypes.HANDLE, wintypes.HANDLE, wintypes.DWORD, ctypes.POINTER(wintypes.HANDLE)]
+    kernel32.CreatePseudoConsole.restype = wintypes.LONG
+    kernel32.ClosePseudoConsole.argtypes = [wintypes.HANDLE]
+    kernel32.ClosePseudoConsole.restype = None
+    kernel32.InitializeProcThreadAttributeList.argtypes = [ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, ctypes.POINTER(ctypes.c_size_t)]
+    kernel32.UpdateProcThreadAttribute.argtypes = [ctypes.c_void_p, wintypes.DWORD, ctypes.c_size_t, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_void_p, ctypes.c_void_p]
+    kernel32.DeleteProcThreadAttributeList.argtypes = [ctypes.c_void_p]
+    kernel32.ReadFile.argtypes = [wintypes.HANDLE, ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD), ctypes.c_void_p]
+    input_read, input_write, output_read, output_write, console = [wintypes.HANDLE() for _ in range(5)]
+    process = process_type()
+    attributes = None
+    initialized = False
+    reader = None
+    chunks = []
+
+    def drain():
+        buffer = ctypes.create_string_buffer(4096)
+        count = wintypes.DWORD()
+        while kernel32.ReadFile(output_read, buffer, len(buffer), ctypes.byref(count), None) and count.value:
+            chunks.append(buffer.raw[:count.value])
+
+    try:
+        if not kernel32.CreatePipe(ctypes.byref(input_read), ctypes.byref(input_write), None, 0):
+            raise ctypes.WinError(ctypes.get_last_error())
+        if not kernel32.CreatePipe(ctypes.byref(output_read), ctypes.byref(output_write), None, 0):
+            raise ctypes.WinError(ctypes.get_last_error())
+        status = kernel32.CreatePseudoConsole(Coord(100, 40), input_read, output_write, 0, ctypes.byref(console))
+        if status != 0:
+            raise RuntimeError(f"Cannot create ConPTY: HRESULT {status & 0xffffffff:#x}")
+        size = ctypes.c_size_t()
+        kernel32.InitializeProcThreadAttributeList(None, 1, 0, ctypes.byref(size))
+        attributes = ctypes.create_string_buffer(size.value)
+        if not kernel32.InitializeProcThreadAttributeList(attributes, 1, 0, ctypes.byref(size)):
+            raise ctypes.WinError(ctypes.get_last_error())
+        initialized = True
+        if not kernel32.UpdateProcThreadAttribute(attributes, 0, 0x00020016, console, ctypes.sizeof(console), None, None):
+            raise ctypes.WinError(ctypes.get_last_error())
+        startup = ExtendedStartup()
+        startup.startup.cb = ctypes.sizeof(startup)
+        startup.attributes = ctypes.cast(attributes, ctypes.c_void_p)
+        reader = threading.Thread(target=drain, daemon=True)
+        reader.start()
+        command = ctypes.create_unicode_buffer(subprocess.list2cmdline([str(cli)]))
+        if not kernel32.CreateProcessW(str(cli), command, None, None, False, 0x00080000, None,
+                                      str(cli.parent), ctypes.cast(ctypes.byref(startup), ctypes.POINTER(startup_type)), ctypes.byref(process)):
+            raise ctypes.WinError(ctypes.get_last_error())
+        if kernel32.WaitForSingleObject(process.process, 15000) != 0:
+            raise RuntimeError("ConPTY CLI blocked instead of returning help")
+        code = wintypes.DWORD()
+        if not kernel32.GetExitCodeProcess(process.process, ctypes.byref(code)) or code.value != 2:
+            raise RuntimeError("ConPTY changed the missing-command exit status")
+    finally:
+        if process.process:
+            if kernel32.WaitForSingleObject(process.process, 0) != 0:
+                kernel32.TerminateProcess(process.process, 1)
+                kernel32.WaitForSingleObject(process.process, 10000)
+            kernel32.CloseHandle(process.thread)
+            kernel32.CloseHandle(process.process)
+        for handle in (input_read, input_write, output_write):
+            if handle:
+                kernel32.CloseHandle(handle)
+        if console:
+            kernel32.ClosePseudoConsole(console)
+        if reader:
+            reader.join(timeout=5)
+        if output_read:
+            kernel32.CloseHandle(output_read)
+        if initialized:
+            kernel32.DeleteProcThreadAttributeList(attributes)
+    output = b"".join(chunks).decode("utf-8", errors="replace")
+    (report_dir / "conpty.txt").write_text(output, encoding="utf-8")
+    if "Usage:" not in output:
+        raise RuntimeError("ConPTY did not receive command-line help")
+
+
+def capture_guide(window, report_dir):
+    """Capture only the owned download guide for visual review."""
+    path = str(report_dir / "download-guide.png").replace("'", "''")
+    script = """Add-Type -AssemblyName System.Drawing
+Add-Type 'using System; using System.Runtime.InteropServices; public class CaptureGuide {
+[DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint flags);
+[DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out Rect rect);
+public struct Rect { public int Left, Top, Right, Bottom; }
+}'
+$rect = New-Object CaptureGuide+Rect
+[void][CaptureGuide]::GetWindowRect([IntPtr]WINDOW_HANDLE, [ref]$rect)
+$image = New-Object System.Drawing.Bitmap -ArgumentList ($rect.Right - $rect.Left), ($rect.Bottom - $rect.Top)
+$graphics = [System.Drawing.Graphics]::FromImage($image)
+$dc = $graphics.GetHdc()
+try { if (-not [CaptureGuide]::PrintWindow([IntPtr]WINDOW_HANDLE, $dc, 2)) { throw 'PrintWindow failed' } }
+finally { $graphics.ReleaseHdc($dc) }
+$image.Save('IMAGE_PATH', [System.Drawing.Imaging.ImageFormat]::Png)
+$graphics.Dispose()
+$image.Dispose()
+""".replace("WINDOW_HANDLE", str(window)).replace("IMAGE_PATH", path)
+    subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script], check=True, timeout=20)
 
 
 def check_window_size(window):
