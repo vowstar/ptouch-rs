@@ -111,43 +111,30 @@ jobs:
             python3 scripts/unix-smoke.py --target ${{ matrix.target }} --profile release
           fi
 
+      - name: Package macOS application
+        if: runner.os == 'macOS'
+        run: python3 scripts/macos-package.py build --profile release --output target/macos-package
+
       - name: Upload CLI artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ptouch-${{ matrix.asset_suffix }}
-          path: target/${{ matrix.target }}/release/${{ matrix.artifact_cli }}
+          path: ${{ runner.os == 'macOS' && 'target/macos-package/ptouch' || format('target/{0}/release/{1}', matrix.target, matrix.artifact_cli) }}
           if-no-files-found: error
 
       - name: Upload GUI artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ptouch-gui-${{ matrix.asset_suffix }}
-          path: target/${{ matrix.target }}/release/${{ matrix.artifact_gui }}
+          path: ${{ runner.os == 'macOS' && 'target/macos-package/ptouch-gui' || format('target/{0}/release/{1}', matrix.target, matrix.artifact_gui) }}
           if-no-files-found: error
-
-      # macOS: assemble a .app bundle (binary + icns + Info.plist) and zip it
-      # with ditto so the bundle's structure is preserved.
-      - name: Package macOS .app bundle
-        if: runner.os == 'macOS'
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          app="ptouch-gui.app"
-          mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-          cp "target/${{ matrix.target }}/release/ptouch-gui" "$app/Contents/MacOS/ptouch-gui"
-          chmod +x "$app/Contents/MacOS/ptouch-gui"
-          cp data/macos/ptouch-gui.icns "$app/Contents/Resources/ptouch-gui.icns"
-          sed "s/__VERSION__/${version}/g" data/macos/Info.plist > "$app/Contents/Info.plist"
-          plutil -lint "$app/Contents/Info.plist"
-          bluetooth_usage="$(plutil -extract NSBluetoothAlwaysUsageDescription raw -o - "$app/Contents/Info.plist")"
-          test -n "$bluetooth_usage"
-          ditto -c -k --keepParent "$app" "ptouch-gui-${{ matrix.asset_suffix }}.app.zip"
 
       - name: Upload macOS .app bundle
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ptouch-gui-${{ matrix.asset_suffix }}-app
-          path: ptouch-gui-${{ matrix.asset_suffix }}.app.zip
+          path: target/macos-package/ptouch-gui-macos-arm64.app.zip
           if-no-files-found: error
 
       # Linux: build .deb and .rpm with nfpm; they install the binaries, the
@@ -168,9 +155,34 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
+  macos-install:
+    name: macOS release install (${{ matrix.os }})
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ptouch-gui-macos-arm64-app
+          path: candidate
+      - name: Check the downloaded release application
+        run: python3 scripts/macos-package.py verify candidate/ptouch-gui-macos-arm64.app.zip --report target/macos-install
+      - name: Upload installation results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: macos-release-install-${{ matrix.os }}
+          path: target/macos-install
+          if-no-files-found: warn
+
   release:
     name: Create Release
-    needs: build
+    needs: [build, macos-install]
     runs-on: ubuntu-latest
     permissions:
       contents: write
