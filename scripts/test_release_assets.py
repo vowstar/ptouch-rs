@@ -22,6 +22,7 @@ class ReleaseAssetsTest(unittest.TestCase):
             for name in (
                 "ptouch-windows-arm64.exe", "ptouch-gui-windows-arm64.exe", "ptouch-windows-amd64.exe",
                 "ptouch-linux-arm64", "ptouch-gui-macos-arm64.app.zip",
+                "ptouch-windows-arm64.zip", "ptouch-windows-amd64.zip",
                 "usbprint-probe-windows-arm64.exe", "usbprint-probe-windows-amd64.exe",
             ):
                 self.assertTrue((root / "release" / name).is_file())

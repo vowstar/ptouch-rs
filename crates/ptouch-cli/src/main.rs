@@ -429,9 +429,6 @@ fn main() {
         if let Some(code) = ptouch_core::usbprint::run_worker_from_args() {
             process::exit(code);
         }
-        if launch_help::show_for_desktop_launch() {
-            process::exit(2);
-        }
         if let Err(error) = std::env::current_exe()
             .map_err(|e| e.to_string())
             .and_then(|path| {

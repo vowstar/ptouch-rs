@@ -103,9 +103,13 @@ jobs:
       if: runner.os == 'Windows'
       run: cargo clippy --workspace --all-targets --all-features --locked --target ${{ matrix.target }} -- -D warnings
 
+    - name: Package Windows portable download
+      if: runner.os == 'Windows'
+      run: python scripts/windows-package.py --target ${{ matrix.target }} --profile debug
+
     - name: Windows executable smoke tests
       if: runner.os == 'Windows'
-      run: python scripts/windows-smoke.py --target ${{ matrix.target }} --profile debug
+      run: python scripts/windows-smoke.py --target ${{ matrix.target }} --profile debug --package target/windows-package/ptouch-windows-${{ startsWith(matrix.target, 'aarch64') && 'arm64' || 'amd64' }}.zip
 
     - name: Upload desktop launch checks
       if: always() && runner.os == 'Windows'
@@ -115,12 +119,12 @@ jobs:
         path: target/${{ matrix.target }}/debug/windows-smoke/cli-launches/
         if-no-files-found: warn
 
-    - name: Upload Windows preview GUI
+    - name: Upload Windows portable preview
       if: runner.os == 'Windows' && github.event_name == 'pull_request'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       with:
-        name: ptouch-gui-${{ matrix.target }}
-        path: target/${{ matrix.target }}/debug/ptouch-gui.exe
+        name: ptouch-windows-${{ matrix.target }}
+        path: target/windows-package/*.zip
         retention-days: 7
         if-no-files-found: error
 

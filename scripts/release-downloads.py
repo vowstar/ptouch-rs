@@ -13,18 +13,18 @@ def download_notes(version):
 
 | Computer | Download |
 | --- | --- |
-| Windows Intel or AMD (x64) | [Label editor]({base}/ptouch-gui-windows-amd64.exe) |
-| Windows ARM or Snapdragon | [Label editor]({base}/ptouch-gui-windows-arm64.exe) |
+| Windows Intel or AMD (x64) | [Label editor]({base}/ptouch-windows-amd64.zip) |
+| Windows ARM or Snapdragon | [Label editor]({base}/ptouch-windows-arm64.zip) |
 | Mac with Apple silicon | [Label editor]({base}/ptouch-gui-macos-arm64.app.zip) |
 
-On Windows, open the downloaded GUI executable. On Mac, extract the ZIP and open `ptouch-gui.app`. The Mac app is ad-hoc signed and not notarized. See the [Mac installation steps](https://github.com/vowstar/ptouch-rs/blob/v{version}/README.md#macos-installation).
+On Windows, extract the ZIP and open `ptouch-gui.exe`. The command-line tool is in `cli/ptouch.exe`. On Mac, extract the ZIP and open `ptouch-gui.app`. The Mac app is ad-hoc signed and not notarized. See the [Mac installation steps](https://github.com/vowstar/ptouch-rs/blob/v{version}/README.md#macos-installation).
 
 On Linux, install the `.deb` or `.rpm` for your architecture, then open P-Touch Label Printer.
 
 <details>
 <summary>Command-line downloads</summary>
 
-The `ptouch-*` files are command-line tools. Use `ptouch-gui-*` for the label editor.
+The Windows ZIPs above include the command-line tool. Separate command-line downloads are also available:
 
 | Computer | Download |
 | --- | --- |
