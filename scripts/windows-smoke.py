@@ -240,18 +240,24 @@ def check_pseudoconsole_cli(cli, kernel32, startup_type, process_type, report_di
     kernel32.UpdateProcThreadAttribute.argtypes = [ctypes.c_void_p, wintypes.DWORD, ctypes.c_size_t, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_void_p, ctypes.c_void_p]
     kernel32.DeleteProcThreadAttributeList.argtypes = [ctypes.c_void_p]
     kernel32.ReadFile.argtypes = [wintypes.HANDLE, ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD), ctypes.c_void_p]
+    kernel32.GetStdHandle.argtypes = [wintypes.DWORD]
+    kernel32.GetStdHandle.restype = wintypes.HANDLE
+    kernel32.SetStdHandle.argtypes = [wintypes.DWORD, wintypes.HANDLE]
     input_read, input_write, output_read, output_write, console = [wintypes.HANDLE() for _ in range(5)]
     process = process_type()
     attributes = None
     initialized = False
     reader = None
     chunks = []
+    received_help = threading.Event()
 
     def drain():
         buffer = ctypes.create_string_buffer(4096)
         count = wintypes.DWORD()
         while kernel32.ReadFile(output_read, buffer, len(buffer), ctypes.byref(count), None) and count.value:
             chunks.append(buffer.raw[:count.value])
+            if b"Usage:" in b"".join(chunks):
+                received_help.set()
 
     try:
         if not kernel32.CreatePipe(ctypes.byref(input_read), ctypes.byref(input_write), None, 0):
@@ -275,14 +281,26 @@ def check_pseudoconsole_cli(cli, kernel32, startup_type, process_type, report_di
         reader = threading.Thread(target=drain, daemon=True)
         reader.start()
         command = ctypes.create_unicode_buffer(subprocess.list2cmdline([str(cli)]))
-        if not kernel32.CreateProcessW(str(cli), command, None, None, False, 0x00080000, None,
-                                      str(cli.parent), ctypes.cast(ctypes.byref(startup), ctypes.POINTER(startup_type)), ctypes.byref(process)):
-            raise ctypes.WinError(ctypes.get_last_error())
+        # Windows can duplicate the host's standard handles even with handle
+        # inheritance disabled. Temporarily clear them so the child receives
+        # actual console handles from ConPTY rather than the runner's log pipes.
+        saved = [(kind & 0xffffffff, kernel32.GetStdHandle(kind & 0xffffffff)) for kind in (-10, -11, -12)]
+        try:
+            for kind, _ in saved:
+                if not kernel32.SetStdHandle(kind, None):
+                    raise ctypes.WinError(ctypes.get_last_error())
+            if not kernel32.CreateProcessW(str(cli), command, None, None, False, 0x00080000, None,
+                                          str(cli.parent), ctypes.cast(ctypes.byref(startup), ctypes.POINTER(startup_type)), ctypes.byref(process)):
+                raise ctypes.WinError(ctypes.get_last_error())
+        finally:
+            for kind, handle in saved:
+                kernel32.SetStdHandle(kind, handle)
         if kernel32.WaitForSingleObject(process.process, 15000) != 0:
             raise RuntimeError("ConPTY CLI blocked instead of returning help")
         code = wintypes.DWORD()
         if not kernel32.GetExitCodeProcess(process.process, ctypes.byref(code)) or code.value != 2:
             raise RuntimeError("ConPTY changed the missing-command exit status")
+        received_help.wait(timeout=5)
     finally:
         if process.process:
             if kernel32.WaitForSingleObject(process.process, 0) != 0:
