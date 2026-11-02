@@ -139,6 +139,18 @@ jobs:
           python3 scripts/unix-smoke.py --target ${{ matrix.target }} --profile debug
         fi
 
+    - name: Package macOS application
+      if: runner.os == 'macOS'
+      run: python3 scripts/macos-package.py build --profile debug --output target/macos-package
+
+    - name: Upload macOS application candidate
+      if: runner.os == 'macOS'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      with:
+        name: macos-app-candidate
+        path: target/macos-package/ptouch-gui-macos-arm64.app.zip
+        if-no-files-found: error
+
     - name: Enumerate experimental USBPRINT interfaces
       if: runner.os == 'Windows'
       run: cargo run -p ptouch-core --example usbprint_probe --locked --target ${{ matrix.target }} -- --list
@@ -151,3 +163,28 @@ jobs:
         RUST_TARGET: ${{ matrix.target }}
         BUILD_PROFILE: debug
       run: bash scripts/package-linux.sh
+
+  macos-install:
+    name: macOS app install (${{ matrix.os }})
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: macos-app-candidate
+          path: candidate
+      - name: Check the downloaded application
+        run: python3 scripts/macos-package.py verify candidate/ptouch-gui-macos-arm64.app.zip --report target/macos-install
+      - name: Upload installation results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: macos-install-${{ matrix.os }}
+          path: target/macos-install
+          if-no-files-found: warn
