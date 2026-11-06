@@ -24,6 +24,67 @@ pub struct TapeInfo {
     pub margin_mm: f64,
 }
 
+/// PT-E550W TZe print areas. Transfer lines still contain all 128 head dots.
+static E550W_TAPES: &[TapeInfo] = &[
+    TapeInfo {
+        width_mm: 4,
+        pixels: 24,
+        margin_mm: 0.5,
+    },
+    TapeInfo {
+        width_mm: 6,
+        pixels: 32,
+        margin_mm: 1.0,
+    },
+    TapeInfo {
+        width_mm: 9,
+        pixels: 50,
+        margin_mm: 1.0,
+    },
+    TapeInfo {
+        width_mm: 12,
+        pixels: 70,
+        margin_mm: 2.0,
+    },
+    TapeInfo {
+        width_mm: 18,
+        pixels: 112,
+        margin_mm: 3.0,
+    },
+    TapeInfo {
+        width_mm: 24,
+        pixels: 128,
+        margin_mm: 3.0,
+    },
+];
+
+/// TZe widths supported by a specific USB printer.
+pub fn supported_tapes_for_device(info: &crate::DeviceInfo) -> &'static [TapeInfo] {
+    if info.flags.contains(crate::DeviceFlags::E550W_RASTER) {
+        E550W_TAPES
+    } else {
+        supported_tapes(info.dpi)
+    }
+}
+
+/// Resolve a USB printer's TZe printable area without changing generic layouts.
+pub fn find_tape_for_device(width_mm: u8, info: &crate::DeviceInfo) -> Option<TapeInfo> {
+    supported_tapes_for_device(info)
+        .iter()
+        .find(|tape| tape.width_mm == width_mm)
+        .map(|tape| TapeInfo {
+            pixels: tape.pixels.min(info.max_px),
+            ..*tape
+        })
+}
+
+pub(crate) fn e550w_tape_pixels(width_mm: u8) -> Option<u16> {
+    E550W_TAPES
+        .iter()
+        .find(|tape| tape.width_mm == width_mm)
+        .map(|tape| tape.pixels)
+}
+
 /// Tape print areas for 180 dpi printers.
 static TAPE_TABLE_180: &[TapeInfo] = &[
     TapeInfo {
@@ -149,6 +210,23 @@ pub fn tape_pixels(width_mm: u8, dpi: u16) -> Option<u16> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn e550w_uses_its_own_print_area_without_changing_existing_models() {
+        let e550w = crate::device::find_device(0x04f9, 0x2060).unwrap();
+        assert!(
+            !e550w
+                .flags
+                .intersects(crate::DeviceFlags::UNSUP_RASTER | crate::DeviceFlags::PLITE)
+        );
+        for (width, pixels) in [(4, 24), (6, 32), (9, 50), (12, 70), (18, 112), (24, 128)] {
+            assert_eq!(find_tape_for_device(width, e550w).unwrap().pixels, pixels);
+        }
+        assert!(find_tape_for_device(36, e550w).is_none());
+        let legacy = crate::device::find_device(0x04f9, 0x201a).unwrap();
+        assert_eq!(find_tape_for_device(12, legacy).unwrap().pixels, 76);
+        assert_eq!(tape_pixels(12, 180), Some(76));
+    }
 
     #[test]
     fn test_find_24mm_tape() {

@@ -116,9 +116,14 @@ pub fn cmd_finalize(chain_print: bool, flags: DeviceFlags) -> Vec<u8> {
 ///         <raster_lines as 4 LE bytes> <n9> 0x00
 ///
 /// For D460BT devices, n9 is set to 0x02 to feed the last label properly.
+/// E550W sets n1 to 0x84 to validate the tape width and enable recovery.
 pub fn cmd_info(media_width: u8, raster_lines: u32, flags: DeviceFlags) -> Vec<u8> {
     let mut buf = vec![0x1B, 0x69, 0x7A]; // ESC i z
-    buf.push(0x00); // n1: quality flags
+    buf.push(if flags.contains(DeviceFlags::E550W_RASTER) {
+        0x84
+    } else {
+        0x00
+    });
     buf.push(0x00); // n2: media type
     buf.push(media_width); // n3: media width
     buf.push(0x00); // n4
@@ -311,7 +316,8 @@ pub fn build_print_job(lines: &[Vec<u8>], flags: DeviceFlags, opts: &JobOptions)
         PrintQuality::Draft => (1, 2),
     };
     let selected: Vec<&Vec<u8>> = lines.iter().step_by(step).collect();
-    let line_count = (selected.len() * repeat) as u32;
+    let e550w = flags.contains(DeviceFlags::E550W_RASTER);
+    let line_count = (selected.len() * repeat).max(if e550w { 31 } else { 0 }) as u32;
 
     let mut job: Vec<Vec<u8>> = Vec::with_capacity(selected.len() * repeat + 8);
 
@@ -333,7 +339,17 @@ pub fn build_print_job(lines: &[Vec<u8>], flags: DeviceFlags, opts: &JobOptions)
         job.push(cmd_d460bt_magic());
     }
 
-    if flags.contains(DeviceFlags::HAS_PRECUT) && opts.precut {
+    if e550w {
+        job.push(cmd_precut(opts.precut));
+        job.push(vec![0x1b, 0x69, 0x41, 1]); // Cut each label when enabled.
+        job.push(cmd_advanced_mode(
+            PrintQuality::Standard,
+            false,
+            !opts.chain_print,
+            false,
+        ));
+        job.push(vec![0x1b, 0x69, 0x64, 14, 0]); // 180 dpi minimum feed margin.
+    } else if flags.contains(DeviceFlags::HAS_PRECUT) && opts.precut {
         job.push(cmd_precut(true));
     }
 
@@ -357,6 +373,11 @@ pub fn build_print_job(lines: &[Vec<u8>], flags: DeviceFlags, opts: &JobOptions)
         }
     }
 
+    if e550w {
+        for _ in lines.len()..31 {
+            job.push(cmd_line_feed());
+        }
+    }
     job.push(cmd_finalize(opts.chain_print, flags));
 
     job
@@ -370,6 +391,38 @@ pub fn rasterline_is_blank(line: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn e550w_jobs_set_media_cut_state_and_compression_explicitly() {
+        let flags = crate::device::find_device(0x04f9, 0x2060).unwrap().flags;
+        for (cut, chain) in [(true, false), (false, false), (false, true)] {
+            let job = build_print_job(
+                &[vec![0xff; 16]],
+                flags,
+                &JobOptions {
+                    media_width: 12,
+                    precut: cut,
+                    chain_print: chain,
+                    ..Default::default()
+                },
+            );
+            assert_eq!(job[0], [0x1b, 0x69, 0x61, 1]);
+            assert_eq!(
+                job[1],
+                [0x1b, 0x69, 0x7a, 0x84, 0, 12, 0, 31, 0, 0, 0, 0, 0]
+            );
+            assert_eq!(job[2], cmd_precut(cut));
+            assert_eq!(job[3], [0x1b, 0x69, 0x41, 1]);
+            assert_eq!(job[4], [0x1b, 0x69, 0x4b, if chain { 0 } else { 8 }]);
+            assert_eq!(job[5], [0x1b, 0x69, 0x64, 14, 0]);
+            assert_eq!(job[6], [0x4d, 2]);
+            let mut literal = vec![0x47, 17, 0, 15];
+            literal.extend([0xff; 16]);
+            assert_eq!(job[7], literal);
+            assert_eq!(job[8..38], vec![vec![0x5a]; 30]);
+            assert_eq!(job.last(), Some(&vec![if chain { 0x0c } else { 0x1a }]));
+        }
+    }
 
     #[test]
     fn test_cmd_init() {
