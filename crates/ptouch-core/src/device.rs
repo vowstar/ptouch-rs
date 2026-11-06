@@ -42,6 +42,8 @@ bitflags! {
         const WAIT_FOR_RECEIVE_READY = 1 << 8;
         /// Device supports ESC i ! for configuring automatic status notification.
         const AUTO_STATUS_NOTIFICATION = 1 << 9;
+        /// PT-E550W raster, media and optional status-query behavior.
+        const E550W_RASTER = 1 << 10;
     }
 }
 
@@ -213,7 +215,11 @@ static DEVICE_TABLE: &[DeviceInfo] = &[
         name: "PT-E550W",
         max_px: 128,
         dpi: 180,
-        flags: DeviceFlags::UNSUP_RASTER,
+        flags: DeviceFlags::E550W_RASTER
+            .union(DeviceFlags::P700_INIT)
+            .union(DeviceFlags::RASTER_PACKBITS)
+            .union(DeviceFlags::USE_INFO_CMD)
+            .union(DeviceFlags::HAS_PRECUT),
     },
     DeviceInfo {
         vid: 0x04f9,

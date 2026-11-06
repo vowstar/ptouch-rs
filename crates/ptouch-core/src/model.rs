@@ -51,6 +51,9 @@ impl ModelProfile {
 
     pub(crate) fn tape_width_px(self, width_mm: u8) -> Option<u16> {
         match self.dialect {
+            Dialect::Usb if self.flags.contains(DeviceFlags::E550W_RASTER) => {
+                tape::e550w_tape_pixels(width_mm)
+            }
             Dialect::Usb => {
                 tape::tape_pixels(width_mm, self.dpi).map(|px| px.min(self.raster_width_px))
             }

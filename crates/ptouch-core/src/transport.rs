@@ -330,6 +330,25 @@ impl PtouchDevice {
     pub fn query_status(&mut self) -> Result<&PrinterStatus> {
         self.session.query_status()
     }
+    /// Probe status without reset, allowing an absent PT-E550W status reply.
+    pub fn probe_status(&mut self) -> Result<Option<&PrinterStatus>> {
+        self.session.probe_status()
+    }
+    /// Prepare a job using a manual TZe width when PT-E550W status is unavailable.
+    pub fn prepare_print(&mut self, manual_width_mm: Option<u8>) -> Result<()> {
+        self.session.prepare_print(manual_width_mm)
+    }
+    /// Submit a job and distinguish physical completion from an unconfirmed send.
+    pub fn print_raster_outcome(
+        &mut self,
+        lines: &[Vec<u8>],
+        chain_print: bool,
+        precut: bool,
+        quality: protocol::PrintQuality,
+    ) -> Result<crate::PrintOutcome> {
+        self.session
+            .print_raster_outcome(lines, chain_print, precut, quality)
+    }
     /// Request and read the printer status.
     pub fn get_status(&mut self) -> Result<&PrinterStatus> {
         self.session.get_status()

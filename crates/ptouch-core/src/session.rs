@@ -60,6 +60,15 @@ const PRINT_STATUS_MIN_POLL_TIMEOUT: Duration = Duration::from_millis(1);
 /// completing empty reads cannot spin a core until the deadline expires.
 const ZERO_LENGTH_TRANSFER_DELAY: Duration = Duration::from_millis(10);
 
+/// Result of a submitted job. A USB write does not prove physical completion.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PrintOutcome {
+    /// The printer confirmed completion.
+    Completed,
+    /// All data was sent, but the printer did not confirm completion.
+    SubmittedUnconfirmed,
+}
+
 pub(crate) struct PrinterSession<T: Transport> {
     pub(crate) transport: T,
     profile: ModelProfile,
@@ -67,6 +76,8 @@ pub(crate) struct PrinterSession<T: Transport> {
     status: Option<PrinterStatus>,
     tape_width_px: Option<u16>,
     initialized: bool,
+    prepared_width_mm: Option<u8>,
+    next_page: bool,
     pub(crate) cancellation: CancellationToken,
     pub(crate) job_timeout: Duration,
 }
@@ -80,6 +91,8 @@ impl<T: Transport> PrinterSession<T> {
             status: None,
             tape_width_px: None,
             initialized: false,
+            prepared_width_mm: None,
+            next_page: false,
             cancellation: CancellationToken::default(),
             job_timeout: Duration::from_secs(600),
         }
@@ -142,6 +155,8 @@ impl<T: Transport> PrinterSession<T> {
     /// Raster start is sent per-job in `print_raster()`.
     pub fn init(&mut self) -> Result<()> {
         self.initialized = false;
+        self.prepared_width_mm = None;
+        self.next_page = false;
         // Flush any stale data from previous sessions
         self.flush_input()?;
 
@@ -154,6 +169,18 @@ impl<T: Transport> PrinterSession<T> {
         // Retain diagnostics, but do not initialize a device reporting an
         // error or power-off notification for a new print job.
         print_status_is_ready(self.get_status()?)?;
+        if self.profile.flags.contains(DeviceFlags::E550W_RASTER) {
+            let status = self.status.as_ref().ok_or(PtouchError::NotInitialized)?;
+            if !matches!(status.media_type, 0x01 | 0x03) {
+                return Err(PtouchError::UnsupportedOperation(
+                    "PT-E550W currently supports TZe tape only",
+                ));
+            }
+            self.profile
+                .tape_width_px(status.media_width)
+                .ok_or(PtouchError::UnknownTapeWidth(status.media_width))?;
+            self.prepared_width_mm = Some(status.media_width);
+        }
 
         if self
             .profile
@@ -185,6 +212,138 @@ impl<T: Transport> PrinterSession<T> {
         self.get_status()
     }
 
+    /// Query media without resetting. Only E550W can return no status reply.
+    pub fn probe_status(&mut self) -> Result<Option<&PrinterStatus>> {
+        if !self.profile.flags.contains(DeviceFlags::E550W_RASTER) {
+            return self.query_status().map(Some);
+        }
+        self.flush_input()?;
+        self.probe_e550w_status()
+    }
+
+    fn probe_e550w_status(&mut self) -> Result<Option<&PrinterStatus>> {
+        self.status = None;
+        self.tape_width_px = None;
+        let started = Instant::now();
+        self.cancellation.check()?;
+        self.transport
+            .send(&protocol::cmd_status_request(), Duration::from_secs(2))?;
+        let mut frames = StatusFrameBuffer::new();
+        let mut received_bytes = 0;
+        for _ in 0..128 {
+            let Some(remaining) = Duration::from_secs(2).checked_sub(started.elapsed()) else {
+                break;
+            };
+            if remaining < PRINT_STATUS_MIN_POLL_TIMEOUT {
+                break;
+            }
+            let mut buf = [0; STATUS_PACKET_SIZE];
+            match self.receive_with_timeout(&mut buf, remaining.min(PRINT_STATUS_POLL_TIMEOUT)) {
+                Ok(n) if n > buf.len() => {
+                    return Err(PtouchError::StatusError("Invalid transport length".into()));
+                }
+                Ok(0) => std::thread::sleep(ZERO_LENGTH_TRANSFER_DELAY),
+                Ok(n) => {
+                    received_bytes += n;
+                    frames.push(&buf[..n]);
+                    while let Some(packet) = frames.pop() {
+                        let status = parse_status_packet(&packet, "Invalid status header")?;
+                        if status.model_code != 0x66 {
+                            return Err(PtouchError::StatusError(
+                                "Unexpected PT-E550W model code".into(),
+                            ));
+                        }
+                        if matches!(status.status_type, 0 | 2 | 4) || status.has_error() {
+                            print_status_is_ready(&status)?;
+                            self.tape_width_px = if matches!(status.media_type, 0x01 | 0x03) {
+                                self.profile.tape_width_px(status.media_width)
+                            } else {
+                                None
+                            };
+                            self.status = Some(status);
+                            return Ok(self.status.as_ref());
+                        }
+                    }
+                }
+                Err(PtouchError::Timeout) => {}
+                Err(error) => return Err(error),
+            }
+        }
+        if received_bytes != 0 {
+            return Err(PtouchError::StatusError(
+                "No complete reply to the PT-E550W status request".into(),
+            ));
+        }
+        Ok(None)
+    }
+
+    /// Prepare printing, with an explicit TZe width if E550W cannot report media.
+    /// Existing models retain the strict initialization path.
+    pub fn prepare_print(&mut self, manual_width_mm: Option<u8>) -> Result<()> {
+        if !self.profile.flags.contains(DeviceFlags::E550W_RASTER) {
+            return self.init();
+        }
+        self.initialized = false;
+        self.prepared_width_mm = None;
+        self.next_page = false;
+        let width = match self.probe_status()? {
+            Some(status) => {
+                if status.media_width == 0 || status.media_type == 0 {
+                    return Err(PtouchError::StatusError("No tape installed".into()));
+                }
+                if !matches!(status.media_type, 0x01 | 0x03) {
+                    return Err(PtouchError::UnsupportedOperation("PT-E550W currently supports TZe tape only"));
+                }
+                if status.phase_type != 0 {
+                    return Err(PtouchError::StatusError("Printer is busy".into()));
+                }
+                status.media_width
+            }
+            None => manual_width_mm.ok_or_else(|| PtouchError::StatusError(
+                "Tape width is unavailable. Select the installed TZe tape width before printing".into()
+            ))?,
+        };
+        let pixels = self
+            .profile
+            .tape_width_px(width)
+            .ok_or(PtouchError::UnknownTapeWidth(width))?;
+        self.send(&protocol::cmd_init())?;
+        self.tape_width_px = Some(pixels);
+        self.prepared_width_mm = Some(width);
+        self.initialized = true;
+        info!(
+            "Prepared PT-E550W: tape={}mm ({}px), media={}",
+            width,
+            pixels,
+            if self.status.is_some() {
+                "detected"
+            } else {
+                "manual TZe"
+            }
+        );
+        Ok(())
+    }
+
+    /// Submit a job while preserving unconfirmed E550W completion as an outcome.
+    pub fn print_raster_outcome(
+        &mut self,
+        lines: &[Vec<u8>],
+        chain_print: bool,
+        precut: bool,
+        quality: protocol::PrintQuality,
+    ) -> Result<PrintOutcome> {
+        self.print_raster(lines, chain_print, precut, quality)
+            .map(|()| PrintOutcome::Completed)
+            .or_else(|error| match error {
+                PtouchError::CompletionUnknown
+                    if self.profile.flags.contains(DeviceFlags::E550W_RASTER) =>
+                {
+                    Ok(PrintOutcome::SubmittedUnconfirmed)
+                }
+                error => Err(error),
+            })
+    }
+
     /// Request and read the printer status.
     ///
     /// Sends the status request command and reads the 32-byte response.
@@ -194,6 +353,11 @@ impl<T: Transport> PrinterSession<T> {
     pub fn get_status(&mut self) -> Result<&PrinterStatus> {
         if self.profile.dialect == Dialect::P300Bt {
             return self.get_p300bt_status();
+        }
+        if self.profile.flags.contains(DeviceFlags::E550W_RASTER) {
+            return self.probe_e550w_status()?.ok_or_else(|| {
+                PtouchError::StatusError("PT-E550W did not reply to the status request".into())
+            });
         }
         self.send(&protocol::cmd_status_request())?;
 
@@ -317,8 +481,24 @@ impl<T: Transport> PrinterSession<T> {
             return Err(PtouchError::NotInitialized);
         }
 
+        if self.profile.flags.contains(DeviceFlags::E550W_RASTER)
+            && (lines.len() > 7086 || lines.iter().any(|line| line.len() != 16))
+        {
+            return Err(PtouchError::SendFailed(
+                "PT-E550W requires 16-byte lines and at most 7086 raster lines per label".into(),
+            ));
+        }
+
         if let Some(status) = &self.status {
             print_status_is_ready(status)?;
+            if self.profile.flags.contains(DeviceFlags::E550W_RASTER)
+                && status.status_type == 0
+                && !matches!(status.media_type, 0x01 | 0x03)
+            {
+                return Err(PtouchError::UnsupportedOperation(
+                    "PT-E550W currently supports TZe tape only",
+                ));
+            }
         }
 
         if quality != protocol::PrintQuality::Standard
@@ -342,13 +522,16 @@ impl<T: Transport> PrinterSession<T> {
         }
 
         let opts = protocol::JobOptions {
-            media_width: self.status.as_ref().map_or(0, |s| s.media_width),
+            media_width: self
+                .prepared_width_mm
+                .or_else(|| self.status.as_ref().map(|s| s.media_width))
+                .unwrap_or(0),
             chain_print,
             precut,
             quality,
         };
 
-        let job = protocol::build_print_job(lines, self.profile.flags, &opts);
+        let job = self.build_job(lines, &opts);
         info!(
             "Print job: model={}, tape={}mm, input_lines={}, length={:.2}mm, dpi={}, quality={:?}, wire_bytes={}, final={:02x?}",
             self.profile.name,
@@ -377,8 +560,19 @@ impl<T: Transport> PrinterSession<T> {
         };
         if result.is_err() {
             self.initialized = false;
+        } else {
+            self.next_page = chain_print;
         }
         result
+    }
+
+    fn build_job(&self, lines: &[Vec<u8>], opts: &protocol::JobOptions) -> Vec<Vec<u8>> {
+        let mut job = protocol::build_print_job(lines, self.profile.flags, opts);
+        if self.profile.flags.contains(DeviceFlags::E550W_RASTER) {
+            // E550W print information follows the raster-mode command.
+            job[1][11] = u8::from(self.next_page);
+        }
+        job
     }
 
     /// Feed tape forward and cut.
@@ -403,11 +597,14 @@ impl<T: Transport> PrinterSession<T> {
         // One blank line makes the printer engage the feed mechanism.
         let lines = vec![protocol::rasterline_blank(self.profile.raster_width_px)];
         let opts = protocol::JobOptions {
-            media_width: self.status.as_ref().map_or(0, |s| s.media_width),
+            media_width: self
+                .prepared_width_mm
+                .or_else(|| self.status.as_ref().map(|s| s.media_width))
+                .unwrap_or(0),
             ..protocol::JobOptions::default()
         };
 
-        let job = protocol::build_print_job(&lines, self.profile.flags, &opts);
+        let job = self.build_job(&lines, &opts);
         let started = Instant::now();
         if let Err(error) = self.send_job(job) {
             self.initialized = false;
@@ -428,6 +625,7 @@ impl<T: Transport> PrinterSession<T> {
             return Err(error);
         }
         info!("Feed and cut");
+        self.next_page = false;
         Ok(())
     }
 
@@ -511,6 +709,11 @@ impl<T: Transport> PrinterSession<T> {
             .job_timeout
             .checked_sub(job_started.elapsed())
             .unwrap_or_default();
+        let completion_timeout = if self.profile.flags.contains(DeviceFlags::E550W_RASTER) {
+            completion_timeout.min(PRINT_STATUS_IDLE_TIMEOUT)
+        } else {
+            completion_timeout
+        };
         let mut frames = StatusFrameBuffer::new();
         loop {
             let remaining = completion_timeout
@@ -528,6 +731,13 @@ impl<T: Transport> PrinterSession<T> {
                     frames.push(&response[..n]);
                     if let Some(packet) = frames.pop() {
                         let status = parse_status_packet(&packet, "Invalid completion header")?;
+                        if self.profile.flags.contains(DeviceFlags::E550W_RASTER)
+                            && status.model_code != 0x66
+                        {
+                            return Err(PtouchError::StatusError(
+                                "Unexpected PT-E550W completion model code".into(),
+                            ));
+                        }
                         // Streaming models can report a receiving phase between
                         // internal buffers, before the final raster data prints.
                         // Only a completion notification confirms this page.
@@ -955,6 +1165,8 @@ mod tests {
         first_read_delay: std::cell::Cell<Duration>,
         write_timeouts: std::cell::RefCell<Vec<Duration>>,
         status_reply: std::cell::Cell<Option<[u8; STATUS_PACKET_SIZE]>>,
+        suppress_status: std::cell::Cell<bool>,
+        status_chunks: std::cell::RefCell<Option<Vec<Vec<u8>>>>,
         // Prove the session works with a transport that cannot cross threads.
         _owner: std::rc::Rc<()>,
     }
@@ -967,6 +1179,8 @@ mod tests {
                 first_read_delay: Default::default(),
                 write_timeouts: Default::default(),
                 status_reply: Default::default(),
+                suppress_status: Default::default(),
+                status_chunks: Default::default(),
                 _owner: std::rc::Rc::new(()),
             }
         }
@@ -979,6 +1193,13 @@ mod tests {
                 return Err(PtouchError::SendFailed("Injected transfer failure".into()));
             }
             if data == [0x1b, 0x69, 0x53] {
+                if self.suppress_status.get() {
+                    return Ok(());
+                }
+                if let Some(chunks) = self.status_chunks.borrow_mut().take() {
+                    self.reads.borrow_mut().extend(chunks);
+                    return Ok(());
+                }
                 let mut packet = status_packet(0, 0);
                 packet[2] = 0x42;
                 packet[3] = 0x30;
@@ -1016,6 +1237,226 @@ mod tests {
                 flags,
             },
         )
+    }
+
+    fn e550w_session() -> PrinterSession<ScriptedTransport> {
+        let info = crate::device::find_device(0x04f9, 0x2060).unwrap();
+        let session = PrinterSession::new(ScriptedTransport::new(), info.into());
+        session.transport.suppress_status.set(true);
+        session
+    }
+
+    #[test]
+    fn e550w_optional_probe_never_resets_and_manual_prepare_has_no_fake_status() {
+        let mut session = e550w_session();
+        assert!(session.probe_status().unwrap().is_none());
+        assert_eq!(
+            *session.transport.writes.borrow(),
+            [protocol::cmd_status_request()]
+        );
+        assert!(session.prepare_print(None).is_err());
+        assert!(!session.is_initialized());
+        assert!(
+            !session
+                .transport
+                .writes
+                .borrow()
+                .contains(&protocol::cmd_init())
+        );
+        session.prepare_print(Some(12)).unwrap();
+        assert!(session.status().is_none());
+        assert_eq!(session.tape_width_px(), Some(70));
+        assert!(session.is_initialized());
+        assert_eq!(
+            session.transport.writes.borrow().last(),
+            Some(&protocol::cmd_init())
+        );
+    }
+
+    #[test]
+    fn e550w_strict_init_still_requires_status() {
+        let mut session = e550w_session();
+        assert!(session.init().is_err());
+        assert!(!session.is_initialized());
+    }
+
+    #[test]
+    fn e550w_chain_keeps_prepared_media_when_completion_omits_it() {
+        let mut session = e550w_session();
+        session.prepare_print(Some(12)).unwrap();
+        let mut completion = status_packet(1, 0);
+        completion[4] = 0x66;
+        for chain in [true, false, false] {
+            session
+                .transport
+                .reads
+                .borrow_mut()
+                .push_back(completion.to_vec());
+            session
+                .print_raster(
+                    &[vec![0xff; 16]],
+                    chain,
+                    true,
+                    protocol::PrintQuality::Standard,
+                )
+                .unwrap();
+        }
+        let writes = session.transport.writes.borrow();
+        let infos: Vec<_> = writes
+            .iter()
+            .filter(|bytes| bytes.starts_with(&[0x1b, 0x69, 0x7a]))
+            .collect();
+        assert_eq!(
+            infos.iter().map(|bytes| bytes[5]).collect::<Vec<_>>(),
+            [12, 12, 12]
+        );
+        assert_eq!(
+            infos.iter().map(|bytes| bytes[11]).collect::<Vec<_>>(),
+            [0, 1, 0]
+        );
+    }
+
+    #[test]
+    fn e550w_valid_status_overrides_manual_media_and_supports_fragmentation() {
+        let mut session = e550w_session();
+        session.transport.suppress_status.set(false);
+        let mut status = status_packet(0, 0);
+        status[4] = 0x66;
+        status[10] = 9;
+        status[11] = 1;
+        session.transport.status_reply.set(Some(status));
+        session.prepare_print(Some(12)).unwrap();
+        assert_eq!(session.tape_width_px(), Some(50));
+        assert_eq!(session.status().unwrap().media_width, 9);
+        assert_eq!(session.prepared_width_mm, Some(9));
+    }
+
+    #[test]
+    fn e550w_invalid_status_cannot_fall_back_to_manual_tape() {
+        for (model, error, media, phase) in [
+            (0x72, 0, 1, 0),
+            (0x66, 1, 1, 0),
+            (0x66, 0, 0x11, 0),
+            (0x66, 0, 1, 1),
+        ] {
+            let mut session = e550w_session();
+            session.transport.suppress_status.set(false);
+            let mut packet = status_packet(0, phase);
+            packet[4] = model;
+            packet[8] = error;
+            packet[10] = 12;
+            packet[11] = media;
+            session.transport.status_reply.set(Some(packet));
+            assert!(session.prepare_print(Some(12)).is_err());
+            assert!(
+                !session
+                    .transport
+                    .writes
+                    .borrow()
+                    .contains(&protocol::cmd_init())
+            );
+        }
+        for bytes in [vec![0x80, 0x20, 0x42], vec![0xff; 32]] {
+            let mut session = e550w_session();
+            session.transport.suppress_status.set(false);
+            *session.transport.status_chunks.borrow_mut() = Some(vec![bytes]);
+            assert!(session.prepare_print(Some(12)).is_err());
+            assert!(!session.is_initialized());
+        }
+    }
+
+    #[test]
+    fn e550w_completion_and_unconfirmed_submission_are_distinct() {
+        for confirmed in [true, false] {
+            let mut session = e550w_session();
+            session.prepare_print(Some(12)).unwrap();
+            session.job_timeout = if confirmed {
+                Duration::from_secs(1)
+            } else {
+                Duration::from_millis(5)
+            };
+            if confirmed {
+                let mut packet = status_packet(1, 0);
+                packet[4] = 0x66;
+                session
+                    .transport
+                    .reads
+                    .borrow_mut()
+                    .push_back(packet.to_vec());
+            }
+            let writes = session.transport.writes.borrow().len();
+            let outcome = session
+                .print_raster_outcome(
+                    &[vec![0xff; 16]],
+                    false,
+                    true,
+                    protocol::PrintQuality::Standard,
+                )
+                .unwrap();
+            assert_eq!(
+                outcome,
+                if confirmed {
+                    PrintOutcome::Completed
+                } else {
+                    PrintOutcome::SubmittedUnconfirmed
+                }
+            );
+            let submitted = session.transport.writes.borrow();
+            assert!(
+                submitted[writes..]
+                    .iter()
+                    .all(|bytes| bytes != &protocol::cmd_status_request())
+            );
+            assert_eq!(submitted.last(), Some(&vec![0x1a]));
+        }
+    }
+
+    #[test]
+    fn e550w_strict_print_and_partial_transfer_do_not_report_success() {
+        let mut session = e550w_session();
+        session.prepare_print(Some(12)).unwrap();
+        session.job_timeout = Duration::from_millis(5);
+        assert!(matches!(
+            session.print_raster(
+                &[vec![0xff; 16]],
+                false,
+                true,
+                protocol::PrintQuality::Standard
+            ),
+            Err(PtouchError::CompletionUnknown)
+        ));
+        assert!(!session.is_initialized());
+        session.prepare_print(Some(12)).unwrap();
+        session
+            .transport
+            .fail_on_write
+            .set(Some(session.transport.writes.borrow().len() + 2));
+        assert!(matches!(
+            session.print_raster_outcome(
+                &[vec![0xff; 16]],
+                false,
+                true,
+                protocol::PrintQuality::Standard
+            ),
+            Err(PtouchError::SendFailed(_))
+        ));
+        assert!(!session.is_initialized());
+    }
+
+    #[test]
+    fn e550w_rejects_unsupported_media_and_invalid_raster_before_submission() {
+        let mut session = e550w_session();
+        assert!(session.prepare_print(Some(36)).is_err());
+        session.prepare_print(Some(12)).unwrap();
+        for lines in [vec![vec![0; 15]], vec![vec![0; 16]; 7087]] {
+            let writes = session.transport.writes.borrow().len();
+            assert!(
+                session
+                    .print_raster(&lines, false, true, protocol::PrintQuality::Standard)
+                    .is_err()
+            );
+            assert_eq!(session.transport.writes.borrow().len(), writes);
+        }
     }
 
     #[test]

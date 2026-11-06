@@ -83,6 +83,19 @@ mod tests {
     use super::*;
 
     #[test]
+    fn e550w_12mm_edges_are_centered_inside_the_128_dot_head() {
+        let mut bitmap = LabelBitmap::new(2, 70);
+        bitmap.set_pixel(0, 0, true);
+        bitmap.set_pixel(1, 69, true);
+        let lines = bitmap_to_raster_lines(&bitmap, 128);
+        let mut top = vec![0; 16];
+        top[3] = 4;
+        let mut bottom = vec![0; 16];
+        bottom[12] = 32;
+        assert_eq!(lines, [top, bottom]);
+    }
+
+    #[test]
     fn test_rasterline_setpixel_basic() {
         let mut line = vec![0u8; 4];
         // pixel 0 should set bit 0 of the last byte

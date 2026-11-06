@@ -32,6 +32,7 @@ pub use control::CancellationToken;
 pub use device::{DeviceFlags, DeviceInfo};
 pub use error::{PtouchError, Result};
 pub use protocol::PrintQuality;
+pub use session::PrintOutcome;
 pub use status::PrinterStatus;
 pub use tape::TapeInfo;
 pub use transport::PtouchDevice;
