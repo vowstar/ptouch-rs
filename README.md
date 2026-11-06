@@ -17,7 +17,7 @@ in `cli/ptouch.exe`.
 For Linux packages and command-line tools, see [Prebuilt Packages](#prebuilt-packages).
 For Mac setup, see [macOS installation](#macos-installation).
 
-![Label editor.](https://github.com/user-attachments/assets/32a6cc00-7376-401e-b39c-2a4cf2319bdb)
+![Image and layout editing.](https://github.com/user-attachments/assets/a9ccb464-9cb2-496e-941a-1b1da9c91068)
 
 ## Features
 
