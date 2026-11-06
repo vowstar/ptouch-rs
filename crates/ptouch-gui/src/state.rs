@@ -153,6 +153,8 @@ pub use crate::scene_edit::LayerMove;
 pub struct AppState {
     pub document_session: crate::document_session::DocumentSession,
     pub pending_file_action: Option<crate::file_workflow::FileAction>,
+    pub recent_files: crate::recent_files::RecentFiles,
+    pub file_open_error: Option<(std::path::PathBuf, String)>,
     pub file_baseline_pending: bool,
     /// New/Open reset view positions, while Save and Undo keep them.
     pub file_view_generation: u64,
@@ -280,6 +282,8 @@ impl Default for AppState {
         Self {
             document_session: crate::document_session::DocumentSession::new(&initial),
             pending_file_action: None,
+            recent_files: Default::default(),
+            file_open_error: None,
             file_baseline_pending: false,
             file_view_generation: 0,
             close_approved: false,

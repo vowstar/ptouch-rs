@@ -37,6 +37,7 @@ For Mac setup, see [macOS installation](#macos-installation).
 
 Use File to make, open, save or export a layout. Ctrl+S saves to the current
 file. Ctrl+Shift+S saves to another file. Use Cmd on macOS.
+File > Open Recent keeps your last ten opened or saved layouts across restarts.
 
 Elements has its own scroll area and fixed action buttons. The Up and Down keys
 select rows in the list. Ctrl+scroll zooms around the pointer on the canvas.

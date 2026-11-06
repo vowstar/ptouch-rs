@@ -615,3 +615,139 @@ fn repeat_modal_blocks_file_and_document_history_shortcuts() {
     frame(&context, &mut app, size, Vec::new());
     assert!(!crate::panels::repeat_tools::is_open(&context));
 }
+
+#[test]
+fn recent_open_cancel_and_save_keep_the_chosen_path_and_pending_edits() {
+    let directory = tempfile::tempdir().unwrap();
+    let a = directory.path().join("A.ptl");
+    let b = directory.path().join("B.ptl");
+    let mut app = app();
+    app.state.add_text();
+    assert!(file_workflow::save_to(
+        &mut app.state,
+        SaveKind::SaveAs,
+        Some(&a)
+    ));
+    app.state.add_text();
+    assert!(file_workflow::save_to(
+        &mut app.state,
+        SaveKind::SaveAs,
+        Some(&b)
+    ));
+    file_workflow::open_path(&mut app.state, &a).unwrap();
+    let ctx = egui::Context::default();
+    let size = egui::vec2(1000.0, 700.0);
+    frame(&ctx, &mut app, size, vec![]);
+    app.state.add_text();
+    app.state.add_text();
+    frame(&ctx, &mut app, size, vec![]);
+    let edited = app.state.document();
+    let recent = app.state.recent_files.paths().to_vec();
+    panels::toolbar::execute_action(
+        &mut app.state,
+        panels::toolbar::ToolbarAction::OpenRecent(1),
+    );
+    frame(&ctx, &mut app, size, vec![]);
+    let output = frame(&ctx, &mut app, size, vec![]);
+    let cancel = text_rect(&output, "Cancel").center();
+    frame(&ctx, &mut app, size, click(cancel));
+    assert_eq!(app.state.document(), edited);
+    assert_eq!(app.state.recent_files.paths(), recent);
+    assert_eq!(app.state.document_session.current_path(), Some(a.as_path()));
+    panels::toolbar::execute_action(
+        &mut app.state,
+        panels::toolbar::ToolbarAction::OpenRecent(1),
+    );
+    frame(&ctx, &mut app, size, vec![]);
+    let output = frame(&ctx, &mut app, size, vec![]);
+    let save = text_rect(&output, "Save").center();
+    frame(&ctx, &mut app, size, click(save));
+    assert_eq!(app.state.elements.len(), 2);
+    assert_eq!(
+        app.state.document_session.current_path(),
+        Some(b.canonicalize().unwrap().as_path())
+    );
+    assert_eq!(app.state.recent_files.paths()[0], b.canonicalize().unwrap());
+    let saved = LabelDocument::from_toml_str(&std::fs::read_to_string(a).unwrap()).unwrap();
+    assert_eq!(saved.elements.len(), 3);
+    assert!(
+        !app.state
+            .document_session
+            .is_modified(&app.state.document())
+    );
+}
+
+#[test]
+fn missing_recent_file_keeps_unsaved_work_and_can_be_removed_explicitly() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("Unavailable.ptl");
+    let mut app = app();
+    app.state.add_text();
+    assert!(file_workflow::save_to(
+        &mut app.state,
+        SaveKind::SaveAs,
+        Some(&path)
+    ));
+    std::fs::remove_file(&path).unwrap();
+    let ctx = egui::Context::default();
+    let size = egui::vec2(1000.0, 700.0);
+    frame(&ctx, &mut app, size, vec![]);
+    app.state.add_text();
+    frame(&ctx, &mut app, size, vec![]);
+    let edited = app.state.document();
+    panels::toolbar::execute_action(
+        &mut app.state,
+        panels::toolbar::ToolbarAction::OpenRecent(0),
+    );
+    frame(&ctx, &mut app, size, vec![]);
+    let output = frame(&ctx, &mut app, size, vec![]);
+    let discard = text_rect(&output, "Discard").center();
+    frame(&ctx, &mut app, size, click(discard));
+    frame(&ctx, &mut app, size, vec![]);
+    let output = frame(&ctx, &mut app, size, vec![]);
+    text_rect(&output, "Cannot open file");
+    assert_eq!(app.state.document(), edited);
+    assert!(app.state.document_session.is_modified(&edited));
+    assert_eq!(app.state.recent_files.paths().len(), 1);
+    frame(&ctx, &mut app, size, vec![key(egui::Key::N, true)]);
+    assert!(app.state.pending_file_action.is_none());
+    assert_eq!(app.state.document(), edited);
+    let output = frame(&ctx, &mut app, size, vec![]);
+    let remove = text_rect(&output, "Remove from recent files").center();
+    frame(&ctx, &mut app, size, click(remove));
+    assert!(app.state.recent_files.paths().is_empty());
+    assert!(app.state.file_open_error.is_none());
+    assert_eq!(app.state.document(), edited);
+}
+
+#[test]
+fn invalid_recent_open_and_clearing_history_do_not_change_the_document() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("Broken.ptl");
+    let mut app = app();
+    app.state.add_text();
+    assert!(file_workflow::save_to(
+        &mut app.state,
+        SaveKind::SaveAs,
+        Some(&path)
+    ));
+    file_workflow::open_path(&mut app.state, &path).unwrap();
+    std::fs::write(&path, "broken layout").unwrap();
+    let ctx = egui::Context::default();
+    let size = egui::vec2(1000.0, 700.0);
+    frame(&ctx, &mut app, size, vec![]);
+    let document = app.state.document();
+    panels::toolbar::execute_action(
+        &mut app.state,
+        panels::toolbar::ToolbarAction::OpenRecent(0),
+    );
+    frame(&ctx, &mut app, size, vec![]);
+    assert!(app.state.file_open_error.is_some());
+    assert_eq!(app.state.document(), document);
+    assert_eq!(app.state.recent_files.paths().len(), 1);
+    frame(&ctx, &mut app, size, vec![key(egui::Key::Escape, false)]);
+    panels::toolbar::execute_action(&mut app.state, panels::toolbar::ToolbarAction::ClearRecent);
+    assert!(app.state.recent_files.paths().is_empty());
+    assert_eq!(app.state.document(), document);
+    assert_eq!(std::fs::read_to_string(path).unwrap(), "broken layout");
+}

@@ -3,16 +3,17 @@
 
 //! Deferred file commands and confirmation for unsaved document changes.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::document_session::{SaveError, SaveKind};
 use crate::state::AppState;
 use ptouch_render::document::{DEFAULT_DOCUMENT_VERSION, LabelDocument};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum FileAction {
     New,
     Open,
+    OpenPath(PathBuf),
     Close,
 }
 
@@ -24,7 +25,7 @@ pub enum ConfirmChoice {
 }
 
 pub fn request(state: &mut AppState, action: FileAction) {
-    if state.pending_file_action.is_none() {
+    if state.pending_file_action.is_none() && state.file_open_error.is_none() {
         state.pending_file_action = Some(action);
     }
 }
@@ -51,6 +52,7 @@ pub fn save_to(state: &mut AppState, kind: SaveKind, selected: Option<&Path>) ->
     let document = state.document();
     match state.document_session.save(kind, selected, &document) {
         Ok(Some(path)) => {
+            state.recent_files.remember(&path);
             set_file_status(state, "Saved", &path);
             true
         }
@@ -91,6 +93,7 @@ pub fn open_path(state: &mut AppState, path: &Path) -> Result<(), String> {
         .opened(path.to_path_buf(), &state.document());
     state.file_baseline_pending = true;
     state.history = Default::default();
+    state.recent_files.remember(path);
     set_file_status(state, "Opened", path);
     Ok(())
 }
@@ -147,7 +150,34 @@ pub fn apply_choice(state: &mut AppState, choice: ConfirmChoice) -> Option<FileA
 
 /// Called after the editor commits the current frame's numeric and text edits.
 pub fn show_pending(ctx: &egui::Context, state: &mut AppState) {
-    let Some(action) = state.pending_file_action else {
+    if let Some((path, error)) = state.file_open_error.clone() {
+        let response = egui::Modal::new(egui::Id::new("file_open_error")).show(ctx, |ui| {
+            ui.set_max_width(ui.available_width().min(480.0));
+            ui.heading("Cannot open file");
+            egui::ScrollArea::vertical()
+                .max_height(160.0)
+                .show(ui, |ui| {
+                    ui.label(crate::recent_files::display_path(&path));
+                    ui.label(&error);
+                });
+            ui.horizontal_wrapped(|ui| {
+                if state.recent_files.paths().contains(&path)
+                    && ui.button("Remove from recent files").clicked()
+                {
+                    state.recent_files.remove(&path);
+                    state.file_open_error = None;
+                }
+                if ui.button("Close").clicked() {
+                    state.file_open_error = None;
+                }
+            });
+        });
+        if response.should_close() {
+            state.file_open_error = None;
+        }
+        return;
+    }
+    let Some(action) = state.pending_file_action.clone() else {
         return;
     };
     if state.canvas_drag_target.is_some() {
@@ -158,7 +188,9 @@ pub fn show_pending(ctx: &egui::Context, state: &mut AppState) {
             ui.heading("Unsaved changes");
             ui.label(match action {
                 FileAction::New => "Save changes before you make a new label?",
-                FileAction::Open => "Save changes before you open another file?",
+                FileAction::Open | FileAction::OpenPath(_) => {
+                    "Save changes before you open another file?"
+                }
                 FileAction::Close => "Save changes before you close the program?",
             });
             if state.status_message.starts_with("Cannot save") {
@@ -195,19 +227,25 @@ pub fn show_pending(ctx: &egui::Context, state: &mut AppState) {
             if let Some(parent) = state.document_session.current_path().and_then(Path::parent) {
                 dialog = dialog.set_directory(parent);
             }
-            if let Some(path) = dialog.pick_file()
-                && let Err(error) = open_path(state, &path)
-            {
-                let message = format!("Cannot open {}: {error}", file_name(&path));
-                state.status_tooltip = Some((message.clone(), path.display().to_string()));
-                state.status_message = message;
+            if let Some(path) = dialog.pick_file() {
+                open_or_report(state, &path);
             }
         }
+        Some(FileAction::OpenPath(path)) => open_or_report(state, &path),
         Some(FileAction::Close) => {
             state.close_approved = true;
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
         None => {}
+    }
+}
+
+fn open_or_report(state: &mut AppState, path: &Path) {
+    if let Err(error) = open_path(state, path) {
+        let message = format!("Cannot open {}: {error}", file_name(path));
+        state.status_tooltip = Some((message.clone(), path.display().to_string()));
+        state.status_message = message;
+        state.file_open_error = Some((path.to_path_buf(), error));
     }
 }
 
