@@ -206,7 +206,7 @@ impl<T: Transport> PrinterSession<T> {
     ///
     /// Flushes stale USB data and reads the printer status. Unlike
     /// [`init`](Self::init), this does not send the 100-zero + ESC @
-    /// reset sequence, so it will not disturb the printer.
+    /// reset sequence. Call only while the printer is idle.
     pub fn query_status(&mut self) -> Result<&PrinterStatus> {
         self.flush_input()?;
         self.get_status()
@@ -601,6 +601,7 @@ impl<T: Transport> PrinterSession<T> {
                 .prepared_width_mm
                 .or_else(|| self.status.as_ref().map(|s| s.media_width))
                 .unwrap_or(0),
+            precut: self.profile.flags.contains(DeviceFlags::E550W_RASTER),
             ..protocol::JobOptions::default()
         };
 
@@ -1314,6 +1315,33 @@ mod tests {
             infos.iter().map(|bytes| bytes[11]).collect::<Vec<_>>(),
             [0, 1, 0]
         );
+    }
+
+    #[test]
+    fn e550w_feed_and_cut_explicitly_enables_the_cutter() {
+        let mut session = e550w_session();
+        session.prepare_print(Some(12)).unwrap();
+        let mut completion = status_packet(1, 0);
+        completion[4] = 0x66;
+        session
+            .transport
+            .reads
+            .borrow_mut()
+            .push_back(completion.to_vec());
+        let before = session.transport.writes.borrow().len();
+        session.feed_and_cut().unwrap();
+        let writes = session.transport.writes.borrow();
+        let job = &writes[before..];
+        assert_eq!(job[2], protocol::cmd_precut(true));
+        assert_eq!(job[1][5], 12);
+        assert_eq!(job[1][7], 31);
+        assert_eq!(
+            job.iter()
+                .filter(|bytes| bytes.as_slice() == [0x5a])
+                .count(),
+            31
+        );
+        assert_eq!(job.last(), Some(&vec![0x1a]));
     }
 
     #[test]
