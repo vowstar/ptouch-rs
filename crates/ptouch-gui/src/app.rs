@@ -45,6 +45,7 @@ impl PtouchApp {
 
         Self {
             state: AppState {
+                recent_files: crate::recent_files::RecentFiles::load(cc.storage),
                 calibration_profiles: cc
                     .storage
                     .and_then(|storage| eframe::get_value(storage, "calibration_profiles"))
@@ -306,6 +307,7 @@ impl PtouchApp {
         let mut replayed = false;
         let rich_focused = ctx.memory(|m| m.has_focus(rich_id));
         let file_action = if self.state.pending_file_action.is_none()
+            && self.state.file_open_error.is_none()
             && !crate::rich_text_editor::is_composing(&ctx, rich_id)
         {
             file_shortcut(&ctx)
@@ -313,6 +315,7 @@ impl PtouchApp {
             None
         };
         if self.state.pending_file_action.is_none()
+            && self.state.file_open_error.is_none()
             && !panels::repeat_tools::is_open(&ctx)
             && (!ctx.text_edit_focused() || rich_focused)
             && !crate::rich_text_editor::is_composing(&ctx, rich_id)
@@ -517,6 +520,7 @@ impl PtouchApp {
 
 impl eframe::App for PtouchApp {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        self.state.recent_files.save(storage);
         eframe::set_value(
             storage,
             "calibration_profiles",

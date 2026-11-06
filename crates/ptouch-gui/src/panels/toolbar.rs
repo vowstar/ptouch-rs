@@ -34,6 +34,8 @@ pub enum ToolbarAction {
     SaveAs,
     New,
     Open,
+    OpenRecent(usize),
+    ClearRecent,
     Info,
 }
 
@@ -54,9 +56,38 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &AppState) -> Option<ToolbarAction
     }
     ui.horizontal_wrapped(|ui| {
         ui.menu_button("File", |ui| {
+            for (label, command) in [("New", ToolbarAction::New), ("Open", ToolbarAction::Open)] {
+                if ui.button(label).clicked() {
+                    action = Some(command);
+                    ui.close();
+                }
+            }
+            ui.add_enabled_ui(!state.recent_files.paths().is_empty(), |ui| {
+                ui.menu_button("Open Recent", |ui| {
+                    ui.set_max_width(420.0);
+                    for (index, path) in state.recent_files.paths().iter().enumerate() {
+                        let response = ui
+                            .push_id(index, |ui| {
+                                ui.add(
+                                    egui::Button::new(state.recent_files.caption(path))
+                                        .wrap_mode(egui::TextWrapMode::Truncate),
+                                )
+                                .on_hover_text(crate::recent_files::display_path(path))
+                            })
+                            .inner;
+                        if response.clicked() {
+                            action = Some(ToolbarAction::OpenRecent(index));
+                            ui.close();
+                        }
+                    }
+                    ui.separator();
+                    if ui.button("Clear Recent Files").clicked() {
+                        action = Some(ToolbarAction::ClearRecent);
+                        ui.close();
+                    }
+                });
+            });
             for (label, command) in [
-                ("New", ToolbarAction::New),
-                ("Open", ToolbarAction::Open),
                 ("Save", ToolbarAction::Save),
                 ("Save As", ToolbarAction::SaveAs),
             ] {
@@ -262,6 +293,15 @@ pub fn execute_action(state: &mut AppState, action: ToolbarAction) {
         ToolbarAction::Open => {
             crate::file_workflow::request(state, crate::file_workflow::FileAction::Open)
         }
+        ToolbarAction::OpenRecent(index) => {
+            if let Some(path) = state.recent_files.paths().get(index).cloned() {
+                crate::file_workflow::request(
+                    state,
+                    crate::file_workflow::FileAction::OpenPath(path),
+                );
+            }
+        }
+        ToolbarAction::ClearRecent => state.recent_files.clear(),
     }
 }
 
