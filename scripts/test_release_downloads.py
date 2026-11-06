@@ -13,6 +13,16 @@ def load(name):
 
 
 class ReleaseDownloadsTest(unittest.TestCase):
+    def test_readme_downloads_do_not_need_a_version_bump(self):
+        readme = (Path(__file__).resolve().parents[1] / "README.md").read_text()
+        self.assertNotRegex(readme, r"https://github.com/vowstar/ptouch-rs/releases/download/[^/\s)]+/")
+        filenames = re.findall(r"https://github.com/vowstar/ptouch-rs/releases/latest/download/([^\s)]+)", readme)
+        self.assertTrue(filenames)
+        assets = load("release_assets")
+        stable_names = set(assets.asset_map("1.2.3").values()) & set(assets.asset_map("9.8.7").values())
+        for filename in filenames:
+            self.assertIn(filename, stable_names)
+
     def test_download_links_match_the_published_asset_names(self):
         version = "1.2.3"
         notes = load("release_downloads").download_notes(version)
