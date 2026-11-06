@@ -156,6 +156,13 @@ impl PtouchApp {
                 PrinterResponse::UsbDevices(devices) => {
                     self.state.usb_targets = devices;
                 }
+                PrinterResponse::UsbConnected {
+                    info,
+                    status,
+                    error,
+                } => {
+                    self.state.apply_usb_connection(info, status, error);
+                }
                 #[cfg(any(target_os = "macos", test))]
                 PrinterResponse::BluetoothDevices(devices) => {
                     self.state.bluetooth_targets = devices;
@@ -185,6 +192,9 @@ impl PtouchApp {
                     let old_dpi = self.state.target_dpi();
                     let old_width_mm = self.state.tape_width_mm;
                     self.state.printer_connected = true;
+                    self.state.printer_device = None;
+                    self.state.printer_manual_tape = false;
+                    self.state.printer_media_error = None;
                     self.state.preview_uses_printer = true;
                     self.state.connecting = false;
                     self.state.printer_max_px = max_px;
@@ -225,11 +235,13 @@ impl PtouchApp {
                     // and printing is gated on printer_connected anyway.
                 }
                 PrinterResponse::PrintDone => {
+                    self.state.printer_needs_check = false;
                     self.state.operation_in_progress = false;
                     self.state.cancellation = None;
                     self.state.status_message = "Print complete".to_string();
                 }
                 PrinterResponse::FeedAndCutDone => {
+                    self.state.printer_needs_check = false;
                     self.state.operation_in_progress = false;
                     self.state.cancellation = None;
                     self.state.status_message = "Feed & cut done".to_string();
@@ -238,6 +250,21 @@ impl PtouchApp {
                     self.state.operation_in_progress = false;
                     self.state.cancellation = None;
                     self.state.status_message = msg;
+                }
+                PrinterResponse::SubmissionUnconfirmed => {
+                    self.state.operation_in_progress = false;
+                    self.state.cancellation = None;
+                    self.state.printer_needs_check = true;
+                    self.state.printer_status = Some("Completion unconfirmed".into());
+                    self.state.status_message =
+                        "Label sent. Completion unconfirmed. Check the printer.".into();
+                }
+                PrinterResponse::PrintNeedsCheck(message) => {
+                    self.state.operation_in_progress = false;
+                    self.state.cancellation = None;
+                    self.state.printer_needs_check = true;
+                    self.state.printer_status = Some("Check printer".into());
+                    self.state.status_message = message;
                 }
             }
         }
@@ -594,6 +621,123 @@ fn setup_fallback_fonts(ctx: &egui::Context) {
 mod tests {
     use super::*;
     use crate::state::PrinterTarget;
+
+    #[test]
+    fn e550w_manual_geometry_survives_width_changes_and_layout_restore() {
+        let (mut app, tx) = app(AppState::default());
+        tx.send(PrinterEvent {
+            target: Some(PrinterTarget::Usb),
+            response: PrinterResponse::UsbConnected {
+                info: ptouch_core::device::find_device(0x04f9, 0x2060)
+                    .unwrap()
+                    .clone(),
+                status: None,
+                error: None,
+            },
+        })
+        .unwrap();
+        app.drain_printer_responses();
+        assert_eq!(app.state.printer_model.as_deref(), Some("PT-E550W"));
+        assert!(app.state.printer_connected && app.state.printer_manual_tape);
+        assert!(app.state.printer_ready_for_output());
+        assert_eq!(app.state.tape_width_px, 70);
+        app.state.add_text();
+        let saved = app.state.document();
+        app.state.tape_width_mm = 9;
+        app.state.update_tape_pixels();
+        assert_eq!(app.state.tape_width_px, 50);
+        app.state.restore_document(saved);
+        assert_eq!(app.state.tape_width_px, 70);
+        app.state.tape_width_mm = 36;
+        app.state.update_tape_pixels();
+        assert!(!app.state.printer_ready_for_output());
+        assert_eq!(app.state.available_tapes().len(), 6);
+        tx.send(usb_status()).unwrap();
+        app.drain_printer_responses();
+        app.state.tape_width_mm = 12;
+        app.state.update_tape_pixels();
+        assert_eq!(app.state.tape_width_px, 76);
+        assert!(!app.state.printer_manual_tape);
+    }
+
+    #[test]
+    fn e550w_unconfirmed_print_blocks_print_feed_refresh_and_target_switching() {
+        let (command_tx, command_rx) = mpsc::channel();
+        let (mut app, tx) = app(AppState {
+            printer_cmd_tx: Some(command_tx),
+            ..Default::default()
+        });
+        tx.send(PrinterEvent {
+            target: Some(PrinterTarget::Usb),
+            response: PrinterResponse::UsbConnected {
+                info: ptouch_core::device::find_device(0x04f9, 0x2060)
+                    .unwrap()
+                    .clone(),
+                status: None,
+                error: None,
+            },
+        })
+        .unwrap();
+        app.drain_printer_responses();
+        for response in [
+            PrinterResponse::SubmissionUnconfirmed,
+            PrinterResponse::PrintNeedsCheck("Cancelled; sent data may still print".into()),
+        ] {
+            tx.send(PrinterEvent {
+                target: Some(PrinterTarget::Usb),
+                response,
+            })
+            .unwrap();
+            app.drain_printer_responses();
+            assert!(app.state.printer_needs_check && app.state.is_printer_busy());
+            assert!(!app.state.printer_ready_for_output());
+            app.state.request_printer_status();
+            assert!(command_rx.try_recv().is_err());
+            assert!(!app.state.operation_in_progress);
+            app.state.printer_needs_check = false;
+            app.state.request_printer_status();
+            assert!(matches!(
+                command_rx.try_recv().unwrap(),
+                crate::state::PrinterCommand::Poll(_)
+            ));
+            tx.send(PrinterEvent {
+                target: Some(PrinterTarget::Usb),
+                response: PrinterResponse::UsbConnected {
+                    info: ptouch_core::device::find_device(0x04f9, 0x2060)
+                        .unwrap()
+                        .clone(),
+                    status: None,
+                    error: None,
+                },
+            })
+            .unwrap();
+            app.drain_printer_responses();
+        }
+    }
+
+    #[test]
+    fn e550w_status_error_keeps_connection_but_blocks_printing() {
+        let (mut app, tx) = app(AppState::default());
+        tx.send(PrinterEvent {
+            target: Some(PrinterTarget::Usb),
+            response: PrinterResponse::UsbConnected {
+                info: ptouch_core::device::find_device(0x04f9, 0x2060)
+                    .unwrap()
+                    .clone(),
+                status: None,
+                error: Some("Invalid status header".into()),
+            },
+        })
+        .unwrap();
+        app.drain_printer_responses();
+        assert!(app.state.printer_connected);
+        assert!(!app.state.is_printer_busy());
+        assert!(!app.state.printer_ready_for_output());
+        assert_eq!(
+            app.state.printer_status.as_deref(),
+            Some("Invalid status header")
+        );
+    }
 
     fn app(state: AppState) -> (PtouchApp, mpsc::Sender<PrinterEvent>) {
         let (tx, rx) = mpsc::channel();

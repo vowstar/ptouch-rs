@@ -85,6 +85,7 @@ pub enum PrinterCommand {
     Poll(PrinterTarget),
     /// Print raster data.
     Print {
+        media_width: u8,
         raster_lines: Vec<Vec<u8>>,
         chain_print: bool,
         auto_cut: bool,
@@ -94,6 +95,7 @@ pub enum PrinterCommand {
     },
     /// Feed tape forward and cut.
     FeedAndCut {
+        media_width: u8,
         target: PrinterTarget,
         cancellation: ptouch_core::CancellationToken,
     },
@@ -115,6 +117,12 @@ pub enum PrinterResponse {
     BluetoothDiscoveryError(String),
     /// Detected USB locations for explicit selection.
     UsbDevices(Vec<PrinterTarget>),
+    /// USB is open, with optional media information for PT-E550W.
+    UsbConnected {
+        info: ptouch_core::DeviceInfo,
+        status: Option<ptouch_core::PrinterStatus>,
+        error: Option<String>,
+    },
     /// A printer was found and its status queried.
     Connected {
         model_name: String,
@@ -131,6 +139,10 @@ pub enum PrinterResponse {
     PrintDone,
     /// Feed and cut completed successfully.
     FeedAndCutDone,
+    /// Sending finished, but no completion notification arrived.
+    SubmissionUnconfirmed,
+    /// A transfer may have started before it failed or was cancelled.
+    PrintNeedsCheck(String),
     /// An operation failed.
     Error(String),
 }
@@ -223,6 +235,10 @@ pub struct AppState {
     pub auto_cut: bool,
     /// Whether a printer is currently connected (detected by background poll).
     pub printer_connected: bool,
+    pub printer_device: Option<ptouch_core::DeviceInfo>,
+    pub printer_manual_tape: bool,
+    pub printer_media_error: Option<String>,
+    pub printer_needs_check: bool,
     /// Target selected for polling and printing.
     pub printer_target: PrinterTarget,
     /// Paired PT-P300BT targets discovered on macOS.
@@ -314,6 +330,10 @@ impl Default for AppState {
             calibration_profiles: Default::default(),
             auto_cut: true,
             printer_connected: false,
+            printer_device: None,
+            printer_manual_tape: false,
+            printer_media_error: None,
+            printer_needs_check: false,
             printer_target: PrinterTarget::Usb,
             bluetooth_targets: Vec::new(),
             bluetooth_discovering: false,
@@ -1559,7 +1579,73 @@ impl AppState {
     }
 
     pub fn is_printer_busy(&self) -> bool {
-        self.operation_in_progress || self.connecting || self.bluetooth_discovering
+        self.operation_in_progress
+            || self.connecting
+            || self.bluetooth_discovering
+            || self.printer_needs_check
+    }
+
+    pub fn printer_ready_for_output(&self) -> bool {
+        self.printer_connected
+            && !self.is_printer_busy()
+            && self.printer_media_error.is_none()
+            && self.printer_device.as_ref().is_none_or(|info| {
+                ptouch_core::tape::find_tape_for_device(self.tape_width_mm, info).is_some()
+            })
+    }
+
+    pub fn available_tapes(&self) -> &'static [ptouch_core::tape::TapeInfo] {
+        if (self.printer_connected || self.preview_uses_printer)
+            && let Some(info) = &self.printer_device
+        {
+            return ptouch_core::tape::supported_tapes_for_device(info);
+        }
+        ptouch_core::tape::supported_tapes(self.target_dpi())
+    }
+
+    pub fn apply_usb_connection(
+        &mut self,
+        info: ptouch_core::DeviceInfo,
+        status: Option<ptouch_core::PrinterStatus>,
+        error: Option<String>,
+    ) {
+        let initial_blank = self.elements.is_empty()
+            && self.document_session.current_path().is_none()
+            && !self.document_session.is_modified(&self.document());
+        let old_geometry = (self.target_dpi(), self.tape_width_mm, self.tape_width_px);
+        self.printer_connected = true;
+        self.preview_uses_printer = true;
+        self.connecting = false;
+        self.printer_max_px = info.max_px;
+        self.printer_dpi = info.dpi;
+        self.printer_quality_modes = false;
+        self.print_quality = PrintQuality::Standard;
+        self.printer_model = Some(info.name.to_string());
+        self.printer_device = Some(info);
+        self.printer_manual_tape = status.is_none();
+        self.printer_media_error = error;
+        if let Some(status) = status {
+            if status.media_width > 0 {
+                self.tape_width_mm = status.media_width;
+            }
+            if !matches!(status.media_type, 0x01 | 0x03) {
+                self.printer_media_error = Some("PT-E550W currently supports TZe tape only".into());
+            }
+        }
+        self.printer_status = Some(self.printer_media_error.clone().unwrap_or_else(|| {
+            if self.printer_manual_tape {
+                "Connected. Check the selected TZe tape width.".into()
+            } else {
+                "Connected".into()
+            }
+        }));
+        self.update_tape_pixels();
+        if old_geometry != (self.target_dpi(), self.tape_width_mm, self.tape_width_px) {
+            self.mark_dirty();
+        }
+        if initial_blank {
+            self.document_session.reset(&self.document());
+        }
     }
 
     pub fn request_printer_status(&mut self) {
@@ -1609,6 +1695,14 @@ impl AppState {
     /// Update the tape width in pixels based on the current tape_width_mm
     /// and the connected printer's resolution.
     pub fn update_tape_pixels(&mut self) {
+        if (self.printer_connected || self.preview_uses_printer)
+            && let Some(info) = &self.printer_device
+        {
+            if let Some(tape) = ptouch_core::tape::find_tape_for_device(self.tape_width_mm, info) {
+                self.tape_width_px = u32::from(tape.pixels);
+            }
+            return;
+        }
         if let Some(tape) = ptouch_core::tape::find_tape(self.tape_width_mm, self.target_dpi()) {
             let px = u32::from(tape.pixels);
             self.tape_width_px = if (self.printer_connected || self.preview_uses_printer)
