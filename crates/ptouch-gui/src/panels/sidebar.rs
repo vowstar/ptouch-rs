@@ -6,7 +6,6 @@
 use log::info;
 
 use ptouch_core::protocol::PrintQuality;
-use ptouch_core::tape;
 
 use crate::state::{AppState, CanvasEditTarget, CanvasTarget};
 
@@ -94,6 +93,13 @@ fn show_printer_section(ui: &mut egui::Ui, state: &mut AppState) {
 
     let status_text = state.printer_status.as_deref().unwrap_or("Scanning...");
     ui.label(format!("Status: {}", status_text));
+    if state.printer_needs_check {
+        ui.label("Check the printer before sending another label.");
+        if ui.button("Printer has stopped").clicked() {
+            state.printer_needs_check = false;
+            state.request_printer_status();
+        }
+    }
 
     ui.add_space(4.0);
     if ui
@@ -113,8 +119,26 @@ fn show_tape_section(ui: &mut egui::Ui, state: &mut AppState) {
     ui.heading("Tape");
     ui.add_space(4.0);
 
-    let tapes = tape::supported_tapes(state.target_dpi());
-    let current_label = format!("{} mm ({} px)", state.tape_width_mm, state.tape_width_px);
+    let tapes = state.available_tapes();
+    let tape_label = |width: u8, pixels: u32| {
+        let width = if width == 4 {
+            "3.5".to_string()
+        } else {
+            width.to_string()
+        };
+        format!("{width} mm ({pixels} px)")
+    };
+    let current_label = if tapes
+        .iter()
+        .any(|tape| tape.width_mm == state.tape_width_mm)
+    {
+        tape_label(state.tape_width_mm, state.tape_width_px)
+    } else {
+        format!("{} mm (unsupported)", state.tape_width_mm)
+    };
+    if state.printer_manual_tape && state.printer_connected {
+        ui.small("TZe tape (manual selection)");
+    }
 
     ui.add_enabled_ui(
         !state.printer_target.is_bluetooth() || !state.printer_connected,
@@ -123,7 +147,7 @@ fn show_tape_section(ui: &mut egui::Ui, state: &mut AppState) {
                 .selected_text(&current_label)
                 .show_ui(ui, |ui| {
                     for t in tapes {
-                        let label = format!("{} mm ({} px)", t.width_mm, t.pixels);
+                        let label = tape_label(t.width_mm, u32::from(t.pixels));
                         if ui
                             .selectable_value(&mut state.tape_width_mm, t.width_mm, &label)
                             .clicked()

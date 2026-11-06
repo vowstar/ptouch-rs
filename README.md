@@ -52,6 +52,13 @@ PT-E720BT USB printing with 24 mm laminated tape and automatic cutting was
 [confirmed on Apple silicon](https://github.com/vowstar/ptouch-rs/issues/49#issuecomment-6564949140)
 with v0.15.0.
 
+PT-E550W USB support uses the model's TZe print areas. If the printer does not
+report its tape, select the installed TZe width in the GUI. CLI printing accepts
+`--media-width 12` for a 12 mm cassette, or uses the width saved in a layout.
+Completion is reported only when the printer confirms it. Otherwise, check that
+the printer has stopped before sending another label. Hardware confirmation is
+pending in [issue #62](https://github.com/vowstar/ptouch-rs/issues/62).
+
 Tape widths: 3.5mm, 6mm, 9mm, 12mm, 18mm, 24mm, 36mm.
 
 ## Building

@@ -125,7 +125,7 @@ pub fn show_toolbar(ui: &mut egui::Ui, state: &AppState) -> Option<ToolbarAction
             action = Some(ToolbarAction::Padding);
         }
         ui.separator();
-        let ready = state.printer_connected && !state.is_printer_busy();
+        let ready = state.printer_ready_for_output();
         let bitmap = crate::output_tools::preview_ready(state);
         if ui
             .add_enabled(ready && bitmap, egui::Button::new("Print"))
@@ -201,7 +201,7 @@ pub fn execute_action(state: &mut AppState, action: ToolbarAction) {
             state.mark_dirty();
         }
         ToolbarAction::Print => {
-            if !state.printer_connected || state.is_printer_busy() || state.needs_rerender {
+            if !state.printer_ready_for_output() || state.needs_rerender {
                 return;
             }
             if let Some(tx) = &state.printer_cmd_tx {
@@ -215,6 +215,7 @@ pub fn execute_action(state: &mut AppState, action: ToolbarAction) {
                 let cancellation = ptouch_core::CancellationToken::default();
                 state.cancellation = Some(cancellation.clone());
                 let _ = tx.send(PrinterCommand::Print {
+                    media_width: state.tape_width_mm,
                     raster_lines,
                     chain_print: !state.auto_cut,
                     auto_cut: state.auto_cut,
@@ -227,14 +228,14 @@ pub fn execute_action(state: &mut AppState, action: ToolbarAction) {
             }
         }
         ToolbarAction::Feed => {
-            if state.printer_connected
-                && !state.is_printer_busy()
+            if state.printer_ready_for_output()
                 && !state.printer_target.is_bluetooth()
                 && let Some(tx) = &state.printer_cmd_tx
             {
                 let cancellation = ptouch_core::CancellationToken::default();
                 state.cancellation = Some(cancellation.clone());
                 let _ = tx.send(PrinterCommand::FeedAndCut {
+                    media_width: state.tape_width_mm,
                     target: state.printer_target.clone(),
                     cancellation,
                 });

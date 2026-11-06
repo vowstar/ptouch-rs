@@ -149,6 +149,11 @@ struct PrintArgs {
     #[arg(short = 'w', long)]
     tape_width: Option<u32>,
 
+    /// Installed TZe width in mm when PT-E550W cannot report it (3.5, 6, 9, 12, 18, 24)
+    #[arg(long, value_name = "MM", value_parser = parse_media_width,
+        conflicts_with_all = ["output", "tape_width", "bluetooth"])]
+    media_width: Option<u8>,
+
     /// Add a cut mark
     #[arg(short = 'c', long)]
     cut: bool,
@@ -223,6 +228,34 @@ struct InfoArgs {
     timeout: u32,
 }
 
+fn parse_media_width(value: &str) -> Result<u8, String> {
+    match value {
+        "3.5" | "4" => Ok(4),
+        "6" => Ok(6),
+        "9" => Ok(9),
+        "12" => Ok(12),
+        "18" => Ok(18),
+        "24" => Ok(24),
+        _ => Err("select a TZe width: 3.5, 6, 9, 12, 18 or 24 mm".into()),
+    }
+}
+
+fn validate_selected_media(
+    width: Option<u8>,
+    status: Option<&PrinterStatus>,
+) -> Result<(), PtouchError> {
+    if let (Some(selected), Some(status)) = (width, status)
+        && status.media_width > 0
+        && selected != status.media_width
+    {
+        return Err(PtouchError::StatusError(format!(
+            "Selected TZe width is {selected} mm, but the printer reports {} mm",
+            status.media_width
+        )));
+    }
+    Ok(())
+}
+
 /// The printer selected by the CLI. USB remains the default target.
 enum CliDevice {
     Usb(PtouchDevice),
@@ -266,19 +299,19 @@ impl CliDevice {
             .map(Self::Usb)
     }
 
-    fn init(&mut self) -> Result<(), PtouchError> {
+    fn prepare_print(&mut self, manual_width: Option<u8>) -> Result<(), PtouchError> {
         match self {
-            Self::Usb(device) => device.init(),
+            Self::Usb(device) => device.prepare_print(manual_width),
             #[cfg(target_os = "macos")]
             Self::Bluetooth(device) => device.init(),
         }
     }
 
-    fn query_status(&mut self) -> Result<&PrinterStatus, PtouchError> {
+    fn probe_status(&mut self) -> Result<Option<PrinterStatus>, PtouchError> {
         match self {
-            Self::Usb(device) => device.query_status(),
+            Self::Usb(device) => device.probe_status().map(|status| status.cloned()),
             #[cfg(target_os = "macos")]
-            Self::Bluetooth(device) => device.query_status(),
+            Self::Bluetooth(device) => device.query_status().map(|status| Some(status.clone())),
         }
     }
 
@@ -737,7 +770,12 @@ fn execute_info(args: &InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
     )?;
     // A read-only query preserves device errors for display without resetting
     // the printer or requiring it to be ready for a new print job.
-    let status = dev.query_status()?.clone();
+    let Some(status) = dev.probe_status()? else {
+        println!("Model: {} (USB connected)", dev.model_name());
+        println!("Tape status unavailable. Select the installed TZe width before printing.");
+        dev.close()?;
+        return Ok(());
+    };
 
     println!("Printer Information");
     println!("  Model:          {}", dev.model_name());
@@ -853,8 +891,12 @@ fn execute_print(args: &PrintArgs, ignored: &[String]) -> Result<(), Box<dyn std
             if let CliDevice::Usb(usb) = &mut dev {
                 usb.set_job_timeout(std::time::Duration::from_secs(u64::from(args.timeout)))?;
             }
-            dev.init()?;
-            // init() already called get_status() internally
+            dev.prepare_print(args.media_width)?;
+            validate_selected_media(args.media_width, dev.status())?;
+            if dev.status().is_none() {
+                eprintln!("Using manually selected TZe tape width");
+            }
+            // Preparation resolves detected or explicitly selected media.
             let width = dev.tape_width_px().ok_or_else(|| {
                 PtouchError::StatusError("Could not determine tape width".to_string())
             })?;
@@ -1125,7 +1167,11 @@ fn resolve_layout_target(
         if let CliDevice::Usb(usb) = &mut dev {
             usb.set_job_timeout(std::time::Duration::from_secs(u64::from(args.timeout)))?;
         }
-        dev.init()?;
+        dev.prepare_print(args.media_width.or(Some(doc.tape_width_mm)))?;
+        validate_selected_media(args.media_width, dev.status())?;
+        if dev.status().is_none() {
+            eprintln!("Using manually selected TZe tape width");
+        }
         let printer_px = u32::from(dev.tape_width_px().ok_or_else(|| {
             PtouchError::StatusError("Could not determine tape width".to_string())
         })?);
@@ -1322,6 +1368,43 @@ fn print_to_device(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn manual_media_width_does_not_change_offline_pixel_width_options() {
+        let Commands::Print(args) =
+            Cli::try_parse_from(["ptouch", "print", "--media-width", "3.5", "test"])
+                .unwrap()
+                .command
+        else {
+            unreachable!()
+        };
+        assert_eq!(args.media_width, Some(4));
+        assert!(args.tape_width.is_none());
+        for flags in [
+            vec!["--media-width", "12", "-o", "test.png"],
+            vec!["--media-width", "12", "--bluetooth", "AA:BB:CC:DD:EE:FF"],
+            vec!["--media-width", "0"],
+            vec!["--media-width", "36"],
+        ] {
+            assert!(Cli::try_parse_from(["ptouch", "print"].into_iter().chain(flags)).is_err());
+        }
+        let Commands::Print(args) =
+            Cli::try_parse_from(["ptouch", "print", "-w", "70", "-o", "test.png", "test"])
+                .unwrap()
+                .command
+        else {
+            unreachable!()
+        };
+        assert_eq!(args.tape_width, Some(70));
+        assert!(args.media_width.is_none());
+        let mut packet = [0; 32];
+        packet[10] = 9;
+        let status = PrinterStatus::from_bytes(&packet).unwrap();
+        assert!(validate_selected_media(Some(12), Some(&status)).is_err());
+        assert!(validate_selected_media(Some(9), Some(&status)).is_ok());
+        assert!(validate_selected_media(None, Some(&status)).is_ok());
+        assert!(validate_selected_media(Some(12), None).is_ok());
+    }
     use document::{ContentBox, LabelElement, LabelObject, ObjectContent, PositionMode, TextBox};
 
     fn free_layout_fixture(dir: &Path, dpi: u16) -> LabelDocument {
