@@ -1819,6 +1819,23 @@ fn content_box_for_frame(frame: &TextBox) -> ContentBox {
 mod tests {
     use super::*;
 
+    #[cfg(windows)]
+    #[test]
+    fn usbprint_labels_include_the_selected_model_and_verification() {
+        let target = PrinterTarget::UsbPrint {
+            instance_id: "printer-a".into(),
+            model: "PT-P700",
+            verified: true,
+        };
+        assert_eq!(target.label(), "PT-P700 (USBPRINT) printer-a");
+        let target = PrinterTarget::UsbPrint {
+            instance_id: "printer-b".into(),
+            model: "PT-18R",
+            verified: false,
+        };
+        assert_eq!(target.label(), "PT-18R (USBPRINT, experimental) printer-b");
+    }
+
     #[test]
     fn new_sequence_in_a_v13_document_still_has_default_spacing() {
         let mut state = AppState {

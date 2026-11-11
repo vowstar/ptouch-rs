@@ -77,7 +77,7 @@ struct PrintArgs {
     #[arg(long, value_name = "BUS:ADDRESS", conflicts_with = "bluetooth")]
     usb: Option<UsbLocation>,
 
-    /// Select a Windows PT-P710BT device ID from `ptouch doctor`
+    /// Select a Windows P-touch USBPRINT instance ID from `ptouch doctor`
     #[arg(long, value_name = "INSTANCE_ID", conflicts_with_all = ["bluetooth", "usb"])]
     usbprint: Option<String>,
 
@@ -211,7 +211,7 @@ struct InfoArgs {
     #[arg(long, value_name = "BUS:ADDRESS", conflicts_with = "bluetooth")]
     usb: Option<UsbLocation>,
 
-    /// Select a Windows PT-P710BT device ID from `ptouch doctor`
+    /// Select a Windows P-touch USBPRINT instance ID from `ptouch doctor`
     #[arg(long, value_name = "INSTANCE_ID", conflicts_with_all = ["bluetooth", "usb"])]
     usbprint: Option<String>,
 
