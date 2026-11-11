@@ -715,6 +715,42 @@ mod tests {
             .unwrap();
         Worker::from_child(child).unwrap()
     }
+
+    #[test]
+    fn raster_write_can_outlast_the_control_timeout() {
+        // The child reports the requested deadline after a six-second delay.
+        // This exercises request clamping and the parent watchdog without USB.
+        let script = r"
+$reader = New-Object System.IO.BinaryReader([Console]::OpenStandardInput())
+$null = $reader.ReadUInt32()
+$millis = $reader.ReadUInt32()
+$length = $reader.ReadUInt32()
+$null = $reader.ReadBytes($length)
+Start-Sleep -Seconds 6
+$writer = New-Object System.IO.BinaryWriter([Console]::OpenStandardOutput())
+$writer.Write([uint32]0)
+$writer.Write([uint32]0)
+$writer.Write([uint32]4)
+$writer.Write([uint32]$millis)
+$writer.Flush()
+";
+        let child = Command::new("powershell.exe")
+            .args(["-NoProfile", "-NonInteractive", "-Command", script])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap();
+        let transport = UsbPrintTransport {
+            worker: Mutex::new(Worker::from_child(child).unwrap()),
+            cancellation: CancellationToken::default(),
+        };
+        let reply = transport
+            .request(wire::WRITE, vec![1], Duration::from_secs(30))
+            .unwrap();
+        assert_eq!(reply, WRITE_TIMEOUT_MS.to_le_bytes());
+    }
+
     #[test]
     fn unresponsive_worker_has_a_deadline_and_cannot_be_reused() {
         let mut worker = sleeping_worker();
