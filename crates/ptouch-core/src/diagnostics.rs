@@ -87,6 +87,9 @@ pub struct DriverBinding {
     pub service: Option<String>,
     /// Device description from the registry.
     pub description: Option<String>,
+    /// Parent devnode of a composite USB interface, when available.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_instance_id: Option<String>,
 }
 
 /// A supported printer available through the native Windows USBPRINT backend.
@@ -96,6 +99,10 @@ pub struct UsbPrintDiagnostic {
     pub instance_id: String,
     /// Backend used by the normal application.
     pub backend: &'static str,
+    /// Model resolved from the USB hardware IDs.
+    pub model: &'static str,
+    /// Native printing has been verified for this model.
+    pub verified: bool,
     /// Optional open/close check. Never sends a printer command.
     pub open: Check,
 }
@@ -187,8 +194,10 @@ pub fn doctor(probe: bool) -> DoctorReport {
                         Check { status: "not_requested", detail: "Use --probe to check USBPRINT open/close; no printer commands are sent".into() }
                     };
                     report.usbprint_devices.push(UsbPrintDiagnostic {
-                        instance_id: printer.instance_id,
                         backend: "usbprint",
+                        model: printer.device_info().name,
+                        verified: printer.verified(),
+                        instance_id: printer.instance_id,
                         open,
                     });
                 }

@@ -686,23 +686,24 @@ committed rasters still match the SVG.
 
 ## USB Driver (Windows)
 
-PT-P710BT (`04F9:20AF`) can use the built-in Windows `usbprint.sys` driver
-with the native ARM64 and x64 applications from v0.8.6. Keep the existing driver
-and close other printer applications. When it is the only supported printer,
-`ptouch info` and the GUI select it automatically.
+PT-P700 and PT-P710BT can use the built-in Windows `usbprint.sys` driver.
+Keep the existing driver and close other printer applications. The GUI and
+`ptouch info` connect automatically when one verified printer is available.
+With multiple printers, select the one you want.
 
-For explicit selection, copy the instance ID from `ptouch doctor`:
+The connection list and `ptouch doctor` also show other supported raster models
+that Windows has bound to `usbprint`. These entries are marked experimental
+until hardware testing confirms status and printing. Select the model in the
+GUI or copy its instance ID from `ptouch doctor`. From the portable ZIP folder:
 
 ```powershell
-.\ptouch-windows-arm64.exe info --usbprint 'INSTANCE_ID_FROM_DOCTOR'
-.\ptouch-windows-arm64.exe print --usbprint 'INSTANCE_ID_FROM_DOCTOR' 'Hello'
+.\cli\ptouch.exe info --usbprint 'INSTANCE_ID_FROM_DOCTOR'
+.\cli\ptouch.exe print --usbprint 'INSTANCE_ID_FROM_DOCTOR' 'Hello'
 ```
 
-The GUI also lists PT-P710BT devices directly. `--usb BUS:ADDRESS` continues to
-select the libusb path. Other USBPRINT models are not enabled yet.
-
-For printers already using WinUSB, and for other models, communication continues
-through libusb. If a compatible driver is needed, the existing installation path is:
+If the printer has an Editor Lite mode, turn it off to use raster printing.
+WinUSB printers use libusb. `--usb BUS:ADDRESS` explicitly selects that path.
+If a libusb-compatible driver is needed:
 
 1. Download [Zadig](https://zadig.akeo.ie/).
 2. Plug in the printer, then choose `Options > List All Devices`.
@@ -766,17 +767,16 @@ as success. Reinitialize a library session after a failed or cancelled job.
 
 An ARM64 executable does not change the printer's driver binding. Windows 11
 can emulate x64 applications, but kernel drivers need native ARM64 support.
-PT-P710BT (`04F9:20AF`) is already in the model table. A device bound to
-`usbprint` uses the native backend described above. WinUSB uses libusb.
+A compatible P-touch bound to `usbprint` can use the native backend above.
+WinUSB uses libusb.
 
 The Brother printer driver and the Windows USB transport driver are separate.
 Windows can load its built-in `usbprint.sys` without the Brother package.
 See Microsoft's [USB printer driver documentation](https://learn.microsoft.com/en-us/windows-hardware/drivers/print/usb-printing).
 The current libusb backend still requires a compatible binding, normally WinUSB,
 as described in the [libusb Windows documentation](https://github.com/libusb/libusb/wiki/Windows).
-Zadig is one installation tool, not an application dependency. An existing
-WinUSB binding needs no Zadig installation. PT-P710BT bound to `usbprint`
-uses the native backend without changing drivers.
+Zadig is one installation tool. Keep an existing WinUSB or compatible
+`usbprint` binding when it already works.
 
 Zadig 2.8 added ARM64 WinUSB installation support. Installation can still fail
 because Windows rejects a generated driver package's signature. See
@@ -799,9 +799,9 @@ Keep driver-binding failures separate from application startup failures.
 
 ### Experimental USBPRINT status probe
 
-The separate Windows example queries PT-P710BT status while the device remains
-bound to `usbprint`. The CLI and GUI also support this driver from v0.8.6.
-It sends no labels, reset commands, or cut commands and changes no driver settings.
+The separate Windows example sends a raster status request to a P-touch
+bound to `usbprint`. Some models do not answer this request. The probe sends
+no labels, reset commands, or cut commands and changes no driver settings.
 
 Download `usbprint-probe-windows-arm64.exe` for Windows ARM64 or
 `usbprint-probe-windows-amd64.exe` for Windows x64 from the release assets.
@@ -820,7 +820,7 @@ cargo run -p ptouch-core --example usbprint_probe -- --status 'DEVICE_PATH_FROM_
 ```
 
 Copy the complete device path from `--list`. The probe checks it against currently
-present PT-P710BT interfaces before opening it exclusively. An occupied device
+present supported interfaces before opening it exclusively. An occupied device
 reports an error. Close other printer applications before testing.
 
 Status I/O runs in a child process with a 15-second watchdog. On timeout, the
@@ -924,16 +924,16 @@ attribution details.
 
 ### USBPRINT implementation and verification
 
-The native backend currently accepts PT-P710BT only. It uses SetupAPI device
-properties for identification and opens the enumerated interface exclusively.
-Multiple supported printers require explicit selection. The application does not
-switch backends after sending data, retry a partial write, or replay a failed job.
+The native backend uses SetupAPI hardware IDs to select a raster model from
+the device table. It opens the selected interface exclusively. Automatic
+selection requires one physical printer and a verified USBPRINT model.
+After a failed or partial write, the application stops the job.
 
 USBPRINT I/O runs in a private process launched from the same application binary.
 Overlapped reads and writes retain their buffers until completion or acknowledged
-cancellation. The parent enforces an outer deadline and stops an unresponsive
-worker. Cancellation cannot recall data already sent to the printer. Check the
-printer before retrying an interrupted job.
+cancellation. A raster write can wait up to 30 seconds within the remaining
+job budget. The parent enforces an outer deadline and stops an unresponsive
+worker. Check the printer before retrying an interrupted job.
 
 Windows CI exercises native I/O through named pipes, worker deadlines and
 cancellation, both application worker entry points, and malformed IPC requests.

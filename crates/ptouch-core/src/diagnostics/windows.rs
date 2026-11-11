@@ -62,6 +62,30 @@ fn property(
     ))
 }
 
+fn composite_parent(device: &SP_DEVINFO_DATA, hardware_ids: &[String]) -> Option<String> {
+    if !hardware_ids.iter().any(|id| {
+        id.split('&')
+            .any(|part| part.to_ascii_uppercase().starts_with("MI_"))
+    }) {
+        return None;
+    }
+    let mut parent = 0;
+    let mut id = [0u16; MAX_DEVICE_ID_LEN as usize];
+    // SAFETY: the devnode came from this local PnP enumeration. Both output
+    // pointers refer to writable buffers of the advertised size.
+    let result = unsafe {
+        if CM_Get_Parent(&mut parent, device.DevInst, 0) != CR_SUCCESS {
+            return None;
+        }
+        CM_Get_Device_IDW(parent, id.as_mut_ptr(), id.len() as u32, 0)
+    };
+    if result != CR_SUCCESS {
+        return None;
+    }
+    let end = id.iter().position(|unit| *unit == 0)?;
+    String::from_utf16(&id[..end]).ok()
+}
+
 pub(super) fn inspect(report: &mut DoctorReport) {
     let mut process = 0;
     let mut native = 0;
@@ -156,11 +180,13 @@ pub(super) fn inspect(report: &mut DoctorReport) {
         };
         let service = text(SPDRP_SERVICE);
         let description = text(SPDRP_DEVICEDESC);
+        let parent_instance_id = composite_parent(&device, &ids);
         report.windows_bindings.push(DriverBinding {
             instance_id,
             hardware_ids: ids,
             service,
             description,
+            parent_instance_id,
         });
     }
     report

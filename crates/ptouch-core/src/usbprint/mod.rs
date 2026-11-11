@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! PT-P710BT access through the existing Windows USBPRINT driver.
+//! P-touch access through the existing Windows USBPRINT driver.
 //!
 //! Applications call [`run_worker_from_args`] before initializing their UI or CLI,
 //! then [`configure_worker`] with that executable. No driver installation is performed.
@@ -7,7 +7,7 @@ mod discovery;
 mod io;
 mod wire;
 
-use crate::{CancellationToken, PtouchError, Result, session::Transport};
+use crate::{CancellationToken, DeviceFlags, DeviceInfo, PtouchError, Result, session::Transport};
 use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
 use std::os::windows::process::CommandExt;
 use std::{
@@ -19,15 +19,31 @@ use std::{
 use wire::Frame;
 
 const WORKER_ARG: &str = "--ptouch-usbprint-worker";
+const CONTROL_TIMEOUT_MS: u32 = 5000;
+const WRITE_TIMEOUT_MS: u32 = crate::session::PRINT_TRANSFER_TIMEOUT.as_millis() as u32;
 static WORKER: OnceLock<PathBuf> = OnceLock::new();
 
-/// An enumerated PT-P710BT bound to the Windows USB printer driver.
+/// An enumerated raster-capable P-touch bound to the Windows USB printer driver.
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct Printer {
     /// Device identity for explicit selection. It can contain a serial number.
     pub instance_id: String,
     /// Opaque SetupAPI interface path. Do not parse or construct this string.
     pub device_path: String,
+    #[serde(skip)]
+    model: &'static DeviceInfo,
+}
+
+impl Printer {
+    /// Capabilities of the model identified by Windows hardware IDs.
+    pub fn device_info(&self) -> &'static DeviceInfo {
+        self.model
+    }
+
+    /// Whether this model has hardware verification for native printing.
+    pub fn verified(&self) -> bool {
+        self.model.flags.contains(DeviceFlags::USBPRINT_VERIFIED)
+    }
 }
 
 pub(super) fn failure(stage: &str, error: impl std::fmt::Display) -> PtouchError {
@@ -54,7 +70,27 @@ pub fn list() -> Result<Vec<Printer>> {
 
 /// Check native opening and closing without sending printer commands.
 pub fn probe(instance_id: &str) -> Result<()> {
-    UsbPrintTransport::open(instance_id)?.close()
+    let (transport, _) = UsbPrintTransport::open(instance_id)?;
+    transport.close()
+}
+
+fn resolve_instance<'a>(printers: &'a [Printer], instance_id: &str) -> Result<&'a Printer> {
+    let mut matches = printers
+        .iter()
+        .filter(|printer| printer.instance_id.eq_ignore_ascii_case(instance_id));
+    let printer = matches.next().ok_or_else(|| {
+        failure(
+            "open",
+            "no matching P-touch USBPRINT device. Run `ptouch doctor` or refresh the printer list.",
+        )
+    })?;
+    if matches.next().is_some() {
+        return Err(failure(
+            "open",
+            "more than one USBPRINT interface matches this device",
+        ));
+    }
+    Ok(printer)
 }
 
 /// Resolve automatic selection only when PnP identifies one supported physical
@@ -72,37 +108,77 @@ fn select_automatic(
 ) -> Result<Option<String>> {
     let supported: Vec<_> = bindings
         .iter()
-        .filter(|binding| {
-            binding.hardware_ids.iter().any(|id| {
-                crate::device::supported_devices().iter().any(|model| {
-                    let prefix = format!("USB\\VID_{:04X}&PID_{:04X}", model.vid, model.pid);
-                    id.to_ascii_uppercase()
-                        .strip_prefix(&prefix)
-                        .is_some_and(|tail| tail.is_empty() || tail.starts_with('&'))
-                        && !model.flags.intersects(
-                            crate::DeviceFlags::PLITE | crate::DeviceFlags::UNSUP_RASTER,
-                        )
-                })
-            })
+        .filter_map(|binding| {
+            discovery::raster_model(&binding.hardware_ids).map(|model| (binding, model))
         })
         .collect();
-    if supported.len() > 1 {
+    let mut physical_id: Option<&str> = None;
+    let mut native = None;
+    for &(binding, model) in &supported {
+        // A composite parent and its printer interface describe one device.
+        // Group only when PnP also reported that exact parent as this model.
+        let id = binding
+            .parent_instance_id
+            .as_deref()
+            .filter(|parent| {
+                supported.iter().any(|(candidate, candidate_model)| {
+                    candidate.instance_id.eq_ignore_ascii_case(parent) && *candidate_model == model
+                })
+            })
+            .unwrap_or(&binding.instance_id);
+        if physical_id.is_some_and(|previous| !previous.eq_ignore_ascii_case(id)) {
+            return Err(PtouchError::AmbiguousDevice);
+        }
+        physical_id = Some(id);
+        if binding
+            .service
+            .as_deref()
+            .is_some_and(|service| service.eq_ignore_ascii_case("usbprint"))
+        {
+            if native.is_some() {
+                return Err(PtouchError::AmbiguousDevice);
+            }
+            native = Some((binding, model));
+        }
+    }
+    let Some((binding, model)) = native else {
+        return if printers.is_empty() {
+            Ok(None)
+        } else {
+            Err(failure(
+                "select",
+                "printer detection changed. Refresh the printer list or run `ptouch doctor`.",
+            ))
+        };
+    };
+    let printer = resolve_instance(printers, &binding.instance_id)?;
+    if printers.len() != 1 {
         return Err(PtouchError::AmbiguousDevice);
     }
-    let Some(binding) = supported.first() else {
-        return Ok(None);
-    };
-    if !binding
-        .service
-        .as_deref()
-        .is_some_and(|s| s.eq_ignore_ascii_case("usbprint"))
-    {
-        return Ok(None);
+    if printer.device_info() != model {
+        return Err(failure(
+            "select",
+            "the printer reported conflicting hardware IDs. Run `ptouch doctor`.",
+        ));
     }
-    Ok(printers
-        .iter()
-        .find(|p| p.instance_id.eq_ignore_ascii_case(&binding.instance_id))
-        .map(|p| p.instance_id.clone()))
+    if !printer.verified() {
+        return Err(failure(
+            "select",
+            format_args!(
+                "{} native printing is experimental. Select it in the printer list, or run `ptouch doctor` for its `--usbprint` selector.",
+                model.name
+            ),
+        ));
+    }
+    Ok(Some(printer.instance_id.clone()))
+}
+
+fn timeout_limit(code: u32) -> u32 {
+    if code == wire::WRITE {
+        WRITE_TIMEOUT_MS
+    } else {
+        CONTROL_TIMEOUT_MS
+    }
 }
 
 struct Worker {
@@ -264,32 +340,33 @@ pub(crate) struct UsbPrintTransport {
     cancellation: CancellationToken,
 }
 impl UsbPrintTransport {
-    pub(crate) fn open(instance_id: &str) -> Result<Self> {
-        if !list()?
-            .iter()
-            .any(|p| p.instance_id.eq_ignore_ascii_case(instance_id))
-        {
-            return Err(PtouchError::DeviceNotFound);
-        }
+    pub(crate) fn open(instance_id: &str) -> Result<(Self, &'static DeviceInfo)> {
+        let printers = list()?;
+        let printer = resolve_instance(&printers, instance_id)?;
         let mut worker = Worker::spawn()?;
         worker.exchange(
             Frame {
                 code: wire::OPEN,
-                millis: 5000,
-                data: instance_id.as_bytes().to_vec(),
+                millis: CONTROL_TIMEOUT_MS,
+                data: printer.instance_id.as_bytes().to_vec(),
             },
             &CancellationToken::default(),
         )?;
-        Ok(Self {
-            worker: Mutex::new(worker),
-            cancellation: CancellationToken::default(),
-        })
+        Ok((
+            Self {
+                worker: Mutex::new(worker),
+                cancellation: CancellationToken::default(),
+            },
+            printer.device_info(),
+        ))
     }
     pub(crate) fn set_cancellation(&mut self, token: CancellationToken) {
         self.cancellation = token;
     }
     fn request(&self, code: u32, data: Vec<u8>, timeout: Duration) -> Result<Vec<u8>> {
-        let millis = timeout.as_millis().clamp(1, 5000) as u32;
+        let millis = timeout
+            .as_millis()
+            .clamp(1, u128::from(timeout_limit(code))) as u32;
         self.worker
             .lock()
             .map_err(|_| failure("communicate", "worker lock poisoned"))?
@@ -370,7 +447,7 @@ fn worker_loop() -> std::io::Result<()> {
         let frame = Frame::read(&mut input)?;
         let mut bytes = frame.data;
         let result: Result<Vec<u8>> = (|| {
-            if !(1..=5000).contains(&frame.millis) {
+            if !(1..=timeout_limit(frame.code)).contains(&frame.millis) {
                 return Err(failure("request", "invalid timeout"));
             }
             match frame.code {
@@ -379,10 +456,8 @@ fn worker_loop() -> std::io::Result<()> {
                 }
                 wire::OPEN if handle.is_none() => {
                     let id = std::str::from_utf8(&bytes).map_err(|e| failure("open", e))?;
-                    let printer = list()?
-                        .into_iter()
-                        .find(|p| p.instance_id.eq_ignore_ascii_case(id))
-                        .ok_or(PtouchError::DeviceNotFound)?;
+                    let printers = list()?;
+                    let printer = resolve_instance(&printers, id)?;
                     handle = Some(
                         io::open(&printer.device_path)
                             .map_err(|e| failure("open (printer may be in use)", e))?,
@@ -442,53 +517,143 @@ fn worker_loop() -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn binding(id: &str, service: &str) -> crate::diagnostics::DriverBinding {
+    fn binding(id: &str, pid: u16, service: &str) -> crate::diagnostics::DriverBinding {
         crate::diagnostics::DriverBinding {
             instance_id: id.into(),
-            hardware_ids: vec!["USB\\VID_04F9&PID_20AF".into()],
+            hardware_ids: vec![format!(r"USB\VID_04F9&PID_{pid:04X}")],
             service: Some(service.into()),
             description: None,
+            parent_instance_id: None,
         }
     }
+
+    fn printer(id: &str, pid: u16) -> Printer {
+        Printer {
+            instance_id: id.into(),
+            device_path: format!("opaque-{id}"),
+            model: crate::device::find_device(0x04f9, pid).unwrap(),
+        }
+    }
+
+    #[test]
+    fn instance_selection_resolves_the_exact_model() {
+        let printers = [
+            printer("printer-a", 0x2061),
+            printer("printer-b", 0x20af),
+            printer("printer-c", 0x2060),
+        ];
+        let p700 = resolve_instance(&printers, "PRINTER-A").unwrap();
+        let p710bt = resolve_instance(&printers, "printer-b").unwrap();
+        assert_eq!(p700.device_info().name, "PT-P700");
+        assert!(p700.device_info().flags.contains(DeviceFlags::P700_INIT));
+        assert_eq!(p710bt.device_info().name, "PT-P710BT");
+        assert!(
+            p710bt
+                .device_info()
+                .flags
+                .contains(DeviceFlags::AUTO_STATUS_NOTIFICATION)
+        );
+        assert!(p700.verified() && p710bt.verified());
+        assert!(!resolve_instance(&printers, "printer-c").unwrap().verified());
+        assert!(
+            resolve_instance(&printers, "printer")
+                .unwrap_err()
+                .to_string()
+                .contains("ptouch doctor")
+        );
+        assert!(resolve_instance(&[p700.clone(), p700.clone()], "printer-a").is_err());
+    }
+
+    #[test]
+    fn automatic_selection_requires_one_verified_usbprint_device() {
+        for pid in [0x2061, 0x20af] {
+            let printers = [printer("printer-a", pid)];
+            assert_eq!(
+                select_automatic(&[binding("PRINTER-A", pid, "USBPrint")], &printers).unwrap(),
+                Some("printer-a".into())
+            );
+        }
+        assert_eq!(
+            select_automatic(&[binding("printer-a", 0x2061, "WinUSB")], &[]).unwrap(),
+            None
+        );
+        assert!(
+            select_automatic(
+                &[binding("printer-b", 0x2061, "usbprint")],
+                &[printer("printer-a", 0x2061)],
+            )
+            .is_err()
+        );
+        assert!(
+            select_automatic(
+                &[binding("printer-a", 0x2061, "usbprint")],
+                &[printer("printer-a", 0x20af)],
+            )
+            .is_err()
+        );
+        let error = select_automatic(
+            &[binding("printer-a", 0x2060, "usbprint")],
+            &[printer("printer-a", 0x2060)],
+        )
+        .unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("PT-E550W native printing is experimental")
+        );
+    }
+
     #[test]
     fn automatic_selection_never_guesses_between_devices_or_backends() {
-        let printers = [Printer {
-            instance_id: "printer-a".into(),
-            device_path: "opaque-a".into(),
-        }];
+        let printers = [printer("printer-a", 0x2061)];
+        for (pid, service) in [
+            (0x2061, "usbprint"),
+            (0x20af, "WinUSB"),
+            (0x2060, "usbprint"),
+        ] {
+            assert!(matches!(
+                select_automatic(
+                    &[
+                        binding("printer-a", 0x2061, "usbprint"),
+                        binding("printer-b", pid, service)
+                    ],
+                    &printers
+                ),
+                Err(PtouchError::AmbiguousDevice)
+            ));
+        }
         assert_eq!(
-            select_automatic(&[binding("printer-a", "usbprint")], &printers).unwrap(),
+            select_automatic(
+                &[
+                    binding("printer-a", 0x2061, "usbprint"),
+                    binding("plite", 0x2065, "usbprint")
+                ],
+                &printers,
+            )
+            .unwrap(),
             Some("printer-a".into())
         );
+    }
+
+    #[test]
+    fn composite_interface_counts_with_its_exact_parent() {
+        let parent = binding("parent", 0x2061, "usbccgp");
+        let mut child = binding("child", 0x2061, "usbprint");
+        child.hardware_ids[0].push_str("&MI_00");
+        child.parent_instance_id = Some("PARENT".into());
+        let printers = [printer("child", 0x2061)];
         assert_eq!(
-            select_automatic(&[binding("printer-a", "WinUSB")], &printers).unwrap(),
-            None
+            select_automatic(&[parent, child], &printers).unwrap(),
+            Some("child".into())
         );
-        assert_eq!(
-            select_automatic(&[binding("printer-b", "usbprint")], &printers).unwrap(),
-            None
-        );
+        let mut child = binding("child", 0x2061, "usbprint");
+        child.parent_instance_id = Some("other-parent".into());
         assert!(matches!(
-            select_automatic(
-                &[
-                    binding("printer-a", "usbprint"),
-                    binding("printer-b", "WinUSB")
-                ],
-                &printers
-            ),
-            Err(PtouchError::AmbiguousDevice)
-        ));
-        assert!(matches!(
-            select_automatic(
-                &[
-                    binding("printer-a", "usbprint"),
-                    binding("printer-b", "usbprint")
-                ],
-                &printers
-            ),
+            select_automatic(&[binding("parent", 0x2061, "usbccgp"), child], &printers,),
             Err(PtouchError::AmbiguousDevice)
         ));
     }
+
     #[test]
     fn short_and_failed_writes_never_replay_data() {
         for count in [0, 2, 4] {
@@ -596,8 +761,8 @@ mod tests {
         assert!(matches!(
             worker.exchange(
                 Frame {
-                    code: wire::PING,
-                    millis: 5000,
+                    code: wire::WRITE,
+                    millis: WRITE_TIMEOUT_MS,
                     data: Vec::new()
                 },
                 &token

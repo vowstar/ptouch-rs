@@ -44,6 +44,8 @@ bitflags! {
         const AUTO_STATUS_NOTIFICATION = 1 << 9;
         /// PT-E550W raster, media and optional status-query behavior.
         const E550W_RASTER = 1 << 10;
+        /// Native Windows USBPRINT printing has been verified on hardware.
+        const USBPRINT_VERIFIED = 1 << 11;
     }
 }
 
@@ -230,7 +232,8 @@ static DEVICE_TABLE: &[DeviceInfo] = &[
         flags: DeviceFlags::RASTER_PACKBITS
             .union(DeviceFlags::P700_INIT)
             .union(DeviceFlags::HAS_PRECUT)
-            .union(DeviceFlags::WAIT_FOR_RECEIVE_READY),
+            .union(DeviceFlags::WAIT_FOR_RECEIVE_READY)
+            .union(DeviceFlags::USBPRINT_VERIFIED),
     },
     DeviceInfo {
         vid: 0x04f9,
@@ -313,7 +316,8 @@ static DEVICE_TABLE: &[DeviceInfo] = &[
         flags: DeviceFlags::RASTER_PACKBITS
             .union(DeviceFlags::HAS_PRECUT)
             .union(DeviceFlags::WAIT_FOR_RECEIVE_READY)
-            .union(DeviceFlags::AUTO_STATUS_NOTIFICATION),
+            .union(DeviceFlags::AUTO_STATUS_NOTIFICATION)
+            .union(DeviceFlags::USBPRINT_VERIFIED),
     },
     DeviceInfo {
         vid: 0x04f9,
