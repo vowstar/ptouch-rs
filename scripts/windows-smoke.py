@@ -74,6 +74,17 @@ def check_usbprint_worker(executable):
     result.check_returncode()
     if len(result.stdout) < 12 or struct.unpack_from("<I", result.stdout)[0] != 2:
         raise RuntimeError("USBPRINT worker accepted an arbitrary file path")
+    # Only writes can use the extended timeout. Neither request opens a device.
+    for code, millis, detail in (
+        (2, 30000, b"printer is not open"),
+        (2, 30001, b"invalid timeout"),
+        (3, 5001, b"invalid timeout"),
+    ):
+        result = subprocess.run([str(executable), "--ptouch-usbprint-worker"],
+                                input=frame(code, millis=millis), **options)
+        result.check_returncode()
+        if len(result.stdout) < 12 or struct.unpack_from("<I", result.stdout)[0] != 2 or detail not in result.stdout[12:]:
+            raise RuntimeError(f"USBPRINT worker rejected timeout incorrectly: {code}, {millis}")
 
 
 def pe_imports(path):
@@ -454,6 +465,9 @@ if __name__ == "__main__":
         raise RuntimeError("Invalid read-only doctor report")
     if report["process_arch"] != ("aarch64" if args.target.startswith("aarch64") else "x86_64"):
         raise RuntimeError("Doctor architecture disagrees with the build target")
+    for candidate in report["usbprint_devices"]:
+        if candidate["backend"] != "usbprint" or not candidate["model"] or not isinstance(candidate["verified"], bool):
+            raise RuntimeError("Incomplete USBPRINT candidate in doctor report")
     if "opengl32.dll" in pe_imports(gui):
         raise RuntimeError("Windows GUI still imports OpenGL")
     report_dir = (directory / "windows-smoke").resolve()

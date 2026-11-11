@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Experimental PT-P710BT status probe through the existing Windows USBPRINT driver.
+//! Experimental P-touch status probe through the existing Windows USBPRINT driver.
 //! Does not print, cut, reset, install drivers, or modify registry settings.
 
 #[cfg(windows)]

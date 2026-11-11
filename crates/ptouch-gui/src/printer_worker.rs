@@ -98,7 +98,8 @@ pub fn printer_worker(
 }
 
 fn discover_usb(tx: &mpsc::Sender<PrinterEvent>, ctx: &egui::Context) {
-    let devices: Vec<_> = ptouch_core::diagnostics::doctor(false)
+    let report = ptouch_core::diagnostics::doctor(false);
+    let devices: Vec<_> = report
         .devices
         .into_iter()
         .filter(|device| device.model.is_some())
@@ -107,12 +108,19 @@ fn discover_usb(tx: &mpsc::Sender<PrinterEvent>, ctx: &egui::Context) {
     #[cfg(windows)]
     let devices = {
         let mut devices = devices;
-        match ptouch_core::usbprint::list() {
-            Ok(printers) => devices.extend(printers.into_iter().map(|p| PrinterTarget::UsbPrint {
-                instance_id: p.instance_id,
-            })),
-            Err(error) => error!("USBPRINT discovery failed: {error}"),
+        for error in report.errors {
+            error!("USB discovery: {error}");
         }
+        devices.extend(
+            report
+                .usbprint_devices
+                .into_iter()
+                .map(|p| PrinterTarget::UsbPrint {
+                    instance_id: p.instance_id,
+                    model: p.model,
+                    verified: p.verified,
+                }),
+        );
         devices
     };
     let _ = tx.send(PrinterEvent {
@@ -164,7 +172,7 @@ fn do_poll(target: &PrinterTarget, tx: &mpsc::Sender<PrinterEvent>, ctx: &egui::
 
 fn open_usb(target: &PrinterTarget) -> ptouch_core::Result<PtouchDevice> {
     #[cfg(windows)]
-    if let PrinterTarget::UsbPrint { instance_id } = target {
+    if let PrinterTarget::UsbPrint { instance_id, .. } = target {
         return PtouchDevice::open_usbprint(instance_id);
     }
     target

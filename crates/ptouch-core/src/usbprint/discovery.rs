@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 use super::{Printer, failure};
-use crate::Result;
+use crate::{DeviceFlags, DeviceInfo, Result, device};
 use std::{
     mem::{offset_of, size_of},
     ptr,
 };
 use windows_sys::Win32::{
     Devices::DeviceAndDriverInstallation::*,
-    Foundation::{ERROR_INSUFFICIENT_BUFFER, ERROR_NO_MORE_ITEMS, GetLastError},
+    Foundation::{
+        ERROR_DEVICE_NOT_CONNECTED, ERROR_INSUFFICIENT_BUFFER, ERROR_INVALID_DATA,
+        ERROR_NO_MORE_ITEMS, ERROR_NO_SUCH_DEVINST, GetLastError,
+    },
     Graphics::Printing::GUID_DEVINTERFACE_USBPRINT,
 };
 
@@ -38,10 +41,14 @@ fn property(set: HDEVINFO, device: &SP_DEVINFO_DATA, key: u32) -> Result<Vec<Str
         )
     } == 0
     {
-        return Err(failure(
-            "read device property",
-            std::io::Error::last_os_error(),
-        ));
+        let error = std::io::Error::last_os_error();
+        if matches!(
+            error.raw_os_error().map(|code| code as u32),
+            Some(ERROR_INVALID_DATA | ERROR_NO_SUCH_DEVINST | ERROR_DEVICE_NOT_CONNECTED)
+        ) {
+            return Ok(Vec::new());
+        }
+        return Err(failure("read device property", error));
     }
     if ![1, 7].contains(&kind) || bytes as usize > data.len() * 2 || !bytes.is_multiple_of(2) {
         return Err(failure("enumerate", "invalid device property"));
@@ -53,10 +60,35 @@ fn property(set: HDEVINFO, device: &SP_DEVINFO_DATA, key: u32) -> Result<Vec<Str
         .collect()
 }
 
-pub(super) fn is_p710bt_id(id: &str) -> bool {
-    id.to_ascii_uppercase()
-        .strip_prefix("USB\\VID_04F9&PID_20AF")
-        .is_some_and(|tail| tail.is_empty() || tail.starts_with('&'))
+fn vid_pid(id: &str) -> Option<(u16, u16)> {
+    let id = id.to_ascii_uppercase();
+    let mut parts = id.strip_prefix("USB\\VID_")?.split('&');
+    let vid = parts.next()?;
+    let pid = parts.next()?.strip_prefix("PID_")?;
+    if ![vid, pid]
+        .iter()
+        .all(|part| part.len() == 4 && part.bytes().all(|byte| byte.is_ascii_hexdigit()))
+        || parts.any(|suffix| suffix.is_empty() || suffix.contains(['\\', '/']))
+    {
+        return None;
+    }
+    Some((
+        u16::from_str_radix(vid, 16).ok()?,
+        u16::from_str_radix(pid, 16).ok()?,
+    ))
+}
+
+pub(super) fn raster_model(hardware_ids: &[String]) -> Option<&'static DeviceInfo> {
+    let mut pairs = hardware_ids.iter().filter_map(|id| vid_pid(id));
+    let (vid, pid) = pairs.next()?;
+    if pairs.any(|pair| pair != (vid, pid)) {
+        return None;
+    }
+    device::find_device(vid, pid).filter(|model| {
+        !model
+            .flags
+            .intersects(DeviceFlags::PLITE | DeviceFlags::UNSUP_RASTER)
+    })
 }
 
 pub(super) fn list() -> Result<Vec<Printer>> {
@@ -110,8 +142,11 @@ pub(super) fn list() -> Result<Vec<Printer>> {
                 ptr::null_mut(),
             );
         }
-        if unsafe { GetLastError() } != ERROR_INSUFFICIENT_BUFFER || !(8..=65536).contains(&needed)
-        {
+        let error = unsafe { GetLastError() };
+        if matches!(error, ERROR_NO_SUCH_DEVINST | ERROR_DEVICE_NOT_CONNECTED) {
+            continue;
+        }
+        if error != ERROR_INSUFFICIENT_BUFFER || !(8..=65536).contains(&needed) {
             return Err(failure("enumerate", "invalid interface length"));
         }
         let mut storage = vec![0usize; (needed as usize).div_ceil(size_of::<usize>())];
@@ -137,15 +172,19 @@ pub(super) fn list() -> Result<Vec<Printer>> {
             )
         } == 0
         {
-            return Err(failure(
-                "enumerate interface details",
-                std::io::Error::last_os_error(),
-            ));
+            let error = std::io::Error::last_os_error();
+            if matches!(
+                error.raw_os_error().map(|code| code as u32),
+                Some(ERROR_NO_SUCH_DEVINST | ERROR_DEVICE_NOT_CONNECTED)
+            ) {
+                continue;
+            }
+            return Err(failure("enumerate interface details", error));
         }
         let ids = property(set.0, &device, SPDRP_HARDWAREID)?;
-        if !ids.iter().any(|id| is_p710bt_id(id)) {
+        let Some(model) = raster_model(&ids) else {
             continue;
-        }
+        };
         if !property(set.0, &device, SPDRP_SERVICE)?
             .iter()
             .any(|s| s.eq_ignore_ascii_case("usbprint"))
@@ -164,7 +203,14 @@ pub(super) fn list() -> Result<Vec<Printer>> {
             )
         } == 0
         {
-            return Err(failure("read instance ID", std::io::Error::last_os_error()));
+            let error = std::io::Error::last_os_error();
+            if matches!(
+                error.raw_os_error().map(|code| code as u32),
+                Some(ERROR_NO_SUCH_DEVINST | ERROR_DEVICE_NOT_CONNECTED)
+            ) {
+                continue;
+            }
+            return Err(failure("read instance ID", error));
         }
         let offset = offset_of!(SP_DEVICE_INTERFACE_DETAIL_DATA_W, DevicePath);
         // SAFETY: UTF-16 aligned slice entirely within the allocated detail buffer.
@@ -184,6 +230,7 @@ pub(super) fn list() -> Result<Vec<Printer>> {
         printers.push(Printer {
             instance_id: decode(&instance)?,
             device_path: decode(path)?,
+            model,
         });
     }
     Err(failure("enumerate", "too many interfaces"))
@@ -193,17 +240,39 @@ pub(super) fn list() -> Result<Vec<Printer>> {
 mod tests {
     use super::*;
     #[test]
-    fn hardware_ids_require_an_exact_product() {
-        for id in ["USB\\VID_04F9&PID_20AF", "usb\\vid_04f9&pid_20af&REV_0100"] {
-            assert!(is_p710bt_id(id));
+    fn hardware_ids_match_raster_models_and_reject_other_modes() {
+        for model in device::supported_devices() {
+            let ids = [
+                format!(
+                    "usb\\vid_{:04x}&pid_{:04x}&rev_0100&mi_00",
+                    model.vid, model.pid
+                ),
+                format!("USB\\VID_{:04X}&PID_{:04X}", model.vid, model.pid),
+            ];
+            let supported = !model
+                .flags
+                .intersects(DeviceFlags::PLITE | DeviceFlags::UNSUP_RASTER);
+            assert_eq!(raster_model(&ids), supported.then_some(model));
         }
         for id in [
             "USB\\VID_04F9&PID_20AFF",
-            "USB\\VID_04F9&PID_205E",
+            "USB\\VID_04F9&PID_FFFF",
+            "USB\\VID_1234&PID_2061",
+            "USB\\VID_04F9&PID_2061\\serial",
+            "USB\\VID_04F9&PID_2061&MI_00\\serial",
+            "USB\\VID_04F9&PID_+061",
+            "USBPRINT\\BrotherPT-P700",
             "C:\\file",
             "\\\\?\\usb#vid_04f9&pid_20af",
         ] {
-            assert!(!is_p710bt_id(id));
+            assert_eq!(raster_model(&[id.into()]), None);
         }
+        assert_eq!(
+            raster_model(&[
+                "USB\\VID_04F9&PID_2061".into(),
+                "USB\\VID_04F9&PID_2064".into()
+            ]),
+            None
+        );
     }
 }

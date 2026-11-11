@@ -519,18 +519,17 @@ fn main() {
                         binding.instance_id,
                         binding.service.as_deref().unwrap_or("unknown")
                     );
-                    if binding
-                        .service
-                        .as_deref()
-                        .is_some_and(|service| service.eq_ignore_ascii_case("usbprint"))
-                    {
-                        println!(
-                            "  PT-P710BT can use the native USBPRINT backend. See the USBPRINT candidates below. Other models require a libusb-compatible driver."
-                        );
-                    }
                 }
                 for printer in &report.usbprint_devices {
-                    println!("USBPRINT PT-P710BT | {}", printer.instance_id);
+                    let availability = if printer.verified {
+                        ""
+                    } else {
+                        " (experimental)"
+                    };
+                    println!(
+                        "USBPRINT {}{availability} | {}",
+                        printer.model, printer.instance_id
+                    );
                     println!("  Open: {} {}", printer.open.status, printer.open.detail);
                     println!("  Select with --usbprint '{}'", printer.instance_id);
                 }

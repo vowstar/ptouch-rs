@@ -32,7 +32,7 @@ const TRANSFER_TIMEOUT: Duration = Duration::from_secs(5);
 /// PT-18RZ pauses USB reception while feeding an internal buffer. A five-second
 /// write deadline truncates long jobs; measured pauses fit within 30 seconds.
 /// The USB transport polls cancellation while waiting for buffer space.
-const PRINT_TRANSFER_TIMEOUT: Duration = Duration::from_secs(30);
+pub(crate) const PRINT_TRANSFER_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Short timeout for flushing stale input.
 const FLUSH_TIMEOUT: Duration = Duration::from_millis(100);

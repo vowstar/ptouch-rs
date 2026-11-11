@@ -21,7 +21,7 @@ fn interfaces() -> io::Result<Vec<String>> {
 fn query_status(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     // Do not accept arbitrary file/device paths even in the internal worker mode.
     if !interfaces()?.iter().any(|candidate| candidate == path) {
-        return Err("Selected PT-P710BT interface disappeared".into());
+        return Err("Selected P-touch USBPRINT interface disappeared".into());
     }
     let path: Vec<u16> = path.encode_utf16().chain(Some(0)).collect();
     // SAFETY: NUL-terminated path, synchronous I/O, no security attributes or template handle.
@@ -105,7 +105,7 @@ pub(super) fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args == ["--help"] {
         println!(
-            "usbprint_probe [--list | --status DEVICE_PATH]\nExperimental PT-P710BT query only; no printing or driver changes."
+            "usbprint_probe [--list | --status DEVICE_PATH]\nExperimental P-touch query only. No printing or driver changes."
         );
         return Ok(());
     }
@@ -118,7 +118,7 @@ pub(super) fn run() -> Result<(), Box<dyn std::error::Error>> {
             println!("{path}");
         }
         if paths.is_empty() {
-            println!("No PT-P710BT USBPRINT interfaces found");
+            println!("No P-touch USBPRINT interfaces found");
         }
         return Ok(());
     }

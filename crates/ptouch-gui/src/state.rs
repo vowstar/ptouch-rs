@@ -38,6 +38,8 @@ pub enum PrinterTarget {
     #[cfg(windows)]
     UsbPrint {
         instance_id: String,
+        model: &'static str,
+        verified: bool,
     },
     #[cfg(any(target_os = "macos", test))]
     Bluetooth {
@@ -52,7 +54,18 @@ impl PrinterTarget {
             Self::Usb => "USB (automatic)".to_string(),
             Self::UsbAt(location) => format!("USB {location}"),
             #[cfg(windows)]
-            Self::UsbPrint { instance_id } => format!("PT-P710BT ({instance_id})"),
+            Self::UsbPrint {
+                instance_id,
+                model,
+                verified,
+            } => {
+                let backend = if *verified {
+                    "USBPRINT"
+                } else {
+                    "USBPRINT, experimental"
+                };
+                format!("{model} ({backend}) {instance_id}")
+            }
             #[cfg(any(target_os = "macos", test))]
             Self::Bluetooth { name, address } => format!("{name} ({address})"),
         }

@@ -173,14 +173,13 @@ impl PtouchDevice {
         Self::open_matching(None, None)
     }
 
-    /// Open an explicitly selected PT-P710BT through the existing Windows driver.
+    /// Open an explicitly selected P-touch through the existing Windows driver.
     #[cfg(windows)]
     pub fn open_usbprint(instance_id: &str) -> Result<Self> {
-        let dev_info = device::find_device(0x04f9, 0x20af).unwrap().clone();
-        let transport = crate::usbprint::UsbPrintTransport::open(instance_id)?;
+        let (transport, model) = crate::usbprint::UsbPrintTransport::open(instance_id)?;
         Ok(Self {
-            session: PrinterSession::new(UsbBackend::UsbPrint(transport), (&dev_info).into()),
-            dev_info,
+            session: PrinterSession::new(UsbBackend::UsbPrint(transport), model.into()),
+            dev_info: model.clone(),
         })
     }
 
