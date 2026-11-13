@@ -486,8 +486,14 @@ if __name__ == "__main__":
                 if bundle.read(member) != source.read_bytes():
                     raise RuntimeError(f"Portable ZIP contains the wrong executable: {member}")
         subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
-                        "Expand-Archive -LiteralPath '" + str(args.package.resolve()).replace("'", "''")
-                        + "' -DestinationPath '" + str(clean).replace("'", "''") + "'"], check=True, timeout=60)
+                        # PowerShell 7's Archive module can leak into Windows
+                        # PowerShell via PSModulePath and require newer .NET APIs.
+                        # Use the two-argument API available in .NET Framework.
+                        "$ErrorActionPreference = 'Stop'; "
+                        "Add-Type -AssemblyName System.IO.Compression.FileSystem; "
+                        "[System.IO.Compression.ZipFile]::ExtractToDirectory('"
+                        + str(args.package.resolve()).replace("'", "''")
+                        + "', '" + str(clean).replace("'", "''") + "')"], check=True, timeout=60)
         staged_gui = clean / "ptouch-gui.exe"
         staged_cli = clean / "cli" / "ptouch.exe"
         check_gui_arguments(staged_gui)
