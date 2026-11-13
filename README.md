@@ -105,6 +105,35 @@ nix develop        # dev shell
 nix flake check    # cargo fmt, clippy and the workspace tests
 ```
 
+On NixOS, build with your system's package set so the GUI and the system's
+OpenGL drivers use compatible libraries. Add the flake as an input:
+
+```nix
+inputs.ptouch-rs.url = "github:vowstar/ptouch-rs";
+inputs.ptouch-rs.inputs.nixpkgs.follows = "nixpkgs";
+```
+
+Then apply its overlay in your NixOS configuration (with `inputs` passed to the
+module through `specialArgs`, or captured from your flake's `outputs`):
+
+```nix
+{ pkgs, inputs, ... }:
+{
+  nixpkgs.overlays = [ inputs.ptouch-rs.overlays.default ];
+  environment.systemPackages = [ pkgs.ptouch-gui pkgs.ptouch-cli ];
+  services.udev.packages = [ pkgs.ptouch-cli ];
+  hardware.graphics.enable = true;
+}
+```
+
+The overlay uses the caller's `pkgs`, including its overrides. Standalone
+`nix build` and `nix run` use this repository's lock file; mixing that runtime
+with a newer system Mesa can fail to load drivers and produce a glutin/EGL
+startup error. Updating this repository's lock may help one system, while
+aligning the inputs and using the overlay keeps the application on your
+system's package set. Updating your own nixpkgs can still introduce build
+changes; retain your lock file for reproducible builds.
+
 ## PT-P300BT Bluetooth (macOS)
 
 The macOS CLI can use the native RFCOMM backend for an already-paired PT-P300BT.
