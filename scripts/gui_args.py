@@ -13,11 +13,12 @@ def check_gui_arguments(executable):
     for key in ("DISPLAY", "WAYLAND_DISPLAY", "WAYLAND_SOCKET"):
         environment.pop(key, None)
     version = tomllib.loads((Path(__file__).resolve().parents[1] / "Cargo.toml").read_text())["workspace"]["package"]["version"]
+    usage = f"Usage: {Path(executable).name} [OPTIONS]"
     cases = [
-        (["--help"], 0, "Usage: ptouch-gui [OPTIONS]"),
-        (["-h"], 0, "Usage: ptouch-gui [OPTIONS]"),
-        (["--offline", "--help"], 0, "Usage: ptouch-gui [OPTIONS]"),
-        (["--smoke-test", "--help"], 0, "Usage: ptouch-gui [OPTIONS]"),
+        (["--help"], 0, usage),
+        (["-h"], 0, usage),
+        (["--offline", "--help"], 0, usage),
+        (["--smoke-test", "--help"], 0, usage),
         (["--version"], 0, f"ptouch-gui {version}\n"),
         (["-V"], 0, f"ptouch-gui {version}\n"),
         (["--unknown-option"], 2, "unexpected argument '--unknown-option'"),

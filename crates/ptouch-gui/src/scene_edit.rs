@@ -1202,8 +1202,8 @@ mod tests {
         .unwrap();
         for case in 0..24 {
             let mut state = fixture();
-            for index in 0..3 {
-                let object = state.elements[index].as_object_mut().unwrap();
+            for (index, element) in state.elements[..3].iter_mut().enumerate() {
+                let object = element.as_object_mut().unwrap();
                 object.content = match (case + index) % 6 {
                     1 => sample.elements[4].as_object().unwrap().content.clone(),
                     2 => sample.elements[3].as_object().unwrap().content.clone(),
