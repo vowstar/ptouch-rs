@@ -15,7 +15,11 @@
   };
 
   outputs =
-    { self, nixpkgs, crane }:
+    {
+      self,
+      nixpkgs,
+      crane,
+    }:
     let
       systems = [
         "x86_64-linux"
@@ -23,10 +27,11 @@
       ];
       forEachSystem = nixpkgs.lib.genAttrs systems;
 
-      perSystem =
-        system:
+      # The overlay must build with the caller's package set, including its
+      # libc and graphics libraries, rather than our standalone flake's pin.
+      perPkgs =
+        pkgs:
         let
-          pkgs = nixpkgs.legacyPackages.${system};
           craneLib = crane.mkLib pkgs;
           inherit (pkgs) lib;
 
@@ -41,9 +46,7 @@
             inherit src;
             filter =
               path: type:
-              craneLib.filterCargoSources path type
-              || lib.hasInfix "/assets/" path
-              || lib.hasSuffix ".ptl" path;
+              craneLib.filterCargoSources path type || lib.hasInfix "/assets/" path || lib.hasSuffix ".ptl" path;
           };
 
           # libusb1-sys (vendored) probes libudev with pkg-config, so the build
@@ -200,8 +203,14 @@
 
           formatter = pkgs.nixfmt;
         };
+
+      perSystem = system: perPkgs nixpkgs.legacyPackages.${system};
     in
     {
+      overlays.default = final: _prev: {
+        inherit ((perPkgs final).packages) ptouch-cli ptouch-gui;
+      };
+
       packages = forEachSystem (system: (perSystem system).packages);
       apps = forEachSystem (system: (perSystem system).apps);
       checks = forEachSystem (system: (perSystem system).checks);
