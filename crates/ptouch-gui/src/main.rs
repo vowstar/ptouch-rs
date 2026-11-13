@@ -10,6 +10,8 @@
 // explicit stdin/stdout pipes from its parent and does not need a console.
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 
+use clap::Parser;
+
 mod alignment;
 mod app;
 mod batch_edit;
@@ -40,6 +42,23 @@ mod state;
 mod widgets;
 mod window_state;
 
+#[derive(Clone, Copy, Parser)]
+#[command(
+    name = "ptouch-gui",
+    version,
+    about = "Label editor for Brother P-Touch printers",
+    after_help = "Use ptouch for command-line printer control and image export."
+)]
+struct LaunchArgs {
+    /// Edit and export labels without connecting to a printer
+    #[arg(long)]
+    offline: bool,
+
+    /// Render three frames and exit without connecting to a printer (requires a display)
+    #[arg(long)]
+    smoke_test: bool,
+}
+
 /// Decode the embedded application icon for the running window.
 ///
 /// The PNG is generated from the shared SVG by `scripts/gen-icons.sh`. Returns
@@ -66,18 +85,19 @@ fn main() -> std::process::ExitCode {
     if let Some(exit_code) = printer_worker::run_bluetooth_helper_from_args() {
         std::process::exit(exit_code);
     }
-    let smoke_test = std::env::args().any(|arg| arg == "--smoke-test");
-    let report = startup::StartupReport::new(!smoke_test);
+    // Help, version and usage errors must exit before diagnostics or graphics.
+    let args = LaunchArgs::parse();
+    let report = startup::StartupReport::new(!args.smoke_test);
     report.install_panic_hook();
     if let Err(error) = env_logger::try_init() {
         report.record(&format!("Logger setup: {error}"));
     }
-    run_application(smoke_test, &report)
+    run_application(args, &report)
 }
 
 // Keep GUI setup and its stack frames out of the diagnostic entry point.
 #[inline(never)]
-fn run_application(smoke_test: bool, report: &startup::StartupReport) -> std::process::ExitCode {
+fn run_application(args: LaunchArgs, report: &startup::StartupReport) -> std::process::ExitCode {
     #[cfg(windows)]
     {
         if let Err(error) = std::env::current_exe()
@@ -92,11 +112,11 @@ fn run_application(smoke_test: bool, report: &startup::StartupReport) -> std::pr
     }
     #[cfg(windows)]
     let result = report.run_with_renderer_fallback(
-        |software| run_gui(smoke_test, report, software),
+        |software| run_gui(args, report, software),
         |error| matches!(error, eframe::Error::Wgpu(_)),
     );
     #[cfg(not(windows))]
-    let result = run_gui(smoke_test, report, false);
+    let result = run_gui(args, report, false);
     match result {
         Ok(()) => std::process::ExitCode::SUCCESS,
         Err(error) => {
@@ -108,12 +128,14 @@ fn run_application(smoke_test: bool, report: &startup::StartupReport) -> std::pr
 
 #[inline(never)]
 fn run_gui(
-    smoke_test: bool,
+    args: LaunchArgs,
     report: &startup::StartupReport,
     software: bool,
 ) -> eframe::Result<()> {
-    // Offline mode leaves USB and Bluetooth untouched while editing/exporting.
-    let offline = std::env::args().any(|arg| arg == "--offline");
+    let LaunchArgs {
+        offline,
+        smoke_test,
+    } = args;
 
     // `with_app_id` sets the Wayland app_id / X11 WM_CLASS so the desktop entry
     // (StartupWMClass) associates its icon with the window.

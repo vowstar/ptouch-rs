@@ -16,6 +16,8 @@ import threading
 import time
 import zipfile
 
+from gui_args import check_gui_arguments
+
 
 def check_pe(path, machine, require_icon=False, subsystem=3):
     data = path.read_bytes()
@@ -488,6 +490,7 @@ if __name__ == "__main__":
                         + "' -DestinationPath '" + str(clean).replace("'", "''") + "'"], check=True, timeout=60)
         staged_gui = clean / "ptouch-gui.exe"
         staged_cli = clean / "cli" / "ptouch.exe"
+        check_gui_arguments(staged_gui)
         for executable in (staged_cli, staged_gui):
             check_usbprint_worker(executable)
         check_cli_launches(staged_cli, report_dir / "cli-launches", suffix)

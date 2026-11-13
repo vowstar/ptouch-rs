@@ -181,8 +181,12 @@ runs CLI startup and GUI rendering checks. These checks do not exercise a printe
 The Linux ARM64 packages use Debian `arm64` and RPM `aarch64` metadata.
 Nix checks cover both Linux architectures.
 
+`ptouch-gui --help` lists launch options, and `ptouch-gui --version` prints the
+version. Both work without a display or printer connection. `ptouch-gui --offline`
+opens the editor without connecting to a printer.
+
 `ptouch-gui --smoke-test` renders three frames and exits without starting the
-printer worker. This mode requires a working display and OpenGL context.
+printer worker. This mode requires a working display and graphics context.
 
 ### macOS installation
 

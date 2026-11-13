@@ -3160,6 +3160,7 @@ dependencies = [
 name = "ptouch-gui"
 version = "0.15.7"
 dependencies = [
+ "clap",
  "eframe",
  "egui",
  "egui_extras",
