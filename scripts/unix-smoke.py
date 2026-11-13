@@ -9,6 +9,8 @@ import struct
 import subprocess
 import sys
 
+from gui_args import check_gui_arguments
+
 
 def check_architecture(path, target):
     data = path.read_bytes()[:64]
@@ -28,6 +30,7 @@ if __name__ == "__main__":
     directory = Path("target") / args.target / args.profile
     for name in ("ptouch", "ptouch-gui"):
         check_architecture(directory / name, args.target)
+    check_gui_arguments(directory / "ptouch-gui")
     for option in ("--version", "--help"):
         subprocess.run([str(directory / "ptouch"), option], check=True, timeout=30)
     report = json.loads(subprocess.check_output([str((directory / "ptouch")), "doctor", "--json"], timeout=30, text=True))
