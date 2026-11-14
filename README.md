@@ -57,8 +57,8 @@ PT-E550W USB support uses the model's TZe print areas. If the printer does not
 report its tape, select the installed TZe width in the GUI. CLI printing accepts
 `--media-width 12` for a 12 mm cassette, or uses the width saved in a layout.
 Completion is reported only when the printer confirms it. Otherwise, check that
-the printer has stopped before sending another label. Hardware confirmation is
-pending in [issue #62](https://github.com/vowstar/ptouch-rs/issues/62).
+the printer has stopped before sending another label. The reported firmware 1.25
+setup has not been confirmed on hardware; see [troubleshooting](#troubleshooting).
 
 Tape widths: 3.5mm, 6mm, 9mm, 12mm, 18mm, 24mm, 36mm.
 
@@ -903,6 +903,29 @@ required for this connection.
 
 If claiming the device fails with a busy or access error, make sure the
 printer is not added as a print queue in System Settings.
+
+## Troubleshooting
+
+### NixOS / Wayland: GUI cannot initialize OpenGL
+
+`Found no glutin configs` / `provided display handle is not supported` can occur
+when a flake's older glibc cannot load newer system Mesa libraries (for example,
+`GLIBC_2.43 not found`). Use v0.15.8 or later and follow the [NixOS build
+instructions](#building): make the application's `nixpkgs` input follow your
+system's input, apply the overlay, and rebuild using the system's `pkgs`.
+Updating the upstream lock may help one version combination; aligning the
+package sets also keeps your system's library overrides. See
+[issue #67](https://github.com/vowstar/ptouch-rs/issues/67).
+
+### PT-E550W: not detected or unsupported raster format
+
+Upgrade from v0.15.4 to v0.15.5 or later, which includes PT-E550W raster support.
+Check [Linux USB permissions](#usb-permissions-linux) and refresh the connection.
+If tape status is unavailable, select the installed TZe width in the GUI or pass
+the matching CLI `--media-width` value. The reported firmware 1.25 setup remains
+unverified on hardware. If the problem persists, comment on
+[issue #62](https://github.com/vowstar/ptouch-rs/issues/62) with the application
+version, tape type/width and `ptouch doctor --json` output.
 
 ## Project Structure
 
