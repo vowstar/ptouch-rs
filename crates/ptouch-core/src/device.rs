@@ -350,7 +350,10 @@ static DEVICE_TABLE: &[DeviceInfo] = &[
         dpi: 180,
         flags: DeviceFlags::P700_INIT
             .union(DeviceFlags::USE_INFO_CMD)
-            .union(DeviceFlags::D460BT_MAGIC),
+            .union(DeviceFlags::D460BT_MAGIC)
+            .union(DeviceFlags::HAS_PRECUT)
+            .union(DeviceFlags::WAIT_FOR_RECEIVE_READY)
+            .union(DeviceFlags::AUTO_STATUS_NOTIFICATION),
     },
     // This model uses PackBits/P700 commands, without D460BT_MAGIC.
     DeviceInfo {
@@ -441,13 +444,25 @@ mod tests {
     }
 
     #[test]
+    fn test_e560bt_status_capabilities() {
+        let dev = find_device(0x04f9, 0x2203).unwrap();
+        assert_eq!(dev.name, "PT-E560BT");
+        assert!(dev.flags.contains(DeviceFlags::AUTO_STATUS_NOTIFICATION));
+        assert!(dev.flags.contains(DeviceFlags::WAIT_FOR_RECEIVE_READY));
+        assert!(dev.flags.contains(DeviceFlags::HAS_PRECUT));
+        assert!(dev.flags.contains(DeviceFlags::D460BT_MAGIC));
+    }
+
+    #[test]
     fn readiness_wait_is_limited_to_documented_models() {
         // 0x202c (PT-1230PC): without the wait, a second chained page is
         // written while the first still prints; the full input buffer stalls
         // the USB write past TRANSFER_TIMEOUT on labels longer than ~5 s.
         // 0x2201 (PT-E310BT): documented in its raster reference and verified
-        // on hardware; the PT-E510/PT-E560BT share the reference, untested.
-        let opted_in_pids = [0x202c, 0x205e, 0x205f, 0x2061, 0x20af, 0x2201];
+        // on hardware; the PT-E510 shares the reference, untested.
+        // 0x2203 (PT-E560BT): documented in the same raster reference and
+        // verified on hardware.
+        let opted_in_pids = [0x202c, 0x205e, 0x205f, 0x2061, 0x20af, 0x2201, 0x2203];
 
         for dev in supported_devices() {
             assert_eq!(
@@ -461,7 +476,7 @@ mod tests {
 
     #[test]
     fn automatic_status_command_is_limited_to_documented_models() {
-        let opted_in_pids = [0x20af, 0x2201];
+        let opted_in_pids = [0x20af, 0x2201, 0x2203];
 
         for dev in supported_devices() {
             assert_eq!(
