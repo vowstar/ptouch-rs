@@ -351,7 +351,6 @@ static DEVICE_TABLE: &[DeviceInfo] = &[
         flags: DeviceFlags::P700_INIT
             .union(DeviceFlags::USE_INFO_CMD)
             .union(DeviceFlags::D460BT_MAGIC)
-            .union(DeviceFlags::HAS_PRECUT)
             .union(DeviceFlags::WAIT_FOR_RECEIVE_READY)
             .union(DeviceFlags::AUTO_STATUS_NOTIFICATION),
     },
@@ -449,7 +448,7 @@ mod tests {
         assert_eq!(dev.name, "PT-E560BT");
         assert!(dev.flags.contains(DeviceFlags::AUTO_STATUS_NOTIFICATION));
         assert!(dev.flags.contains(DeviceFlags::WAIT_FOR_RECEIVE_READY));
-        assert!(dev.flags.contains(DeviceFlags::HAS_PRECUT));
+        assert!(!dev.flags.contains(DeviceFlags::HAS_PRECUT));
         assert!(dev.flags.contains(DeviceFlags::D460BT_MAGIC));
     }
 
