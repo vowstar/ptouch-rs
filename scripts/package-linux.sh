@@ -26,7 +26,7 @@ extracted="$(mktemp -d)"
 trap 'rm -rf "$extracted"' EXIT
 mkdir "$extracted/deb" "$extracted/rpm"
 dpkg-deb --extract "$deb" "$extracted/deb"
-(cd "$extracted/rpm" && rpm2cpio "$rpm" | cpio --quiet -id --no-absolute-filenames)
+(cd "$extracted/rpm" && rpm2archive -n < "$rpm" | tar -xf -)
 for format in deb rpm; do
   payload="$extracted/$format/usr"
   for binary in ptouch ptouch-gui; do
@@ -36,4 +36,5 @@ for format in deb rpm; do
   cmp data/io.github.vowstar.ptouch-gui.desktop "$payload/share/applications/io.github.vowstar.ptouch-gui.desktop"
   cmp data/io.github.vowstar.ptouch-gui.svg "$payload/share/icons/hicolor/scalable/apps/io.github.vowstar.ptouch-gui.svg"
   cmp data/udev/20-usb-ptouch-permissions.rules "$payload/lib/udev/rules.d/20-usb-ptouch-permissions.rules"
+  printf 'Verified %s payload against the release binaries and desktop files\n' "$format"
 done
