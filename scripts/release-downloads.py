@@ -19,7 +19,7 @@ def download_notes(version):
 
 On Windows, extract the ZIP and open `ptouch-gui.exe`. The command-line tool is in `cli/ptouch.exe`. On Mac, extract the ZIP and open `ptouch-gui.app`. The Mac app is ad-hoc signed and not notarized. See the [Mac installation steps](https://github.com/vowstar/ptouch-rs/blob/v{version}/README.md#macos-installation).
 
-On Linux, install the `.deb` or `.rpm` for your architecture, then open P-Touch Label Printer.
+On Linux, install the `.deb` or `.rpm` for your architecture, then open P-Touch Label Printer. The Linux binaries target glibc 2.17 or newer. See the [Linux package requirements](https://github.com/vowstar/ptouch-rs/blob/v{version}/README.md#prebuilt-packages).
 
 <details>
 <summary>Command-line downloads</summary>

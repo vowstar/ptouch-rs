@@ -193,6 +193,12 @@ The release workflow publishes downloads on the
 Windows and Linux ARM64 assets are available from v0.8.4. macOS ARM64 assets
 already exist in v0.8.3. Check the selected release's asset list.
 
+The GNU/Linux release binaries target glibc 2.17 or newer on amd64 and arm64.
+The package checks install the release builds on Ubuntu 18.04, 24.04 and 26.04,
+AlmaLinux 8 and Fedora 44. The raw CLI binary also needs the system's
+`libudev.so.1`. The raw GUI needs the system's OpenGL, windowing and input
+libraries. The Debian and RPM packages declare these dependencies.
+
 The Windows GUI uses Direct3D 12 with automatic software fallback. Linux and
 macOS use OpenGL 2.0 or later. Native CI rendering does not validate a physical
 host's GPU driver.
