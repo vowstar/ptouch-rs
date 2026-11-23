@@ -1,0 +1,95 @@
+name: Linux packages
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build GNU/Linux package (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            arch: amd64
+            rpm-arch: x86_64
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            arch: arm64
+            rpm-arch: aarch64
+    env:
+      RUST_TARGET: ${{ matrix.target }}
+      PACKAGE_ARCH: ${{ matrix.arch }}
+      RPM_ARCH: ${{ matrix.rpm-arch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install build and packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config binutils rpm rpm2cpio cpio
+      - name: Build with glibc 2.17
+        run: bash scripts/build-linux-release.sh "$RUST_TARGET"
+      - name: Package and check both payloads
+        run: bash scripts/package-linux.sh
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ptouch-linux-${{ matrix.arch }}
+          path: target/${{ matrix.target }}/release/ptouch
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ptouch-gui-linux-${{ matrix.arch }}
+          path: target/${{ matrix.target }}/release/ptouch-gui
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ptouch-linux-${{ matrix.arch }}-packages
+          path: dist/*
+          if-no-files-found: error
+
+  install:
+    name: Install Linux package (${{ matrix.arch }}, ${{ matrix.image }}, ${{ matrix.mode }})
+    needs: build
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+        image: [ubuntu:18.04, ubuntu:24.04, ubuntu:26.04, almalinux:8, fedora:44]
+        mode: [x11]
+        include:
+          - arch: amd64
+            image: ubuntu:24.04
+            mode: wayland
+          - arch: arm64
+            image: ubuntu:24.04
+            mode: wayland
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7 # v8
+        with:
+          name: ptouch-linux-${{ matrix.arch }}-packages
+          path: packages
+      - name: Install and render from the release package
+        env:
+          IMAGE: ${{ matrix.image }}
+          ARCH: ${{ matrix.arch }}
+          MODE: ${{ matrix.mode }}
+        run: |
+          version=$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["version"])')
+          if [[ "$IMAGE" == ubuntu:* ]]; then
+            package="ptouch_${version}_${ARCH}.deb"
+          else
+            rpm_arch=x86_64
+            if [[ "$ARCH" == arm64 ]]; then rpm_arch=aarch64; fi
+            package="ptouch-${version}.${rpm_arch}.rpm"
+          fi
+          docker run --rm -v "$PWD:/source:ro" -v "$PWD/packages:/packages:ro" "$IMAGE" \
+            sh /source/scripts/test-linux-package.sh "/packages/$package" "$MODE" "$version"

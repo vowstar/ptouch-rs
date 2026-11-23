@@ -9,16 +9,31 @@ case "${RUST_TARGET}:${PACKAGE_ARCH}:${RPM_ARCH}" in
   x86_64-unknown-linux-gnu:amd64:x86_64|aarch64-unknown-linux-gnu:arm64:aarch64) ;;
   *) echo "Inconsistent Linux target/package architecture" >&2; exit 1 ;;
 esac
+binary_dir="target/${RUST_TARGET}/${BUILD_PROFILE}"
+python3 scripts/linux-elf.py --target "$RUST_TARGET" "$binary_dir/ptouch" "$binary_dir/ptouch-gui"
 go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0
 nfpm="$(go env GOPATH)/bin/nfpm"
 mkdir -p dist
-"$nfpm" package -f packaging/nfpm.yaml -p deb -t "dist/ptouch_${VERSION}_${PACKAGE_ARCH}.deb"
-"$nfpm" package -f packaging/nfpm.yaml -p rpm -t "dist/ptouch-${VERSION}.${RPM_ARCH}.rpm"
-test "$(dpkg-deb --field "dist/ptouch_${VERSION}_${PACKAGE_ARCH}.deb" Architecture)" = "$PACKAGE_ARCH"
-test "$(rpm -qp --queryformat '%{ARCH}' "dist/ptouch-${VERSION}.${RPM_ARCH}.rpm")" = "$RPM_ARCH"
+deb="$PWD/dist/ptouch_${VERSION}_${PACKAGE_ARCH}.deb"
+rpm="$PWD/dist/ptouch-${VERSION}.${RPM_ARCH}.rpm"
+"$nfpm" package -f packaging/nfpm.yaml -p deb -t "$deb"
+"$nfpm" package -f packaging/nfpm.yaml -p rpm -t "$rpm"
+test "$(dpkg-deb --field "$deb" Architecture)" = "$PACKAGE_ARCH"
+test "$(rpm -qp --queryformat '%{ARCH}' "$rpm")" = "$RPM_ARCH"
+dpkg-deb --field "$deb" Depends | grep -F 'libc6 (>= 2.17)'
+rpm -qp --requires "$rpm" | grep -Fx 'libc.so.6(GLIBC_2.17)(64bit)'
 extracted="$(mktemp -d)"
 trap 'rm -rf "$extracted"' EXIT
-dpkg-deb --extract "dist/ptouch_${VERSION}_${PACKAGE_ARCH}.deb" "$extracted"
-for binary in ptouch ptouch-gui; do
-  cmp "target/${RUST_TARGET}/${BUILD_PROFILE}/${binary}" "$extracted/usr/bin/$binary"
+mkdir "$extracted/deb" "$extracted/rpm"
+dpkg-deb --extract "$deb" "$extracted/deb"
+(cd "$extracted/rpm" && rpm2cpio "$rpm" | cpio --quiet -id --no-absolute-filenames)
+for format in deb rpm; do
+  payload="$extracted/$format/usr"
+  for binary in ptouch ptouch-gui; do
+    test -x "$payload/bin/$binary"
+    cmp "$binary_dir/$binary" "$payload/bin/$binary"
+  done
+  cmp data/io.github.vowstar.ptouch-gui.desktop "$payload/share/applications/io.github.vowstar.ptouch-gui.desktop"
+  cmp data/io.github.vowstar.ptouch-gui.svg "$payload/share/icons/hicolor/scalable/apps/io.github.vowstar.ptouch-gui.svg"
+  cmp data/udev/20-usb-ptouch-permissions.rules "$payload/lib/udev/rules.d/20-usb-ptouch-permissions.rules"
 done

@@ -20,20 +20,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            artifact_cli: ptouch
-            artifact_gui: ptouch-gui
-            asset_suffix: linux-amd64
-            target: x86_64-unknown-linux-gnu
-            package_arch: amd64
-            rpm_arch: x86_64
-          - os: ubuntu-24.04-arm
-            artifact_cli: ptouch
-            artifact_gui: ptouch-gui
-            asset_suffix: linux-arm64
-            target: aarch64-unknown-linux-gnu
-            package_arch: arm64
-            rpm_arch: aarch64
           - os: windows-latest
             artifact_cli: ptouch.exe
             artifact_gui: ptouch-gui.exe
@@ -57,16 +43,6 @@ jobs:
         uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
         with:
           targets: ${{ matrix.target }}
-
-      - name: Install system dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libusb-1.0-0-dev libudev-dev \
-          libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
-          libxkbcommon-dev libssl-dev xvfb libgl1-mesa-dri fonts-dejavu-core rpm \
-            libegl1 libgl1 libglx-mesa0 libxcursor1 libxi6 libxinerama1 \
-            libxrandr2 libxrender1 libxkbcommon-x11-0 libdbus-1-3
 
       - name: Build
         run: cargo build --release --workspace --locked --verbose --target ${{ matrix.target }}
@@ -112,16 +88,9 @@ jobs:
           path: target/${{ matrix.target }}/release/examples/usbprint_probe.exe
           if-no-files-found: error
 
-      - name: Native Unix executable smoke tests
-        if: runner.os != 'Windows'
-        env:
-          LIBGL_ALWAYS_SOFTWARE: "1"
-        run: |
-          if [ "$RUNNER_OS" = Linux ]; then
-            xvfb-run -a python3 scripts/unix-smoke.py --target ${{ matrix.target }} --profile release
-          else
-            python3 scripts/unix-smoke.py --target ${{ matrix.target }} --profile release
-          fi
+      - name: Native macOS executable smoke tests
+        if: runner.os == 'macOS'
+        run: python3 scripts/unix-smoke.py --target ${{ matrix.target }} --profile release
 
       - name: Package macOS application
         if: runner.os == 'macOS'
@@ -157,23 +126,8 @@ jobs:
           path: target/windows-package/ptouch-${{ matrix.asset_suffix }}.zip
           if-no-files-found: error
 
-      # Linux: build .deb and .rpm with nfpm; they install the binaries, the
-      # desktop entry, the icon, and the udev rule (postinst reloads udev).
-      - name: Package .deb and .rpm
-        if: runner.os == 'Linux'
-        env:
-          PACKAGE_ARCH: ${{ matrix.package_arch }}
-          RUST_TARGET: ${{ matrix.target }}
-          RPM_ARCH: ${{ matrix.rpm_arch }}
-        run: bash scripts/package-linux.sh
-
-      - name: Upload Linux packages
-        if: runner.os == 'Linux'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: ptouch-${{ matrix.asset_suffix }}-packages
-          path: dist/*
-          if-no-files-found: error
+  linux-packages:
+    uses: ./.github/workflows/linux-packages.yml
 
   macos-install:
     name: macOS release install (${{ matrix.os }})
@@ -202,7 +156,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: [build, macos-install]
+    needs: [build, linux-packages, macos-install]
     runs-on: ubuntu-latest
     permissions:
       contents: write
