@@ -32,7 +32,7 @@ jobs:
       - name: Install build and packaging tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends pkg-config binutils rpm rpm2cpio cpio
+          sudo apt-get install -y --no-install-recommends pkg-config binutils rpm rpm2cpio
       - name: Build with glibc 2.17
         run: bash scripts/build-linux-release.sh "$RUST_TARGET"
       - name: Package and check both payloads
